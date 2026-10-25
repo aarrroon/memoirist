@@ -1,0 +1,62 @@
+# Secrets — copy .env.example to .env; never commit .env
+.env
+.env.*
+!.env.example
+
+# Claude Code: personal settings and worktrees
+.claude/settings.local.json
+.claude/worktrees/
+CLAUDE.local.md
+
+# Java / Gradle
+.gradle/
+build/
+out/
+backend/bin/
+*.class
+hs_err_pid*.log
+
+# Node / Vite / tests
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.vite/
+playwright-report/
+test-results/
+blob-report/
+
+# IDEs
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Copies of the ui-ux-pro-max skill for other AI tools (only .claude/ is used here)
+.agent/
+.codebuddy/
+.codex/
+.continue/
+.cursor/
+.gemini/
+.github/prompts/
+.kiro/
+.opencode/
+.qoder/
+.roo/
+.trae/
+.windsurf/

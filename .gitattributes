@@ -1,0 +1,18 @@
+# Normalise line endings in the repo; Windows checkouts get CRLF where it is safe.
+* text=auto
+
+# Scripts run by bash must keep LF or they fail with "/usr/bin/env: 'sh\r'".
+gradlew text eol=lf
+*.sh    text eol=lf
+*.mjs   text eol=lf
+
+# Windows scripts keep CRLF.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# Binary files.
+*.jar   binary
+*.png   binary
+*.jpg   binary
+*.webp  binary
+*.docx  binary

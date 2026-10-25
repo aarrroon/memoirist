@@ -1,0 +1,36 @@
+---
+paths:
+  - "backend/src/main/**"
+  - "frontend/src/**"
+---
+
+# Security and privacy rules
+
+## Ownership: every request, every resource
+- The current user comes only from `CurrentUserProvider`.
+- Load user data only through user-scoped finders (`findByIdAndUserId`, or through the owning entry for media).
+- A resource that is missing or not owned throws `NotFoundException`, which becomes `404`. Never `403`, which would reveal that it exists.
+- When a request references another resource (an `eraId` on a week, a `templateId` on an entry), check that the referenced one is also owned. Otherwise return `404`.
+
+## Dev user header
+- `DevHeaderCurrentUserProvider` is annotated `@Profile({"local","test"})`. No other profile may resolve `X-Dev-User-Id`.
+- The dev-user seed lives in `db/seed-local`, which only the `local` and `test` profiles load.
+
+## Loot Drops (strict seal)
+"Sealed" means `unlockDate != null && unlockDate.isAfter(Instant.now(clock))`.
+- **Redaction:** responses go through `EntryMapper`. It nulls `contentJson`, `contentText` and `templateId`, empties `media`, and sets `isLocked`.
+- **Writes:** reject changes to content, date, template and media with `EntrySealedException` (`409`). The unlock date may only move later. Delete is allowed.
+- **Never** presign media of a sealed entry, log its content, include it in AI input or summaries (Phase 3), or expose it through share links (Phase 2).
+
+## Content (TipTap JSON)
+- **Backend:** validate against the allow-list and the 200 KB cap. Reject unknown node types, unknown marks and link `href`s that aren't `http:`, `https:` or `mailto:`. Derive `content_text` on the server.
+- **Frontend:** render captions from JSON only. No `dangerouslySetInnerHTML`, no `innerHTML`, no HTML strings from the API.
+
+## Secrets and logs
+- Never read, print or commit `.env`. Read secrets from configuration and environment variables. New variables go in `.env.example` with a placeholder value.
+- Never log entry content, presigned URLs, tokens or passwords. Log IDs instead.
+- Keep presigned URLs short-lived (60 minutes) and generate them only for media the caller may see.
+
+## Network
+- Locally, the Vite proxy means no CORS configuration is needed. Never add a wildcard CORS origin.
+- Phase 2 prefers a same-origin `/api` rewrite on Vercel; any CORS allow-list must name exact origins.
