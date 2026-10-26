@@ -116,8 +116,29 @@ React 19, Vite, TypeScript, Tailwind CSS v4, Motion (`motion` package), TipTap, 
 | Dates and timezones | `date-fns` + `@date-fns/tz` |
 | Forms | `react-hook-form` + `zod` |
 | API mocks in tests | MSW |
+| Accessible UI building blocks (dialogs, menus, popovers, tabs) | shadcn/ui on Radix UI: components are copied into `src/components/ui/` and restyled with Tailwind, not installed as a styled kit |
+| Toast messages | Sonner |
+| Drag-to-reorder (capture media strip) | dnd-kit |
+| Mobile bottom sheets (capture on phones) | Vaul |
+| Date picker | react-day-picker (shadcn's Calendar) |
+| Shrink photos before upload | browser-image-compression (target ~2–3 MB, keeps uploads fast and R2 usage low) |
+| Full-screen photo viewer | yet-another-react-lightbox |
+| Isolating render errors | react-error-boundary |
 
-These were chosen during setup as sensible defaults. Change them freely, but record the change here.
+**Added when the task that needs them starts** (each still needs approval at that point):
+
+| Library | Use | When |
+|---|---|---|
+| TanStack Virtual | Only render on-screen cards in a long feed | When the feed gets slow (Sprint 4 or later) |
+| wavesurfer.js | Waveform display for voice notes | Voice-note polish, any time after 4.7 |
+| Storybook | Build and preview components in isolation | Optional, once `docs/design/DESIGN.md` exists |
+| react-force-graph or visx | Friendship map | Phase 3 |
+| vite-plugin-pwa, Dexie | Installable app, offline capture | Phase 4 |
+| @react-pdf/renderer | Zine export (and possibly week PDFs, Q4) | Phase 4 (or Phase 2 per Q4) |
+
+**Not used:** all-in-one styled kits (MUI, Chakra, Mantine) fight Tailwind and make a distinctive look harder; Next.js adds server rendering a private, logged-in app doesn't need; Redux duplicates TanStack Query plus Zustand.
+
+These were chosen during setup as sensible defaults. Change them freely, but record the change here. Pin exact versions when scaffolding (task 4.1) and check current docs, since several have had recent major releases.
 
 ## D-14 Testing and CI
 - **Backend:** JUnit 5 + Testcontainers against real Postgres (`pgvector/pgvector:pg17`) and SeaweedFS. No H2, because it can't emulate JSONB, `TIMESTAMPTZ` behaviour or deferrable constraints.

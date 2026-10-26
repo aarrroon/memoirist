@@ -6,7 +6,7 @@
 
 | Phase | Backend | Frontend | Infrastructure |
 |---|---|---|---|
-| 1. Local MVP | Java 21, Spring Boot 4.x, Spring Web/Data JPA/Validation, Flyway, springdoc-openapi, AWS SDK v2 (S3), Actuator | React 19, Vite, TypeScript, Tailwind v4, Motion, TipTap, TanStack Query, Zustand, React Router, Embla, openapi-fetch | Docker Compose: Postgres 17 (pgvector image) and SeaweedFS |
+| 1. Local MVP | Java 21, Spring Boot 4.x, Spring Web/Data JPA/Validation, Flyway, springdoc-openapi, AWS SDK v2 (S3), Actuator | React 19, Vite, TypeScript, Tailwind v4, Motion, TipTap, TanStack Query, Zustand, React Router, Embla, openapi-fetch, shadcn/ui (Radix), Sonner, dnd-kit, Vaul, react-day-picker, browser-image-compression, yet-another-react-lightbox, react-error-boundary | Docker Compose: Postgres 17 (pgvector image) and SeaweedFS |
 | 2. Cloud and auth | Spring Security (JWT), share links | Auth screens, share view | Vercel, Render, Neon (Postgres 17), Cloudflare R2, GitHub Actions |
 | 3. AI biographer | Spring AI, pgvector (HNSW), Spring events + `@Async`; one shared AI layer (D-21); a `TranscriptionProvider` for reading handwriting (6c) | Help me think, tags, Era summaries, Cast of Characters with friend profiles, friendship map, read-a-page review | AI providers (decided at Phase 3) |
 | 4. Mobile and offline | Endpoints for sync if needed | `vite-plugin-pwa`, Dexie, dictation, inline media node, zine export, scan mode | — |
@@ -124,7 +124,9 @@ src/
 │   ├── templates/
 │   └── settings/
 ├── components/   # shared UI primitives
+│   └── ui/       # shadcn/ui components (copied in, owned by us, restyled to DESIGN.md)
 ├── lib/time.ts   # all date/time formatting + "today" in the user's timezone
+├── lib/images.ts # compress photos before upload (browser-image-compression)
 ├── stores/       # Zustand: UI-only state (open modals, drafts)
 └── main.tsx, router.tsx
 ```
@@ -136,7 +138,16 @@ src/
 - **State:** Zustand holds UI state only.
 - **Time:** every timestamp shown and every "today" is computed in the user's timezone from `GET /users/me`, using `@date-fns/tz`.
 - **Editor:** TipTap with StarterKit plus Link. Its extensions must match the backend allow-list. Read-only captions are rendered from JSON (TipTap's static renderer or a small JSON→React renderer), never through `dangerouslySetInnerHTML`.
-- **Media:** an Embla carousel shows images and an audio player in `displayOrder`. Voice notes use `MediaRecorder` with the first supported type of `audio/webm;codecs=opus` or `audio/mp4`.
+- **UI building blocks (D-13):**
+  - Dialogs, menus, popovers and tabs come from shadcn/ui (Radix underneath), so focus handling and keyboard support are built in. They live in `components/ui/` and are restyled to DESIGN.md.
+  - Toasts use Sonner (saved, upload failed, sealed). Dates use react-day-picker with future days disabled where D-09 requires.
+  - On phones the capture view opens as a Vaul bottom sheet; on desktop, a dialog.
+  - Each feed card and each page section sits inside a `react-error-boundary`, so one broken card doesn't blank the app.
+- **Media:**
+  - An Embla carousel shows images and an audio player in `displayOrder`. Tapping a photo opens yet-another-react-lightbox (full screen, pinch-zoom).
+  - In capture, the staging strip is reordered with dnd-kit (pointer, touch and keyboard).
+  - Before upload, `lib/images.ts` compresses photos to roughly 2–3 MB with browser-image-compression. Page scans (D-20) use a gentler setting so handwriting stays readable. Audio is uploaded as recorded.
+  - Voice notes use `MediaRecorder` with the first supported type of `audio/webm;codecs=opus` or `audio/mp4`.
 - **Capture flow:**
   1. `POST /entries` with a client UUID.
   2. Upload media.

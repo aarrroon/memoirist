@@ -47,6 +47,7 @@ cd frontend && npm run gen:api                                            # 4.2:
 | Working on product behaviour or UX | `docs/PRD.md` (glossary in §3) |
 
 `docs/product/` is market research. Don't load it for coding.
+`docs/design/` holds design work. Until `docs/design/DESIGN.md` exists, it's only early options (`DIRECTIONS.md`); don't build UI from them.
 
 ## Non-negotiables
 Details live in `.claude/rules/`, which load when you touch matching files.
