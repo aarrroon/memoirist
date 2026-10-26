@@ -11,7 +11,7 @@
 | Instants | ISO-8601 UTC with `Z`, e.g. `2026-10-25T10:20:00Z` |
 | Calendar dates | `YYYY-MM-DD`, meaning the user's local calendar day |
 | IDs | UUID strings |
-| Docs | Swagger UI at `/swagger-ui.html`; one OpenAPI tag per resource (Users, Eras, Templates, Feed, Weekly Logs, Entries, Media) |
+| Docs | Swagger UI at `/swagger-ui.html`; one OpenAPI tag per resource (Users, Eras, Templates, Tags, Feed, Weekly Logs, Entries, Media) |
 
 ### Who is the current user?
 - **Never** send a user ID in a body, query string or path.
@@ -67,8 +67,10 @@ Every paged endpoint takes `?page=0&size=10` (`size` max 50) and returns:
   "weeklyLogId": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
   "entryDate": "2026-10-20",
   "templateId": null,
+  "title": "Arrived at the Grampians",
   "contentJson": { "type": "doc", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "Just arrived at the campsite." } ] } ] },
   "contentText": "Just arrived at the campsite.",
+  "tags": [ { "id": "12341234-1234-1234-1234-123412341234", "name": "Trips", "source": "USER" } ],
   "createdAt": "2026-10-20T03:30:00Z",
   "updatedAt": "2026-10-20T03:30:00Z",
   "unlockDate": null,
@@ -76,6 +78,7 @@ Every paged endpoint takes `?page=0&size=10` (`size` max 50) and returns:
   "media": [ { "...": "Media" } ]
 }
 ```
+`title` is optional (D-24). `tags[].source` is `USER`, or from Phase 3 `AI` for an accepted suggestion (D-26).
 
 **Sealed entry** (`unlockDate` is in the future): the same shape, with the private fields removed.
 ```json
@@ -84,8 +87,10 @@ Every paged endpoint takes `?page=0&size=10` (`size` max 50) and returns:
   "weeklyLogId": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
   "entryDate": "2026-10-21",
   "templateId": null,
+  "title": null,
   "contentJson": null,
   "contentText": null,
+  "tags": [],
   "createdAt": "2026-10-21T09:00:00Z",
   "updatedAt": "2026-10-21T09:05:00Z",
   "unlockDate": "2027-10-21T09:00:00Z",
@@ -93,6 +98,26 @@ Every paged endpoint takes `?page=0&size=10` (`size` max 50) and returns:
   "media": []
 }
 ```
+
+### `EntrySummary`
+A lightweight row for lists such as the all-entries timeline (D-25). No caption, no media URLs.
+```json
+{
+  "id": "99887766-5544-3322-1100-aabbccddeeff",
+  "weeklyLogId": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
+  "entryDate": "2026-10-20",
+  "title": "Arrived at the Grampians",
+  "previewLine": "Just arrived at the campsite.",
+  "photoCount": 3,
+  "voiceNoteCount": 0,
+  "tags": [ { "id": "12341234-1234-1234-1234-123412341234", "name": "Trips", "source": "USER" } ],
+  "createdAt": "2026-10-20T03:30:00Z",
+  "unlockDate": null,
+  "isLocked": false
+}
+```
+- `previewLine` is the first line of the caption, up to 120 characters, or `null` if there is no caption. The client shows `title`, else `previewLine`, else *Photo* / *Voice note* (D-24).
+- Sealed: `title`, `previewLine`, `photoCount` and `voiceNoteCount` are `null` and `tags` is empty.
 
 ### `Media`
 `fileUrl` is a presigned GET URL that is valid for 60 minutes. Its host is the storage public endpoint (SeaweedFS locally, R2 in production).
@@ -154,6 +179,18 @@ Era shape: `{ "id", "title", "description", "startDate", "endDate", "createdAt",
 
 Template shape: `{ "id", "name", "subheadings": ["What triggered the spiral?", "..."], "createdAt", "updatedAt" }`.
 
+### Tags (tag: Tags)
+Manual tags are Phase 1 (D-26). `Tag`: `{ "id", "name", "entryCount" }`.
+
+| Method and path | Body | Success |
+|---|---|---|
+| `POST /tags` | `{ "name": string(1–50) }` | `201` `Tag`. A name that already exists, ignoring case, returns the existing tag with `200` |
+| `GET /tags` | — | `200` `Tag[]`, by name |
+| `PUT /tags/{tagId}` | `{ "name": string(1–50) }` | `200` `Tag`. Renaming to a name that exists: `409 conflict` |
+| `DELETE /tags/{tagId}` | — | `204`. Entries keep their content and lose the tag |
+
+Tags are set on an entry with `tagIds` in `POST` and `PUT /entries`. Browse by tag with `GET /entries?tagId=…`.
+
 ### Feed (tag: Feed)
 | Method and path | Success |
 |---|---|
@@ -172,9 +209,10 @@ Weeks are created automatically when an entry is created (D-08). There is no cre
 ### Entries (tag: Entries)
 | Method and path | Body | Success |
 |---|---|---|
-| `POST /entries` | `{ "id"?, "entryDate"?: date (default today in the user's zone; not after today), "templateId"?: uuid, "contentJson"?: TipTap doc or null }` | `201` `Entry`, filed into the right week (created if needed). Replay of an existing own `id`: `200` |
+| `POST /entries` | `{ "id"?, "entryDate"?: date (default today in the user's zone; not after today), "templateId"?: uuid, "title"?: string(1–150) or null, "contentJson"?: TipTap doc or null, "tagIds"?: [uuid] (at most 20, the user's own) }` | `201` `Entry`, filed into the right week (created if needed). Replay of an existing own `id`: `200`. An entry may be created empty because media are uploaded afterwards (D-23) |
+| `GET /entries?page=0&size=50&tagId={uuid}` | — | `200` `PageResponse<EntrySummary>` of every entry, `entryDate` then `createdAt`, newest first. `tagId` is optional and filters by tag. `size` max 100 here. Backs the all-entries timeline (D-25) |
 | `GET /entries/{entryId}` | — | `200` `Entry` (redacted if sealed) |
-| `PUT /entries/{entryId}` | `{ "entryDate": date, "templateId": uuid or null, "contentJson": doc or null }` (full replace; a date change moves the entry to the matching week) | `200` `Entry`. Sealed: `409 entry-sealed` |
+| `PUT /entries/{entryId}` | `{ "entryDate": date, "templateId": uuid or null, "title": string or null, "contentJson": doc or null, "tagIds": [uuid] }` (full replace; a date change moves the entry to the matching week) | `200` `Entry`. Sealed: `409 entry-sealed`. A tag ID that isn't the user's: `404` |
 | `DELETE /entries/{entryId}` | — | `204`. Allowed even when sealed; deletes its stored media files too |
 | `POST /entries/{entryId}/seal` | `{ "unlockDate": instant }`: after now, at most 100 years ahead; if already sealed, must be later than the current `unlockDate` | `200` `Entry` (now redacted). Earlier date on a sealed entry: `409 entry-sealed` |
 
@@ -339,17 +377,8 @@ A `Suggestion` is one question or card. Its `kind` says which, and `QUESTION` an
 | `POST /suggestions/{suggestionId}/answer` | `{ "optionId": string, "entryId"?: uuid }`. `entryId` is required for a card made from a draft, and names the saved entry | `200` `Suggestion` (`ANSWERED`). The server applies the option's effect once, for example adding a tag. Repeating the same answer is harmless; a different one is `409 conflict` |
 | `POST /suggestions/{suggestionId}/dismiss` | — | `200` `Suggestion` (`DISMISSED`) |
 
-### Tags (tag: Tags)
-`Tag`: `{ "id", "name", "entryCount" }`. `Entry` gains `"tags": [{ "id", "name", "source" }]`, where `source` is `USER` or `AI` (an AI suggestion the user accepted). The list is empty when the entry is sealed.
-
-| Method and path | Body | Success |
-|---|---|---|
-| `POST /tags` | `{ "name": string(1–50) }` | `201` `Tag`. A name that already exists, ignoring case, returns the existing tag with `200` |
-| `GET /tags` | — | `200` `Tag[]`, by name |
-| `PUT /tags/{tagId}` | `{ "name": string(1–50) }` | `200` `Tag`. Renaming to a name that exists: `409 conflict` |
-| `DELETE /tags/{tagId}` | — | `204`. Entries keep their content and lose the tag |
-| `PUT /entries/{entryId}/tags` | `{ "tagIds": [uuid] }` (at most 20; full replace) | `200` `Entry`. Sealed: `409 entry-sealed` |
-| `GET /tags/{tagId}/entries?page=0&size=10` | — | `200` `PageResponse<Entry>`, newest first, redacted |
+### Tags
+Tags and their endpoints are Phase 1 (D-26). Phase 3 adds only `TAG` suggestions: answering *Add tag* links the tag with `source: "AI"`.
 
 ### Era summaries (tag: Eras)
 `EraSummary`: `{ "eraId", "narrative", "themes": [string], "weekCount", "isStale", "generatedAt" }`. One is made automatically when an Era ends. A stale summary can still be read until it is rebuilt.

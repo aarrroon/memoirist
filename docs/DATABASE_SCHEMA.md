@@ -22,7 +22,6 @@
 | next | `V{n}__ai_biographer.sql` | 3 | Draft below; dimension decided at Phase 3 |
 | next | `V{n}__user_settings.sql` | 3 (6a) | Draft below |
 | next | `V{n}__ai_suggestions.sql` | 3 (6a) | Draft below |
-| next | `V{n}__tags.sql` | 3 (6a) | Draft below |
 | next | `V{n}__era_summaries.sql` | 3 (6b) | Draft below |
 | next | `V{n}__friend_profiles.sql` | 3 (6b) | Draft below |
 | next | `V{n}__page_transcription.sql` | 3 (6c) | Draft below; the provider is decided in Q12 |
@@ -98,6 +97,7 @@ One Instagram-style post. `user_id` is duplicated from the week so ownership che
 | user_id | UUID | NOT NULL → users ON DELETE CASCADE |
 | weekly_log_id | UUID | NOT NULL → weekly_logs ON DELETE CASCADE. The week containing `entry_date` |
 | template_id | UUID | NULL → templates ON DELETE SET NULL |
+| title | VARCHAR(150) | NULL. Optional title (D-24). If set, not blank |
 | entry_date | DATE | NOT NULL. Memory date; not after today in the user's zone (service check) |
 | content_json | JSONB | NULL means no caption. TipTap doc; allow-listed and at most 200 KB (D-05) |
 | content_text | TEXT | NOT NULL DEFAULT ''. Plain text derived from `content_json` by the server |
@@ -119,6 +119,28 @@ Carousel items (images and voice notes) belonging to an entry.
 | uploaded_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() |
 
 At most 10 media items per entry (service check).
+
+### `tags`
+The user's own categories for entries (D-26).
+
+| Column | Type | Constraints and notes |
+|---|---|---|
+| id | UUID | PK |
+| user_id | UUID | NOT NULL → users ON DELETE CASCADE |
+| name | VARCHAR(50) | NOT NULL, not blank. Unique per user ignoring case (`uq_tags_user_name` on `lower(name)`) |
+| created_at, updated_at | TIMESTAMPTZ | |
+
+### `entry_tags`
+Links entries to tags. Owned through `entries`; the service checks the tag belongs to the same user. At most 20 tags per entry (service check).
+
+| Column | Type | Constraints and notes |
+|---|---|---|
+| entry_id | UUID | NOT NULL → entries ON DELETE CASCADE |
+| tag_id | UUID | NOT NULL → tags ON DELETE CASCADE |
+| source | VARCHAR(10) | NOT NULL DEFAULT 'USER'. `AI` is used from Phase 3, when the user accepts a tag suggestion |
+| created_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() |
+
+The primary key is `(entry_id, tag_id)`.
 
 ### V1 SQL: `V1__core_schema.sql`
 
@@ -183,13 +205,15 @@ CREATE TABLE entries (
     user_id          UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     weekly_log_id    UUID NOT NULL REFERENCES weekly_logs (id) ON DELETE CASCADE,
     template_id      UUID REFERENCES templates (id) ON DELETE SET NULL,
+    title            VARCHAR(150),
     entry_date       DATE NOT NULL,
     content_json     JSONB,
     content_text     TEXT NOT NULL DEFAULT '',
     unlock_date      TIMESTAMPTZ,
     unlock_notified  BOOLEAN NOT NULL DEFAULT FALSE,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_entries_title CHECK (title IS NULL OR length(btrim(title)) > 0)
 );
 
 CREATE TABLE media (
@@ -205,6 +229,28 @@ CREATE TABLE media (
     CONSTRAINT chk_media_file_size CHECK (file_size_bytes > 0)
 );
 
+-- The user's own tags (D-26). Names are unique per user, ignoring case.
+CREATE TABLE tags (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    name        VARCHAR(50) NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_tags_name CHECK (length(btrim(name)) > 0)
+);
+
+CREATE UNIQUE INDEX uq_tags_user_name ON tags (user_id, lower(name));
+
+-- Owned through entries and tags; the service keeps both with the same user.
+CREATE TABLE entry_tags (
+    entry_id    UUID NOT NULL REFERENCES entries (id) ON DELETE CASCADE,
+    tag_id      UUID NOT NULL REFERENCES tags (id) ON DELETE CASCADE,
+    source      VARCHAR(10) NOT NULL DEFAULT 'USER',  -- AI from Phase 3, when the user accepts a suggestion
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (entry_id, tag_id),
+    CONSTRAINT chk_entry_tags_source CHECK (source IN ('USER', 'AI'))
+);
+
 -- uq_weekly_logs_user_start already indexes (user_id, start_date);
 -- uq_media_entry_order already indexes (entry_id, display_order).
 CREATE INDEX idx_eras_user_start ON eras (user_id, start_date DESC);
@@ -216,6 +262,8 @@ CREATE INDEX idx_entries_user_date ON entries (user_id, entry_date DESC);
 CREATE INDEX idx_entries_template ON entries (template_id);
 CREATE INDEX idx_entries_pending_unlock ON entries (unlock_date)
     WHERE unlock_date IS NOT NULL AND unlock_notified = FALSE;
+-- The primary key of entry_tags already indexes (entry_id, tag_id).
+CREATE INDEX idx_entry_tags_tag ON entry_tags (tag_id);
 ```
 
 ### Local and test seed: `db/seed-local/R__seed_dev_user.sql`
@@ -422,33 +470,7 @@ CREATE INDEX idx_ai_suggestions_expiry ON ai_suggestions (expires_at) WHERE expi
 CREATE INDEX idx_ai_suggestions_sources ON ai_suggestions USING gin (sources jsonb_path_ops);
 ```
 
-```sql
--- V{n}__tags.sql  (Phase 3, task 6.11 — draft)
-
-CREATE TABLE tags (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    name        VARCHAR(50) NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_tags_name CHECK (length(btrim(name)) > 0)
-);
-
--- Names are unique per user, ignoring case.
-CREATE UNIQUE INDEX uq_tags_user_name ON tags (user_id, lower(name));
-
--- Owned through entries and tags; the service keeps both with the same user.
-CREATE TABLE entry_tags (
-    entry_id    UUID NOT NULL REFERENCES entries (id) ON DELETE CASCADE,
-    tag_id      UUID NOT NULL REFERENCES tags (id) ON DELETE CASCADE,
-    source      VARCHAR(10) NOT NULL DEFAULT 'USER',  -- AI when the user accepted a suggestion
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (entry_id, tag_id),
-    CONSTRAINT chk_entry_tags_source CHECK (source IN ('USER', 'AI'))
-);
-
-CREATE INDEX idx_entry_tags_tag ON entry_tags (tag_id);
-```
+Tags (`tags`, `entry_tags`) are in V1 since D-26; Phase 3 only starts writing `source = 'AI'`.
 
 ```sql
 -- V{n}__era_summaries.sql  (Phase 3, task 6.13 — draft)

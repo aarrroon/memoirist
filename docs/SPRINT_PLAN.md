@@ -78,7 +78,7 @@
 - [ ] **2.4 Entities and repositories**
   - **Read:** `.claude/rules/backend.md`, DATABASE_SCHEMA, D-12.
   - **Do:**
-    - Entities: `User`, `Era`, `Template`, `WeeklyLog`, `Entry`, `Media`.
+    - Entities: `User`, `Era`, `Template`, `WeeklyLog`, `Entry`, `Media`, `Tag` (with `entry_tags` as the link).
     - All extend a base class with `@CreationTimestamp` and `@UpdateTimestamp` `Instant`s and implement `Persistable<UUID>`.
     - JSONB fields use `@JdbcTypeCode(SqlTypes.JSON)`.
     - `Entry.media` uses `@OrderBy("displayOrder ASC")` and `@BatchSize(size = 50)`.
@@ -128,6 +128,7 @@
   - **Read:** D-05, D-08, D-09, D-10, D-12, API_CONTRACT §Entries.
   - **Do:** `WeekCalendar`, `EntryContentValidator`, `ContentTextExtractor`, `EntryMapper` (the only Entry→DTO path), and `EntryService` seal rules.
   - **Done when:** tests prove:
+    - an optional title is saved, and a blank title is `400`
     - the first entry of a week creates the week, and the second reuses it
     - an entry written at 23:30 on Sunday Melbourne time lands in that Melbourne week, even though it's Sunday morning in UTC
     - a daylight-saving week boundary works
@@ -152,7 +153,17 @@
     - the query count for a page doesn't grow with the number of entries or media (assert with Hibernate statistics)
     - PUT (with `eraIds`), close and reopen work, a week can be in several Eras, and an Era owned by another user returns `404`
 
-- [ ] **3.8 API review**
+- [ ] **3.8 Tags** (`/new-endpoint`)
+  - **Read:** D-26, API_CONTRACT §Tags and §Entries.
+  - **Do:** tag CRUD; `tagIds` on `POST` and `PUT /entries`; `tags` on `Entry` through `EntryMapper`.
+  - **Done when:** tests prove tags are scoped to the user; names are unique ignoring case (creating a duplicate returns the existing tag); renaming to an existing name is `409`; deleting a tag untags its entries; more than 20 tags is `400`; another user's tag ID is `404`; and a sealed entry's tags are hidden and can't be changed (`409`).
+
+- [ ] **3.9 Entry list for the timeline**
+  - **Read:** D-24, D-25, API_CONTRACT §EntrySummary and `GET /entries`.
+  - **Do:** `GET /entries` with paging and an optional `tagId`, returning `EntrySummary` rows with `title`, `previewLine`, media counts and tags.
+  - **Done when:** tests prove ordering (newest memory date first, then newest created); the tag filter; `previewLine` is the caption's first line capped at 120 characters; a sealed entry's title, preview, counts and tags are hidden; and the query count per page doesn't grow with the number of entries.
+
+- [ ] **3.10 API review**
   - **Do:** run `/sync-docs`; check that every endpoint has its tag and documented error responses in Swagger.
   - **Done when:** no drift remains between `/v3/api-docs` and API_CONTRACT.md.
 
@@ -177,7 +188,7 @@
 
 - [ ] **4.3 Routing, shell and time utilities**
   - **Do:**
-    - React Router routes: `/` (feed), `/eras`, `/templates`, `/settings`.
+    - React Router routes: `/` (feed), `/entries` (all-entries timeline), `/weeks/:weekId` (week summary), `/eras`, `/templates`, `/tags`, `/settings`.
     - The app shell.
     - A Zustand UI store.
     - `lib/time.ts` (formatting in the user's zone, "today" in the user's zone).
@@ -193,26 +204,38 @@
 
 - [ ] **4.6 Capture modal**
   - **Do:**
-    - A TipTap editor (StarterKit + Link with a protocol allow-list).
-    - A template picker that inserts headings.
+    - An optional title field and a TipTap editor (StarterKit + Link with a protocol allow-list).
+    - A template picker that inserts headings above any existing text (D-23).
     - A memory-date picker (default today, never in the future).
-    - Multi-file upload with reorder.
+    - A tag picker that can create a new tag inline.
+    - Multi-file upload with reorder; failed items stay with retry or remove (D-23).
+    - A draft kept in local storage, and a keep-or-discard prompt on close (D-23).
     - The flow: create (client UUID) → upload → reorder.
-  - **Done when:** creating an entry with two photos shows it in the feed in the right week; validation errors from the API are shown on the right fields.
+  - **Done when:** creating an entry with a title, a tag and two photos shows it in the feed in the right week; save is disabled for an empty entry; a backdated save shows a toast that links to its week; a reload keeps the draft; validation errors from the API are shown on the right fields.
 
 - [ ] **4.7 Voice notes**
   - **Do:** a `MediaRecorder` recorder that picks `audio/webm;codecs=opus` or `audio/mp4`.
   - **Done when:** a recording uploads and plays back in Chrome. Note whether Safari or iOS could be tested.
 
 - [ ] **4.8 Loot Drops in the UI**
-  - **Do:** a seal dialog (pick a date, then a confirmation repeating the date), a sealed vault card with a live countdown, and a `409` that surfaces as a friendly message.
+  - **Do:** a seal dialog (pick a day; it opens at 09:00 in the user's timezone, D-23; then a confirmation repeating the date and time), a sealed vault card with a live countdown, and a `409` that surfaces as a friendly message.
   - **Done when:** sealing an entry turns it into a vault card; the countdown is correct in the user's zone.
 
 - [ ] **4.9 Eras, templates and settings pages**
   - **Do:** CRUD for eras and templates; assign a week to one or more Eras; settings for display name and timezone.
   - **Done when:** changing the timezone changes the displayed times; component tests pass.
 
-- [ ] **4.10 End-to-end smoke test and CI: frontend**
+- [ ] **4.10 Week summary view**
+  - **Read:** D-25, USER_FLOWS F-15.
+  - **Do:** tapping a week in the feed opens `/weeks/:weekId`: title, dates, Eras, counts, a few thumbnails, tags, then one bar per entry (display title, day, media icons, lock if sealed). Tapping a bar opens the entry. Leave a slot at the top for the Phase 3 AI summary.
+  - **Done when:** component tests cover a mixed week, a week with a sealed entry (its bar shows only the lock and unlock date), and the display-title fallbacks (title → first line → *Photo* / *Voice note*).
+
+- [ ] **4.11 All-entries timeline and tags UI**
+  - **Read:** D-24, D-25, D-26, USER_FLOWS F-16 and F-17.
+  - **Do:** `/entries` lists every entry newest first with infinite scroll over `GET /entries`, one row each (display title, date, icons, tags), filterable by tag; a `/tags` page to rename and delete tags.
+  - **Done when:** filtering by a tag shows only its entries; sealed rows show no title or tags; renaming a tag updates everywhere; component tests pass.
+
+- [ ] **4.12 End-to-end smoke test and CI: frontend**
   - **Do:**
     - A Playwright smoke test: create an entry with a photo, then seal another.
     - A CI frontend job (lint, typecheck, test, build).
@@ -255,7 +278,7 @@
 
 - [ ] **6.9 AI consent, settings and the feature gate** (`/new-migration`, `/new-endpoint`). `user_settings`, `GET` and `PUT /users/me/settings`, `POST` and `DELETE /users/me/ai-consent`, `DELETE /users/me/ai-data`, and a `FeatureGate` that reads configuration. **Done when:** tests prove every AI endpoint returns `403 consent-required` until consent is given and again after it is withdrawn; turning on a feature that isn't available returns `403 feature-unavailable`; unknown settings keys return `400`; the client can't set `available`; and deleting AI data removes everything derived while leaving entries untouched.
 - [ ] **6.10 `AiContentSource` and invalidation.** The single reader of entry text, tags and AI facts for AI, plus the listener that reacts when an entry is edited, sealed, unlocked or deleted. **Done when:** tests prove sealed entries never come out of the source (and do once unlocked); editing, sealing or deleting an entry deletes the cards that cite it and marks the summaries and profiles built from it stale; and a stale summary is never used as input to another.
-- [ ] **6.11 Tags** (`/new-migration`, `/new-endpoint`). `tags` and `entry_tags`, the tag endpoints, `tags` on `Entry` (empty when sealed, through `EntryMapper`), browsing by tag, and the `TAG` kind of suggestion. **Done when:** tags are scoped to the user; names are unique ignoring case; deleting a tag untags its entries; a sealed entry's tags are redacted and can't be changed; and an AI tag suggestion adds the tag only after the user taps.
+- [ ] **6.11 Tag suggestions.** Manual tags already exist (task 3.8, D-26); this adds the `TAG` kind of suggestion, drawn from the user's existing tags first. **Done when:** an AI tag suggestion adds the tag (with `source = AI`) only after the user taps; a suggestion never creates a tag the user didn't accept; and sealed entries get none.
 - [ ] **6.12 Help me think UI.** The pause nudge and button in the editor, a two-button question card, tag chips, and the settings switch. **Done when:** a Playwright flow with the fake provider types, pauses, sees the button, taps it, answers a question and accepts a tag; nothing is sent before the tap; and turning the nudge off removes the prompt.
 
 **Era summaries and friend profiles (D-21).** Need 6.3 and 6.4.

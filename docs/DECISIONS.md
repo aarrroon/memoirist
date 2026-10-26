@@ -28,6 +28,10 @@ Each entry says what was decided and why, so it can be revisited knowingly. Add 
 | D-20 | Paper diaries: pages are media; reading them is optional and provider-agnostic | 2026-10-26 |
 | D-21 | One AI layer: ask, generate and surface, never chat | 2026-10-27 |
 | D-22 | Eras can overlap: a week can belong to several Eras | 2026-10-27 |
+| D-23 | Capture and sealing behaviour (drafts, empty entries, partial uploads, 9 am unlocks) | 2026-10-27 |
+| D-24 | Entries have an optional title | 2026-10-27 |
+| D-25 | Week summary view and an all-entries timeline | 2026-10-27 |
+| D-26 | Manual tags in Phase 1; AI tag suggestions in Phase 3 | 2026-10-27 |
 
 ---
 
@@ -83,7 +87,7 @@ Locally the image is `pgvector/pgvector:pg17`; production is Neon on Postgres 17
 
 ## D-10 Loot Drops use a strict seal
 An entry is **sealed** while `unlock_date > now`. While sealed:
-- every response hides `contentJson`, `contentText`, `templateId` and `media`, and sets `isLocked: true`
+- every response hides `contentJson`, `contentText`, `templateId` and `media` (and, since D-24 and D-26, `title` and `tags`), and sets `isLocked: true`
 - content, memory date, template and media cannot change (`409 entry-sealed`)
 - the entry cannot be analysed by AI and is excluded from weekly AI summaries
 - the unlock date can only move later; the entry can always be deleted
@@ -253,6 +257,40 @@ Chapters of life overlap: a trip happens inside a year at university, and a rela
 - Amends D-08 and the Phase 1 design: the V1 migration, the `WeeklyLog` shape, `PUT /weekly-logs/{id}`, and tasks 3.3, 3.7, 4.4, 4.9 and 8.5.
 - Phase 1 stays about the same size: one join table instead of one column.
 - Open question Q18 is settled before Sprint 3.
+
+## D-23 Capture and sealing behaviour
+Answers to the gaps G-01 to G-07 found while drafting [USER_FLOWS.md](USER_FLOWS.md).
+- **Unsaved text (G-01):** closing capture with unsaved changes asks *keep editing* or *discard*. One draft is also kept in the browser's local storage, so a reload or crash doesn't lose it. It is cleared on save or discard.
+- **Empty entries (G-02):** the user can't save an entry with no title, no caption and no media; the client keeps *save* disabled. The server still allows an empty entry *at create time*, because media are uploaded after the entry exists (D-10, F-03). If every upload fails and nothing else was entered, the client deletes the empty entry. Removing the last photo from an entry with no text offers to delete the entry instead.
+- **Partial uploads (G-03):** the entry is saved with the media that uploaded. Failed items stay in capture with *retry* and *remove* until capture is closed.
+- **Backdated entries (G-04):** after saving an entry that lands outside the week on screen, a toast names its week with a *go there* action.
+- **Unlock time (G-05):** the user picks a day; the entry unlocks at **09:00 in their timezone** on that day. The client turns that into the `unlockDate` instant; the API is unchanged.
+- **Two devices (G-06):** last save wins. Revisit when Phase 2 adds logins.
+- **Choosing a template after typing (G-07):** its headings are inserted above the existing text.
+
+## D-24 Entries have an optional title
+- `entries.title` is an optional short title (up to 150 characters).
+- Wherever an entry is listed by name (the all-entries timeline, week summary bars, search results), its **display title** is the title if set, otherwise the first line of its caption (`content_text`), otherwise a label for its first media item (*Photo*, *Voice note*, *Diary page*).
+- The server returns the title and a `previewLine` (the caption's first line, up to 120 characters); the client picks the label.
+- A title is private entry content, so a sealed entry's `title` and `previewLine` are hidden like its caption (D-10).
+
+**Why:** the all-entries timeline (D-25) needs something to show for each entry, and a generated first line isn't always a good name.
+
+## D-25 Week summary view and an all-entries timeline
+- **Week summary (G-08):** the feed stays the main screen. Tapping a week opens its summary: title, dates, Eras, counts of entries, photos and voice notes, a few thumbnails, its tags, and then one **bar per entry** (display title, day, small icons for photos or voice notes, and a lock for sealed entries). Tapping a bar opens the entry. It uses `GET /weekly-logs/{id}`, so it needs no new endpoint. From Phase 3 the AI-written weekly summary appears at the top of the same view.
+- **All-entries timeline:** a second view lists every entry in the journal, newest first, one row per entry with its display title, date and icons, and no summaries. It can be filtered by tag. It is backed by `GET /entries` with paging.
+
+**Why:** the week summary gives Phase 3's AI summary a ready-made home, and the timeline is the quickest way to scan everything.
+
+## D-26 Manual tags in Phase 1; AI tag suggestions in Phase 3
+- Tags (`tags`, `entry_tags`) move from Phase 3 into Phase 1. Users create their own tags (for example *Work*, *Family*, *Going out*), add them while writing or editing, and filter the all-entries timeline by tag.
+- `POST` and `PUT /entries` accept `tagIds`. Tags are scoped to the user and unique ignoring case; at most 20 per entry.
+- A sealed entry's tags are hidden and can't be changed (D-10).
+- Phase 3 adds only the AI part: `TAG` suggestions (D-21) that add a tag after the user taps. `entry_tags.source` records `USER` or `AI`.
+
+**Why:** tags are useful without AI, and having the user's own tags in place before Phase 3 gives the AI a vocabulary to suggest from, rather than inventing one.
+
+**Consequences:** the V1 migration gains `entries.title`, `tags` and `entry_tags`. Task 6.11 shrinks to tag suggestions. New Phase 1 tasks: 3.8 (tags), 3.9 (entry list), 4.10 (week summary) and 4.11 (all-entries timeline and tags UI).
 
 ---
 

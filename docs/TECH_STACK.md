@@ -46,6 +46,7 @@ com.memoirist
 ├── user/          # User, CurrentUserProvider, DevHeaderCurrentUserProvider (local/test), /users/me
 ├── era/
 ├── template/
+├── tag/           # Tag, entry tags (D-26)
 ├── week/          # WeeklyLog, WeekCalendar (date → Monday in user tz), feed endpoint
 ├── entry/         # Entry, EntryMapper (the ONLY Entry→DTO path), content validation + text extraction, seal rules
 ├── media/
@@ -86,7 +87,7 @@ Each feature folder contains:
 - **Content:** `EntryContentValidator` checks the TipTap JSON against an allow-list and the 200 KB cap. `ContentTextExtractor` walks the JSON and produces `content_text`.
   - Allowed nodes: `doc`, `paragraph`, `text`, `heading` (levels 1–3), `bulletList`, `orderedList`, `listItem`, `blockquote`, `hardBreak`, `horizontalRule`.
   - Allowed marks: `bold`, `italic`, `strike`, `code`, `link` (protocols `http`, `https`, `mailto`).
-- **Redaction:** `EntryMapper.toResponse(entry, now)` is the only place an `Entry` becomes a DTO. If `unlockDate` is after `now`, it nulls `contentJson`, `contentText` and `templateId`, empties `media`, and sets `isLocked = true`. Feed, week detail, create, update, seal, share links (Phase 2) and AI (Phase 3) all go through it.
+- **Redaction:** `EntryMapper` is the only place an `Entry` becomes a DTO, both the full `Entry` (`toResponse(entry, now)`) and the list row `EntrySummary` (`toSummary(entry, now)`). If `unlockDate` is after `now`, it nulls `title`, `contentJson`, `contentText`, `templateId`, `previewLine` and the media counts, empties `media` and `tags`, and sets `isLocked = true`. Feed, week detail, create, update, seal, share links (Phase 2) and AI (Phase 3) all go through it.
 - **Seal guard:** `EntryService` rejects edits to content, date, template and media on sealed entries with `409`. The unlock date may only move later.
 - **Unlock notifications (future):** `unlock_notified` plus a partial index lets a `@Scheduled` job find newly unlocked entries cheaply.
 
@@ -119,15 +120,18 @@ src/
 ├── api/          # schema.d.ts (generated — never hand-edit), client.ts (openapi-fetch), queryKeys.ts
 ├── features/
 │   ├── feed/     # FeedPage, WeekSection, sticky era headers
-│   ├── entry/    # EntryCard, MediaCarousel, CaptureModal, SealDialog, SealedCard, VoiceRecorder
+│   ├── week/     # WeekSummaryPage with one bar per entry (D-25)
+│   ├── timeline/ # TimelinePage: every entry, one row each, tag filter (D-25)
+│   ├── entry/    # EntryCard, MediaCarousel, CaptureModal, SealDialog, SealedCard, VoiceRecorder, displayTitle()
 │   ├── eras/
 │   ├── templates/
+│   ├── tags/     # TagPicker, TagsPage (D-26)
 │   └── settings/
 ├── components/   # shared UI primitives
 │   └── ui/       # shadcn/ui components (copied in, owned by us, restyled to DESIGN.md)
 ├── lib/time.ts   # all date/time formatting + "today" in the user's timezone
 ├── lib/images.ts # compress photos before upload (browser-image-compression)
-├── stores/       # Zustand: UI-only state (open modals, drafts)
+├── stores/       # Zustand: UI-only state (open modals); the capture draft is also persisted to localStorage (D-23)
 └── main.tsx, router.tsx
 ```
 

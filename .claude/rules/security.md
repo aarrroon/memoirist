@@ -18,8 +18,8 @@ paths:
 
 ## Loot Drops (strict seal)
 "Sealed" means `unlockDate != null && unlockDate.isAfter(Instant.now(clock))`.
-- **Redaction:** responses go through `EntryMapper`. It nulls `contentJson`, `contentText` and `templateId`, empties `media`, and sets `isLocked`.
-- **Writes:** reject changes to content, date, template and media with `EntrySealedException` (`409`). The unlock date may only move later. Delete is allowed.
+- **Redaction:** responses go through `EntryMapper`. It nulls `title`, `contentJson`, `contentText` and `templateId`, empties `media` and `tags`, and sets `isLocked`. In `EntrySummary` it also nulls `previewLine` and the media counts.
+- **Writes:** reject changes to title, content, date, template, tags and media with `EntrySealedException` (`409`). The unlock date may only move later. Delete is allowed.
 - **Never** presign media of a sealed entry, log its content, include it in AI input or summaries (Phase 3), or expose it through share links (Phase 2).
 
 ## Content (TipTap JSON)

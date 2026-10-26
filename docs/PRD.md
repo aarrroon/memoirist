@@ -33,7 +33,7 @@ memoirist is a private Progressive Web App that acts as an automated biographer.
 
 | Term | Meaning |
 |---|---|
-| **Entry** | One post: an optional rich-text caption plus 0–10 photos or voice notes. It belongs to one memory date. |
+| **Entry** | One post: an optional title, an optional rich-text caption, optional tags, plus 0–10 photos or voice notes. It belongs to one memory date. |
 | **Memory date** | The day an entry is *about*. Defaults to today and can be backdated, never set in the future. |
 | **Week** | Monday–Sunday in the user's timezone. Created automatically for the first entry dated in it. Users can title, close and reopen it. Stored as `weekly_logs`. |
 | **Era** | A user-named chapter of life with a start date and an optional end date (for example, "Monash Double Degree Era"). Holds many weeks. A week can belong to several Eras, so chapters can overlap (D-22). |
@@ -43,7 +43,9 @@ memoirist is a private Progressive Web App that acts as an automated biographer.
 | **Page scan** | A photo of a paper diary page, stored as media on an entry. The original photo is always kept. |
 | **Transcript** (Phase 3) | Text the app reads from a page scan. It is a suggestion for the user to review, and becomes part of the entry only when they choose to use it. |
 | **Help me think** (Phase 3) | A button that appears after a pause in writing. It offers a few two-option questions and tag suggestions, each answered with one tap. |
-| **Tag** (Phase 3) | A category the user puts on an entry, such as Work or Family. The AI can suggest tags, but one is added only when the user taps. |
+| **Tag** | A category the user puts on an entry, such as Work or Family (Phase 1, D-26). From Phase 3 the AI can suggest tags, but one is added only when the user taps. |
+| **Week summary** | The overview that opens when a week is tapped: its facts, photos and tags, then one bar per entry. The AI-written summary joins it in Phase 3 (D-25). |
+| **Timeline** | A plain list of every entry, newest first, one row each, filterable by tag (D-25). |
 | **Era summary** (Phase 3) | An AI-written summary of a whole Era, built from its weekly summaries. |
 | **Friend profile** (Phase 3) | An auto-generated overview of a person in the Cast of Characters: who they are to the user, the moments they share and which Eras they belong to. |
 | **Group** (Phase 5) | A private, invite-only space for a small set of people, usually built around one occasion such as a trip. Members add their own entries to it. |
@@ -74,7 +76,9 @@ memoirist is a private Progressive Web App that acts as an automated biographer.
 
 ### Phase 1: Local MVP (Sprints 1–4)
 Everything runs locally with Docker Compose: Postgres plus SeaweedFS for object storage.
-- **Entries:** create, edit and delete, with an optional TipTap caption, a memory date (backdating allowed) and an optional template.
+- **Entries:** create, edit and delete, with an optional title, an optional TipTap caption, a memory date (backdating allowed), an optional template and optional tags. Drafts survive a reload (D-23, D-24).
+- **Tags:** the user's own tags, added by hand, with a page to rename or delete them (D-26).
+- **Week summary and timeline:** tap a week for its summary with one bar per entry; or open a plain timeline of every entry, filterable by tag (D-25).
 - **Media carousel:** images and voice notes stored privately and served through short-lived presigned URLs. Upload, reorder, delete.
 - **Automatic weeks:** title, assign to one or more Eras, close and reopen.
 - **Eras:** create, edit and delete chapters; assign weeks to them. Chapters can overlap, so a trip can sit inside a longer chapter (D-22).
@@ -94,8 +98,8 @@ Everything runs locally with Docker Compose: Postgres plus SeaweedFS for object 
 
 ### Phase 3: The AI biographer (Sprint 6, likely split)
 - **Help me think:** after a pause in writing, a button appears. Tapping it gives 1–3 quick two-option questions (for example stress or excitement, yes or no) and suggested tags, each answered with one tap. It works on text that isn't saved yet, and nothing is sent to the AI until the button is tapped.
-- **Tags:** the user's own categories for entries (for example Work, Family, Going out). The user can add them by hand or accept the AI's suggestions, and can browse entries by tag.
-- **Weekly summaries:** narrative summary plus embedding when a week is closed (asynchronous).
+- **Tag suggestions:** the AI suggests tags, drawn from the user's own tags first (manual tags already exist from Phase 1). One tap adds it.
+- **Weekly summaries:** narrative summary plus embedding when a week is closed (asynchronous), shown at the top of the week summary view.
 - **Era summaries:** an AI summary of a whole Era, built from its weekly summaries, written on request and when an Era ends.
 - **Cast of Characters and friend profiles:** people mentioned across entries, a friendship map across Eras, and an auto-generated profile for each person who keeps turning up (who they are to the user, the moments they share, which Eras they belong to). The user can edit notes, rename, merge duplicates and hide anyone. The AI never overwrites the user's own notes.
 - **Insights:** semantic search ("when did I last feel like this?") over weekly summaries.

@@ -45,6 +45,7 @@ cd frontend && npm run gen:api                                            # 4.2:
 | Choosing a library or infra pattern | `docs/TECH_STACK.md` |
 | Unsure *why* a rule exists, or docs disagree | `docs/DECISIONS.md` (it wins over other docs) |
 | Working on product behaviour or UX | `docs/PRD.md` (glossary in §3) |
+| Building a screen, or writing an end-to-end test | `docs/USER_FLOWS.md` (draft; flow IDs `F-xx` name the Playwright tests) |
 
 `docs/product/` is market research. Don't load it for coding.
 `docs/design/` holds design work. Until `docs/design/DESIGN.md` exists, it's only early options (`DIRECTIONS.md`); don't build UI from them.
