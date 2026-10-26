@@ -41,6 +41,18 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/doc-sync-reminder.mjs\"",
+            "timeout": 15
+          }
+        ]
+      }
     ]
-  }
+  },
+  "enabledMcpjsonServers": ["context7"]
 }

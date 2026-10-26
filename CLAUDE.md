@@ -24,7 +24,7 @@ A private journaling PWA.
 | `.claude/` | `settings.json`, path-scoped `rules/`, `skills/`, `hooks/` | — |
 
 ## Commands
-Run these from the repo root in Git Bash on Windows. Each one exists from the sprint shown.
+Run these from the repo root in Git Bash on Windows. Each one exists from the sprint shown. The full list, ports and troubleshooting are in `docs/DEVELOPMENT.md`; when a command changes, update both.
 
 ```bash
 docker compose up -d                                                      # 1.3: data services
@@ -40,6 +40,7 @@ cd frontend && npm run gen:api                                            # 4.2:
 | When you are… | Read |
 |---|---|
 | Starting any task | That task's block in `docs/SPRINT_PLAN.md` (it lists what else to read) |
+| Planning or closing a feature, or unsure which doc owns a fact | `docs/WORKFLOW.md` (index of all docs: `docs/README.md`) |
 | Changing tables or migrations | `docs/DATABASE_SCHEMA.md` |
 | Adding or changing endpoints or DTOs | `docs/API_CONTRACT.md` |
 | Choosing a library or infra pattern | `docs/TECH_STACK.md` |
@@ -71,7 +72,14 @@ Details live in `.claude/rules/`, which load when you touch matching files.
 - Spring Boot 4, Hibernate 7, Jackson 3, React 19, Tailwind v4 and TipTap 3 are newer than many examples. Check current docs (the context7 plugin, if installed) before using an API you're unsure of.
 
 ## Project skills
+The full toolkit, with when to use each, is in `docs/CURRENT_SKILLS.md`. When you add, remove or rename a skill, subagent, hook or prompt, update that file in the same change.
 - `/implement-task [id]`: plan, build, test, update docs and tick one task in SPRINT_PLAN.md.
 - `/new-migration [description]`: add a Flyway migration safely.
 - `/new-endpoint [resource]`: the backend endpoint recipe (contract → DTO → service → mapper → controller → tests).
 - `/sync-docs`: find and fix drift between the code and API_CONTRACT.md or DATABASE_SCHEMA.md.
+- `/sprint-ready [n]`: read-only check that a sprint has no blocking questions or doc gaps. Run before starting a sprint.
+- `/parallel-check [P1-04 P1-06]`: read-only check whether features can be built in parallel; reserves migration numbers and writes each session's kickoff note.
+- `/record-decision [decision]`: add a D-entry, close its Q-x, update docs that assumed otherwise.
+- `spec-reviewer` subagent: read-only review of a change against the specs and security rules. Use it after each task.
+- A Stop hook reminds Claude to sync docs when API or schema code changed but the spec docs didn't.
+- context7 MCP (`.mcp.json`): use it to check current library docs.
