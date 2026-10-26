@@ -10,7 +10,7 @@ paths:
   - `schema.d.ts` is **generated** by `npm run gen:api`. Never hand-edit it, and never hand-write API types.
   - `client.ts` is the `openapi-fetch` client.
   - `queryKeys.ts` is the query-key factory.
-- `src/features/<feature>/` holds pages and feature components: `feed`, `entry`, `eras`, `templates`, `settings`.
+- `src/features/<feature>/` holds pages and feature components: `feed`, `week`, `timeline`, `entry`, `eras`, `templates`, `tags`, `settings`.
 - `src/components/` holds shared UI primitives; `src/lib/` holds pure helpers (`time.ts`); `src/stores/` holds Zustand stores.
 
 ## Data
@@ -24,15 +24,17 @@ paths:
 ## Time
 - All formatting and "today" go through `src/lib/time.ts`, using the user's timezone from `GET /users/me` with `@date-fns/tz`.
 - Never use `toLocaleString()` without a zone, and never use the browser's zone as a stand-in.
-- Memory-date pickers default to today in the user's zone and never allow future dates.
+- Memory-date pickers default to today in the user's zone and never allow future dates or dates before 1900 (D-09).
 
 ## Editor and content
 - TipTap with StarterKit and Link only. Link protocols are limited to `http`, `https` and `mailto`. Extensions must match the backend allow-list (TECH_STACK §2, D-05).
 - Read-only captions are rendered from `contentJson` (TipTap's static renderer or a small JSON→React renderer). Never `dangerouslySetInnerHTML`.
-- Choosing a template inserts its subheadings as `heading` nodes at creation time.
+- Choosing a template inserts its subheadings as `heading` nodes above any text already written (D-23). On save, remove template headings the user left empty (D-06).
 
 ## Capture and media
 - **Order:** `POST /entries` with `id: crypto.randomUUID()` → upload each file → `PUT …/media/order` → optional seal (after a confirmation dialog that repeats the date).
+- **Capture behaviour (D-23):** save stays disabled for an empty entry; one draft is kept in local storage until save or discard; failed uploads stay with *retry* or *remove*; a backdated save shows a toast linking to its week.
+- **Diary pages:** the user can mark a photo as a diary page; upload it with `purpose = PAGE_SCAN` (D-20).
 - **File input:** `accept="image/jpeg,image/png,image/webp,audio/webm,audio/mp4,audio/mpeg"`. Check size and count client-side as well (25 MB, 10 files).
 - **Voice notes:** `MediaRecorder` with the first supported of `audio/webm;codecs=opus` and `audio/mp4`.
 

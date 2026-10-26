@@ -13,7 +13,8 @@ paths:
 - **Status codes:** `201` create, `200` read/update/action, `204` delete. Replaying a create with an existing own `id` returns `200` with the stored resource; an `id` owned by someone else returns `409 conflict`.
 - **Controller parameters:** never a `userId`. Get the user from `CurrentUserProvider` inside the service.
 - **Errors:** throw domain exceptions (`NotFoundException`, `EntrySealedException`, …). The single `@RestControllerAdvice` maps them to `ProblemDetail` with `type = urn:memoirist:problem:<suffix>`, plus `timestamp` and (for validation) `fieldErrors`. No stack traces or SQL in responses.
-- **Pagination:** return `PageResponse<T>(items, page, size, totalItems, totalPages)`. Never serialise a Spring `Page` directly. Cap `size` at 50.
+- **Pagination:** return `PageResponse<T>(items, page, size, totalItems, totalPages)`. Never serialise a Spring `Page` directly. Cap `size` at 50 unless the contract sets another limit (`GET /entries` allows 100).
+- **Private input:** search terms and other free text the user types go in request bodies, never in URLs or logs (D-29).
 - **Entries in responses:** always built with `EntryMapper.toResponse(entry, now)`. Never build an `EntryResponse` anywhere else.
 - **Media in responses:** `fileUrl` comes from `StorageService.presignGet(objectKey)` at mapping time. Never return or store the raw key or host.
 - **Uploads:** check the declared type against the D-17 allow-list (`415`), size ≤ 25 MB (`413`), count ≤ 10 per entry (`400`), and that the entry isn't sealed (`409`).

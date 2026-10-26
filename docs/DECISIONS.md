@@ -1,42 +1,46 @@
 # Decisions
 
-Settled choices for memoirist. **When another doc disagrees with this file, this file wins.**
+Settled choices for memoirist, and the questions still open.
 
-Each entry says what was decided and why, so it can be revisited knowingly. Add new entries at the bottom with the next number. Don't delete an outdated entry; mark it "Superseded by D-xx".
+- **Which doc wins (D-27):** the [README](../README.md) wins on what users get and in which phase it ships. This file wins on how things work. Other docs follow both. If the README and this file disagree, stop and ask.
+- **How this file works:** each entry states the decision as it stands now. When a decision changes, update its entry in place and set the **Updated** date (git keeps the old wording). A new topic gets the next number. Numbers are never reused; a dropped decision keeps a one-line entry saying why, so links still work.
+- Record decisions with `/record-decision`. Open questions are at the end.
 
-| ID | Decision | Decided |
-|---|---|---|
-| D-01 | Project name is **memoirist** | 2026-10-25 |
-| D-02 | Spring Boot 4.x on Java 21 | 2026-10-25 |
-| D-03 | SeaweedFS locally, Cloudflare R2 in production | 2026-10-25 |
-| D-04 | PostgreSQL 17 everywhere | 2026-10-25 |
-| D-05 | Entry content is TipTap JSON plus derived plain text | 2026-10-25 |
-| D-06 | Templates attach to entries, not weeks | 2026-10-25 |
-| D-07 | Store UTC; each user has a timezone (default Melbourne) | 2026-10-25 |
-| D-08 | Weeks are created automatically (Monday–Sunday) | 2026-10-25 |
-| D-09 | Entries have a memory date and can be backdated | 2026-10-25 |
-| D-10 | Loot Drops use a strict seal | 2026-10-25 |
-| D-11 | Ownership checks and local-only dev user | 2026-10-25 |
-| D-12 | Clients may generate entity UUIDs | 2026-10-25 |
-| D-13 | Frontend library set | 2026-10-25 |
-| D-14 | Testing and CI approach | 2026-10-25 |
-| D-15 | Backend code style | 2026-10-25 |
-| D-16 | Flyway migration rules | 2026-10-25 |
-| D-17 | Media types and limits | 2026-10-25 |
-| D-18 | AI providers deferred to Phase 3 | 2026-10-25 |
-| D-19 | Groups are contribution-based; entries stay personal | 2026-10-26 |
-| D-20 | Paper diaries: pages are media; reading them is optional and provider-agnostic | 2026-10-26 |
-| D-21 | One AI layer: ask, generate and surface, never chat | 2026-10-27 |
-| D-22 | Eras can overlap: a week can belong to several Eras | 2026-10-27 |
-| D-23 | Capture and sealing behaviour (drafts, empty entries, partial uploads, 9 am unlocks) | 2026-10-27 |
-| D-24 | Entries have an optional title | 2026-10-27 |
-| D-25 | Week summary view and an all-entries timeline | 2026-10-27 |
-| D-26 | Manual tags in Phase 1; AI tag suggestions in Phase 3 | 2026-10-27 |
+| ID | Decision | Decided | Updated |
+|---|---|---|---|
+| D-01 | Project name is **memoirist** | 2026-10-25 | |
+| D-02 | Spring Boot 4.x on Java 21 | 2026-10-25 | |
+| D-03 | SeaweedFS locally, Cloudflare R2 in production | 2026-10-25 | |
+| D-04 | PostgreSQL 17 everywhere | 2026-10-25 | |
+| D-05 | Entry content is TipTap JSON plus derived plain text | 2026-10-25 | |
+| D-06 | Templates attach to entries, not weeks | 2026-10-25 | 2026-10-27 |
+| D-07 | Store UTC; each user has a timezone (default Melbourne) | 2026-10-25 | |
+| D-08 | Weeks are created automatically (Monday–Sunday) | 2026-10-25 | 2026-10-27 |
+| D-09 | Entries have a memory date: backdated, never future, not before 1900 | 2026-10-25 | 2026-10-27 |
+| D-10 | Loot Drops use a strict seal, and opening one is surfaced | 2026-10-25 | 2026-10-27 |
+| D-11 | Ownership checks and local-only dev user | 2026-10-25 | |
+| D-12 | Clients may generate entity UUIDs | 2026-10-25 | |
+| D-13 | Frontend library set | 2026-10-25 | 2026-10-27 |
+| D-14 | Testing and CI approach | 2026-10-25 | |
+| D-15 | Backend code style | 2026-10-25 | |
+| D-16 | Flyway migration rules | 2026-10-25 | |
+| D-17 | Media types and limits | 2026-10-25 | |
+| D-18 | AI providers are chosen at Phase 3 | 2026-10-25 | |
+| D-19 | Groups are contribution-based; entries stay personal | 2026-10-26 | 2026-10-27 |
+| D-20 | Paper diaries: pages are marked media; reading them is on tap | 2026-10-26 | 2026-10-27 |
+| D-21 | One AI layer: ask, generate and surface, never chat | 2026-10-27 | |
+| D-22 | Eras can overlap and fill themselves by date | 2026-10-27 | |
+| D-23 | Capture and sealing behaviour (drafts, empty entries, partial uploads, 9 am unlocks) | 2026-10-27 | |
+| D-24 | Entries have an optional title; how lists name an entry | 2026-10-27 | |
+| D-25 | Week summary view and an all-entries timeline | 2026-10-27 | |
+| D-26 | Manual tags in Phase 1; AI tag suggestions in Phase 3 | 2026-10-27 | |
+| D-27 | The README wins on what and when; this file wins on how | 2026-10-27 | |
+| D-28 | Closing a week or an Era writes its summary | 2026-10-27 | |
+| D-29 | Search by word and by feeling | 2026-10-27 | |
 
 ---
 
 ## D-01 Project name is "memoirist"
-Replaces "Living Time Capsule" from the original drafts.
 - Java base package `com.memoirist`
 - Storage bucket `memoirist-media`
 - Local dev user email `dev@memoirist.local`
@@ -54,7 +58,7 @@ Replaces "Living Time Capsule" from the original drafts.
 **Consequences:** one storage implementation (AWS SDK v2 `S3Client` + `S3Presigner`). Switching providers only changes endpoint, region, credentials and path-style settings. RustFS (MinIO-like, 1.0 in September 2026) is the fallback if SeaweedFS causes trouble.
 
 ## D-04 PostgreSQL 17 everywhere
-Locally the image is `pgvector/pgvector:pg17`; production is Neon on Postgres 17. The original drafts said both "15+" and `pg16`. One major version in both places avoids surprises. pgvector is installed in the image but only enabled in Phase 3.
+Locally the image is `pgvector/pgvector:pg17`; production is Neon on Postgres 17. One major version in both places avoids surprises. pgvector is installed in the image but only enabled in Phase 3.
 
 ## D-05 Entry content is TipTap JSON plus derived plain text
 - `entries.content_json` (JSONB) holds the TipTap/ProseMirror document. It is `NULL` when an entry has no caption (photo-only posts are allowed).
@@ -67,7 +71,9 @@ Locally the image is `pgvector/pgvector:pg17`; production is Neon on Postgres 17
 - In Phase 4, inline images store a `mediaId`, never a URL, so expiring presigned links never get baked into content.
 
 ## D-06 Templates attach to entries
-`entries.template_id` references the template used. When an entry is created, its subheadings are copied into the editor as headings. Editing or deleting a template later never changes existing entries. `weekly_logs` has no template column. This follows the PRD's "pick Spiralling while writing" flow.
+- `entries.template_id` references the template used. Choosing a template inserts its subheadings into the editor as headings, above any text already written (D-23).
+- When the entry is saved, template headings the user left empty are removed, so skipping a prompt leaves nothing behind.
+- Editing or deleting a template later never changes existing entries. `weekly_logs` has no template column.
 
 ## D-07 Time: store UTC, each user has a timezone
 - Instants are `TIMESTAMPTZ` in the database and `Instant` in Java, serialised as ISO-8601 with `Z`.
@@ -79,20 +85,23 @@ Locally the image is `pgvector/pgvector:pg17`; production is Neon on Postgres 17
 ## D-08 Weeks are automatic
 - A week runs Monday to Sunday in the user's timezone.
 - Creating an entry finds or creates the week containing its memory date. The database enforces uniqueness on `(user_id, start_date)`; the service inserts with `ON CONFLICT DO NOTHING` and then selects the row.
-- Users can give a week a title, assign it to one or more Eras (D-22), and close or reopen it. There is no "create week" step.
+- There is no "create week" step. Users can give a week a title, and close or reopen it; from Phase 3, closing a week writes its summary (D-28). Weeks join Eras by date (D-22).
 - Weeks with no entries are hidden from the feed.
 
 ## D-09 Entries have a memory date
-`entries.entry_date` defaults to today in the user's timezone and can be set to an earlier date (backdating). It cannot be later than today. `created_at` still records when the entry was actually written. Changing the date moves the entry into the matching week.
+`entries.entry_date` defaults to today in the user's timezone and can be set to an earlier date (backdating). It can't be later than today, or earlier than 1900-01-01 (`400`), so a typo such as 0202 can't create a week in the year 202. `created_at` still records when the entry was actually written. Changing the date moves the entry into the matching week.
 
 ## D-10 Loot Drops use a strict seal
 An entry is **sealed** while `unlock_date > now`. While sealed:
-- every response hides `contentJson`, `contentText`, `templateId` and `media` (and, since D-24 and D-26, `title` and `tags`), and sets `isLocked: true`
-- content, memory date, template and media cannot change (`409 entry-sealed`)
-- the entry cannot be analysed by AI and is excluded from weekly AI summaries
+- every response hides `title`, `contentJson`, `contentText`, `templateId`, `tags` and `media`, and sets `isLocked: true`
+- it never counts: tag filters, tag counts, search results and every other count or filter leave it out, so nothing hints at what it's about. Unfiltered lists (the feed, a week, the all-entries timeline) still show it as a locked row
+- its title, content, memory date, template, tags and media can't change (`409 entry-sealed`)
+- it can't be analysed by AI and is left out of AI summaries
 - the unlock date can only move later; the entry can always be deleted
 
 Seal last: create the entry, upload media, then call `POST /entries/{id}/seal`. The UI asks the user to confirm the unlock date before sealing. Share links follow the same rules.
+
+**Opening:** a Loot Drop stays in the week of its memory date, which may be far down the feed by the time it opens. So an **Opened** strip at the top of the feed lists Loot Drops that have unlocked and that the user hasn't opened or dismissed yet. `entries.unlock_seen_at` records that (cleared whenever the entry is sealed), with `GET /entries/opened` and `POST /entries/{id}/mark-seen`. Phase 2 adds an email when a Loot Drop opens, and Phase 4 a push notification. `unlock_notified` stays the background job's own flag.
 
 ## D-11 Ownership and the dev user
 - Controllers never receive a user ID from the request body, query or path. The current user comes from `CurrentUserProvider`.
@@ -138,7 +147,7 @@ React 19, Vite, TypeScript, Tailwind CSS v4, Motion (`motion` package), TipTap, 
 | Storybook | Build and preview components in isolation | Optional, once `docs/design/DESIGN.md` exists |
 | react-force-graph or visx | Friendship map | Phase 3 |
 | vite-plugin-pwa, Dexie | Installable app, offline capture | Phase 4 |
-| @react-pdf/renderer | Zine export (and possibly week PDFs, Q4) | Phase 4 (or Phase 2 per Q4) |
+| @react-pdf/renderer | Week PDF export (if Q4 picks it) and zine export | Phase 2 (week PDFs), Phase 4 (zine) |
 
 **Not used:** all-in-one styled kits (MUI, Chakra, Mantine) fight Tailwind and make a distinctive look harder; Next.js adds server rendering a private, logged-in app doesn't need; Redux duplicates TanStack Query plus Zustand.
 
@@ -169,19 +178,21 @@ These were chosen during setup as sensible defaults. Change them freely, but rec
 - No video in Phases 1–3.
 - HEIC is not accepted. iOS converts photos to JPEG when the file picker's `accept` list excludes HEIC; verify this in Sprint 4.
 
-## D-18 AI providers deferred to Phase 3
-The chat model, the embedding provider and therefore the `vector(N)` dimension are decided when Phase 3 starts. Nothing in Phases 1–2 depends on them. Earlier drafts named `gpt-4o-mini`, `text-embedding-3-small` and `claude-3-haiku`; treat those as outdated.
+## D-18 AI providers are chosen at Phase 3
+The chat model, the embedding provider and therefore the `vector(N)` dimension are decided when Phase 3 starts (Q6). Nothing in Phases 1–2 depends on them. Model names in the original drafts are outdated.
 
 ## D-19 Groups are contribution-based; entries stay personal
 Phase 5 adds private groups so friends can build shared memories, for example a trip. A group never owns an entry; it holds links to entries that members choose to add.
 - A **group** has members (an owner plus the people they invite) and, optionally, trip dates and a shared unlock date.
 - A **contribution** is a row in `group_entries` linking a group to one of the contributor's own entries. Nothing is copied. The entry stays in the author's journal and can be withdrawn at any time.
+- **Starting from an entry:** "share with friends" on an entry starts a group from it. `POST /groups` with an `entryId` prefills the title and date from the entry and makes it the first contribution, as the README puts it: "Share one with friends and let them add their side".
 - **Personal endpoints don't change.** `GET /entries/{id}` for another member's entry still returns `404`, even when it sits in a shared group. Members read contributions only through `/groups/**`, which checks membership first. A non-member gets `404`. A member who lacks the role for an action (such as an owner-only edit) gets `403`, because the group's existence is no secret from them.
 - **Redaction is unchanged.** Every contribution becomes a DTO through `EntryMapper`, so a sealed one is redacted exactly as in D-10. Media is presigned only after the membership check.
 - A **group Loot Drop** is a group with an `unlock_date`. Contributing to it seals the entry until at least that date, using the existing seal rules: the contributor confirms the date first, and the group's date, like an entry's, can only move later.
 - **Leaving, removal and account deletion** unlink the member's contributions. Their entries, and any Era they created from the trip, stay with them.
-- **AI:** group content reaches an AI provider only from members who opted in, and never while sealed (extends D-10 and D-18).
+- **AI:** group content reaches an AI provider only from members who opted in, and never while sealed.
 - **Not a social network:** no followers, likes, public groups or discovery. Groups are small and invite-only.
+- **Not planned:** linking a person in the Cast of Characters to a real group member. It only added a label, and it tied private notes about someone to their real account.
 
 **Why:**
 - The private journal stays private. A person shares only what they choose to add.
@@ -189,42 +200,40 @@ Phase 5 adds private groups so friends can build shared memories, for example a 
 - Leaving or deleting is a simple unlink, and the seal and redaction code is reused instead of copied.
 
 **Consequences:**
-- Phase 1 needs no schema or API change. What keeps the door open is already a rule: one Entry→DTO path, object keys with presigned URLs, and user-scoped finders.
-- Groups need real accounts (Phase 2). The shared story and the friendship map also need the AI work (Phase 3). Phase 5 can be built before or after Phase 4.
-- Draft tables and endpoints are in DATABASE_SCHEMA.md and API_CONTRACT.md. Task 8.1 extends `.claude/rules/security.md` with the membership rule.
-- Open questions Q8–Q11 are settled before Sprint 8.
+- Phase 1 needs no schema or API change for groups: one Entry→DTO path, object keys with presigned URLs, and user-scoped finders keep the door open.
+- Groups need real accounts (Phase 2), and the shared story needs the AI work (Phase 3). Phase 5 can be built before or after Phase 4.
+- Task 8.1 extends `.claude/rules/security.md` with the membership rule. Open questions Q8–Q11 and Q26 are settled before Sprint 8.
 
-## D-20 Paper diaries: pages are media; reading them is optional and provider-agnostic
-People who write by hand can bring paper diaries in by photographing the pages.
-- A **page scan** is an ordinary `media` image with `purpose = PAGE_SCAN`. The original photo is always kept and is the record. Text read from it is a derived suggestion that may be wrong.
+## D-20 Paper diaries: pages are marked media; reading them is on tap
+People who write by hand bring paper diaries in by photographing the pages.
+- A **page scan** is an ordinary `media` image with `purpose = PAGE_SCAN`, chosen when it's added. `purpose` is in V1, so pages are marked from Phase 1 and lists can label them *Diary page* (D-24). The original photo is always kept and is the record. Text read from it is a derived suggestion that may be wrong.
 - Pages go into ordinary entries. The page's date becomes the entry's memory date (backdating, D-09) and the entry is filed into its week as usual. Several pages can share one entry (10 media at most, D-17), and are read in `display_order`.
-- **Transcription** (reading the handwriting) is a separate, optional, asynchronous step. The user taps "Read this page", the result is stored in `media_transcriptions`, and the user reviews it. Nothing reaches the caption until the user chooses to use it, and then it is saved with the normal `PUT /entries/{id}` and validated like any other content (D-05). There is no special write path into entry content.
+- **Transcription** (reading the handwriting, Phase 3) is optional and asynchronous, and runs only when the user taps "Read this page"; one tap reads every unread page of the entry. The result is stored in `media_transcriptions` for the user to review. Nothing reaches the caption until the user chooses "Use text"; it is then saved with the normal `PUT /entries/{id}` and validated like any other content (D-05). There is no special write path into entry content. A date found on the page is offered as a one-tap suggestion.
 - It runs behind a `TranscriptionProvider` interface, so the approach (a multimodal model, a dedicated handwriting service or on-device recognition) can change without touching the schema or the API. Each result records its provider and model, so a page can be read again later with a better one.
-- **Privacy:** a page image leaves the system only when the user taps "Read this page", never for a sealed entry (extends D-10 and D-18), and never with location metadata. Transcripts are visible only to the entry's owner, including when the entry is in a group (D-19).
+- **Privacy:** a page image leaves the system only when the user taps "Read this page", never for a sealed entry, and never with location metadata. Transcripts are visible only to the entry's owner, including when the entry is in a group (D-19).
 - **Seal last (D-10):** read the pages, then seal. A sealed entry can't be read.
-- **Phase placement:** photos of pages work from Phase 1 with no changes. Transcription is Phase 3 (Sprint 6c), because it needs the AI provider decision. A camera "scan mode" (crop, straighten, several pages, offline) is Phase 4.
+- **Phase placement:** photos of pages, marked as pages, work from Phase 1. Reading them is Phase 3 (Sprint 6c), because it needs the AI provider decision. A camera "scan mode" (crop, straighten, several pages, offline) is Phase 4.
 
 **Why:**
 - Many people write by hand, and a photographed page is the lowest-friction way in.
 - Keeping the photo means a wrong transcript never loses anything, and the handwriting itself is part of the nostalgia.
-- Separating "store the page" from "read the page" lets the first part work from day one while the second waits for the AI decisions (D-18, Q6, Q12).
+- Reading only on a tap keeps page images private by default, and ties the cost to pages people care about.
 
 **Consequences:**
-- Phase 1 needs no schema or API change. A page photo is just a photo.
-- The Phase 3 migration adds `media.purpose` and `media_transcriptions`. Drafts are in DATABASE_SCHEMA.md and API_CONTRACT.md.
-- An applied transcript lives in `content_text`, so weekly summaries, the Cast of Characters and search (Phase 3) include paper diaries with no extra work.
+- The Phase 3 migration adds `media_transcriptions`. Drafts are in DATABASE_SCHEMA.md and API_CONTRACT.md.
+- A transcript the user has used lives in `content_text`, so weekly summaries, the Cast of Characters and word search (D-29) include paper diaries with no extra work.
 - Q12 (recognition approach and consent) is settled before Sprint 6c, and Q13 (bulk notebook import) before Sprint 7.
 
 ## D-21 One AI layer: ask, generate and surface, never chat
-The AI features share one layer instead of each building their own: Help me think, tags, Era summaries and friend profiles (Phase 3), and proactive insights and the writing coach (Phase 6).
+The AI features share one layer instead of each building their own: Help me think, tag suggestions, weekly and Era summaries, friend profiles and the friendship map (Phase 3), and proactive insights and the writing coach (Phase 6).
 - **Three modes.** *Ask*: short questions and tag suggestions answered with one tap ("Help me think"). *Generate*: stored narratives such as weekly summaries, Era summaries and friend profiles. *Surface*: cards drawn from the user's history, such as patterns, growth reminders and highlight reels. The AI never opens a chat. Everything it offers is a card the user can ignore.
 - **Suggestions.** Questions, tag suggestions, writing insights and insight cards are rows in `ai_suggestions`, told apart by `kind` (a string checked in the service, so a new kind needs no migration). A question or tag suggestion always has exactly two options. The server stores what each option would do; the client sends only the option the user chose, and the server then applies a whitelisted effect (add a tag, record a fact). Nothing the AI says changes data on its own.
 - **Drafts.** Help me think and the writing coach can work on text that isn't saved yet. The draft is processed in memory and never stored; only the resulting cards are, and they expire. A card made from a draft is answered once the entry is saved, by naming its id.
 - **One reader.** Every AI feature gets entry text, tags and AI facts from a single `AiContentSource`, which leaves out sealed entries, applies group consent (D-19) and returns plain text with ids. No other code loads entries for AI. This puts the sealed rule (D-10, D-18, D-20) in one place.
 - **Sources and invalidation.** Every AI output records its provider, model and the sources it was built from. Editing, sealing, unlocking or deleting an entry deletes the cards that cite it and marks the summaries and profiles built from it stale, so they are rebuilt without it. A stale narrative is never used as input to another. This also covers an old entry that is sealed after the AI has already read it.
-- **Consent and toggles.** One AI consent (with its wording version) is stored per user, and every AI endpoint needs it (`403 consent-required`), including reading pages (D-20). Each feature also has a user toggle. Whether a feature is available at all goes through a `FeatureGate`, which reads configuration today and can read a plan later, so a feature can become paid without changing the API (Q15).
+- **Consent and switches.** One AI consent (with its wording version) is stored per user, and every AI endpoint needs it (`403 consent-required`), including reading pages (D-20). Each feature also has its own switch, as the README promises. Whether a feature is available at all goes through a `FeatureGate`, which reads configuration today and can read a plan later, so a feature can become paid without changing the API (Q15).
 - **Providers stay swappable.** Chat, embedding and transcription are separate interfaces (D-18, D-20). Entry text is treated as data, never as instructions: model output is parsed against a schema, and unknown fields and effects are dropped.
-- **Phase placement:** Help me think, tags, Era summaries and friend profiles are Phase 3. Proactive insights and the writing coach are Phase 6 (Sprint 9), because they need built-up history, entry-level retrieval and an answer on paid features.
+- **Phase placement:** Help me think, tag suggestions, weekly and Era summaries, friend profiles and the friendship map are Phase 3. Proactive insights and the writing coach are Phase 6 (Sprint 9), because they need built-up history, entry-level retrieval and an answer on paid features.
 - **The positioning stays:** "a biographer, not a therapist". Insight cards and the writing coach are opt-in, capped and dismissible, and never conversational.
 
 **Why:**
@@ -233,30 +242,29 @@ The AI features share one layer instead of each building their own: Help me thin
 - Two-option questions and whitelisted effects keep the AI a helper, not an editor.
 
 **Consequences:**
-- Replaces the Phase 3 draft endpoints `analyze` and `ai-confirm` with `POST /suggestions` and `POST /suggestions/{id}/answer`. Nothing was built yet.
-- Phase 1 needs no schema or API change. In Phase 3, `EntryMapper` gains `tags` (empty when sealed).
-- New tables are drafted in DATABASE_SCHEMA.md (`user_settings`, `tags`, `entry_tags`, `ai_suggestions`, `era_summaries`, and `entry_embeddings` in Phase 6), with the endpoints in API_CONTRACT.md. `ai_summaries` gains `is_stale`, `provider` and `model`.
-- Templates (D-06) already cover custom subheadings, so they need no change.
-- Open questions Q14–Q17 are settled before Sprint 6 (Q14, Q17) and Sprint 9 (Q15, Q16).
+- Phase 1 needs no schema or API change for the AI layer.
+- Summaries are written when a week or an Era is closed (D-28).
+- New tables are drafted in DATABASE_SCHEMA.md (`user_settings`, `ai_suggestions`, `era_summaries`, and `entry_embeddings` in Phase 6), with the endpoints in API_CONTRACT.md. `ai_summaries` carries `is_stale`, `provider` and `model`.
+- Open questions Q14, Q17 and Q23 are settled before Sprint 6, and Q15 and Q16 before Sprint 9.
 
-## D-22 Eras can overlap
-Chapters of life overlap: a trip happens inside a year at university, and a relationship runs across several jobs. So a week can belong to more than one Era.
-- A week is linked to its Eras through a join table, `weekly_log_eras`. This replaces the single `weekly_logs.era_id` column in the Phase 1 design.
-- Era date ranges may overlap (they always could). Assignment is still manual by default (Q1), and a week can be in as many Eras as the user likes, up to 10.
+## D-22 Eras can overlap and fill themselves by date
+Chapters of life overlap: a trip happens inside a year at university, and a relationship runs across several jobs. So a week can belong to more than one Era, and weeks join Eras by date.
+- A week is linked to its Eras through a join table, `weekly_log_eras`. Each link records its `source`: `AUTO` (joined by date) or `USER` (added by hand).
+- **Filling by date:** a week joins every Era whose dates overlap it: the Era starts on or before the week's Sunday, and has no end date or ends on or after its Monday. This happens when a week is created, and whenever an Era is created or its dates change. An automatic link that no longer overlaps after a date change is removed.
+- **By hand:** users can still add or remove a week's Eras (`PUT /weekly-logs/{id}` with `eraIds`). An Era added by hand stays even outside its dates. Removing an Era is remembered in `weekly_log_era_exclusions`, so filing by date never adds it back; adding it back by hand clears that.
+- A week can be in at most 10 Eras. Filing by date skips a week that is already full.
 - Deleting an Era removes only its links. The weeks, and their other Eras, stay.
-- The API shows a week's Eras as a list (`eras`), and `PUT /weekly-logs/{id}` takes `eraIds`.
+- The API shows a week's Eras as a list (`eras`, each with its `source`), and `PUT /weekly-logs/{id}` takes `eraIds`.
 - The feed lists each week once. Which Era it is grouped under is open question Q18; the default is the Era that started most recently, with the others shown as chips on the week.
-- Trip Eras (D-19) are ordinary Eras linked to a group. A week where the user adds to a trip joins the Trip Era and stays in its other Eras.
+- Trip Eras (D-19) are ordinary Eras linked to a group, so they fill by the trip dates. A week the user contributes from outside those dates is added too, as a link that stays.
 - Anything counted per Era counts a week once for each Era it is in: Era summaries, the friendship map and a person's mentions per Era (D-21).
 
 **Why:**
 - "Trips become chapters" (Phase 5) needs a short Era inside a long one.
-- A join table from the start is a small change while nothing is built. Moving a single `era_id` column into a join table later would need a data migration and a breaking API change.
+- The README promises "Weeks and Eras, filed automatically": an Era such as "Uni Days" gathers its weeks with no sorting.
+- A join table from the start is a small change while nothing is built.
 
-**Consequences:**
-- Amends D-08 and the Phase 1 design: the V1 migration, the `WeeklyLog` shape, `PUT /weekly-logs/{id}`, and tasks 3.3, 3.7, 4.4, 4.9 and 8.5.
-- Phase 1 stays about the same size: one join table instead of one column.
-- Open question Q18 is settled before Sprint 3.
+**Consequences:** filling by date answers the old open question Q1. The V1 migration has `weekly_log_eras.source` and `weekly_log_era_exclusions`, so this was settled before Sprint 2 (task 2.3). Q18 is settled before Sprint 3.
 
 ## D-23 Capture and sealing behaviour
 Answers to the gaps G-01 to G-07 found while drafting [USER_FLOWS.md](USER_FLOWS.md).
@@ -265,14 +273,14 @@ Answers to the gaps G-01 to G-07 found while drafting [USER_FLOWS.md](USER_FLOWS
 - **Partial uploads (G-03):** the entry is saved with the media that uploaded. Failed items stay in capture with *retry* and *remove* until capture is closed.
 - **Backdated entries (G-04):** after saving an entry that lands outside the week on screen, a toast names its week with a *go there* action.
 - **Unlock time (G-05):** the user picks a day; the entry unlocks at **09:00 in their timezone** on that day. The client turns that into the `unlockDate` instant; the API is unchanged.
-- **Two devices (G-06):** last save wins. Revisit when Phase 2 adds logins.
+- **Two devices (G-06):** last save wins. Revisit when Phase 2 adds logins (Q21).
 - **Choosing a template after typing (G-07):** its headings are inserted above the existing text.
 
-## D-24 Entries have an optional title
+## D-24 Entries have an optional title; how lists name an entry
 - `entries.title` is an optional short title (up to 150 characters).
-- Wherever an entry is listed by name (the all-entries timeline, week summary bars, search results), its **display title** is the title if set, otherwise the first line of its caption (`content_text`), otherwise a label for its first media item (*Photo*, *Voice note*, *Diary page*).
-- The server returns the title and a `previewLine` (the caption's first line, up to 120 characters); the client picks the label.
-- A title is private entry content, so a sealed entry's `title` and `previewLine` are hidden like its caption (D-10).
+- Wherever an entry is listed by name (the all-entries timeline, week summary bars, search results), its **display title** is the title if set, otherwise its preview line, otherwise a label for its first media item (*Photo*, *Diary page*, *Voice note*).
+- The server returns the title, a `previewLine` and `firstMediaKind`; the client picks the label. `previewLine` is the first non-empty line of the caption that isn't a heading (up to 120 characters), or the first heading if there's nothing else. Skipping headings stops every entry started from a template being listed under its first prompt, such as "What triggered the spiral?".
+- A title is private entry content, so a sealed entry's `title`, `previewLine` and `firstMediaKind` are hidden like its caption (D-10).
 
 **Why:** the all-entries timeline (D-25) needs something to show for each entry, and a generated first line isn't always a good name.
 
@@ -283,38 +291,68 @@ Answers to the gaps G-01 to G-07 found while drafting [USER_FLOWS.md](USER_FLOWS
 **Why:** the week summary gives Phase 3's AI summary a ready-made home, and the timeline is the quickest way to scan everything.
 
 ## D-26 Manual tags in Phase 1; AI tag suggestions in Phase 3
-- Tags (`tags`, `entry_tags`) move from Phase 3 into Phase 1. Users create their own tags (for example *Work*, *Family*, *Going out*), add them while writing or editing, and filter the all-entries timeline by tag.
+- Users create their own tags (for example *Work*, *Family*, *Going out*), add them while writing or editing, and filter the all-entries timeline by tag.
 - `POST` and `PUT /entries` accept `tagIds`. Tags are scoped to the user and unique ignoring case; at most 20 per entry.
-- A sealed entry's tags are hidden and can't be changed (D-10).
+- A sealed entry's tags are hidden, can't be changed, and don't count in tag filters or counts (D-10).
 - Phase 3 adds only the AI part: `TAG` suggestions (D-21) that add a tag after the user taps. `entry_tags.source` records `USER` or `AI`.
 
 **Why:** tags are useful without AI, and having the user's own tags in place before Phase 3 gives the AI a vocabulary to suggest from, rather than inventing one.
 
-**Consequences:** the V1 migration gains `entries.title`, `tags` and `entry_tags`. Task 6.11 shrinks to tag suggestions. New Phase 1 tasks: 3.8 (tags), 3.9 (entry list), 4.10 (week summary) and 4.11 (all-entries timeline and tags UI).
+## D-27 The README wins on what and when; this file wins on how
+- The README says what users get and in which phase it ships. When another doc disagrees with it about that, the README wins and the other doc is updated.
+- This file says how things work: technical choices and detailed product rules. When another doc disagrees with this file, this file wins.
+- If the README and this file disagree, stop and ask the user. Record the answer here, and change the README only with their approval.
+
+**Why:** the README is the product's source of truth, but it stays short and doesn't spell out technical detail.
+**Consequences:** CLAUDE.md, DEVELOPMENT.md and the Claude tooling (`/sync-readme`, `/record-decision`, `/sprint-ready`, spec-reviewer and the doc-sync hook) follow this rule.
+
+## D-28 Closing a week or an Era writes its summary
+- **Weeks (Phase 3):** closing a week (`POST /weekly-logs/{id}/close`) writes its AI summary. There is no automatic closing and no "close all weeks" action. A week the user never closes has no summary, and that trade-off is accepted.
+- **Wrap up card:** at the top of the feed, it offers the most recent finished week (its Sunday has passed in the user's timezone) that has entries and is still open. That is usually last week; after a break, it's the last week the user wrote in. One tap closes it and shows its summary. The card also offers Eras whose end date has passed but that aren't closed.
+- **Gentle reminder:** when three or more finished weeks are still open, a small note appears under the card, at most once a week. It can be dismissed, and has its own switch.
+- **Eras:** closing an Era (`POST /eras/{id}/close`) first shows how many of its weeks are still open, then closes them too. Their summaries are written in the background within the daily AI limit, and the Era summary is written from all of them. Closing sets the Era's end date to the end of its latest week if it has none, so no new weeks join it (D-22). A week later backdated into its dates still joins and makes the Era summary stale. `POST /eras/{id}/reopen` reopens it.
+- Era summaries, search by feeling (D-29) and Phase 6 insights use closed weeks only.
+
+**Why:** closing a week is a small, satisfying ritual, and the AI cost follows what users choose to do. The card makes it one tap at a natural moment, without streaks or guilt. Closing an Era together with its weeks saves closing 150 weeks one by one.
+**Consequences:** Phase 1 keeps close and reopen for weeks as they are. Task 6.13 builds Era closing (`eras.is_closed`), and task 6.16 the card and the reminder. Automatic and bulk closing are listed in PRD §6 as not planned.
+
+## D-29 Search by word and by feeling
+- **Word search (Phase 3):** Postgres full-text search over each entry's title and `content_text` (which includes page text the user has used). Sealed entries never match (D-10). `POST /search/words` returns `PageResponse<EntrySummary>`.
+- **Search by feeling (Phase 3):** "when did I last feel like this?" over the summaries of closed weeks (D-28), with `POST /search/feeling`.
+- Search terms go in the request body, never in the URL, and are never logged, because they are as private as entries.
+
+**Why:** the README promises page text "you can search". "Insights" is the Phase 6 name for cards, so the Phase 3 search is called search by feeling.
 
 ---
 
 ## Open questions
 
-Decide each one before the phase that needs it, then turn it into a D-entry.
+Decide each one before the sprint that needs it, then record it with `/record-decision`: as a new entry, or as an update to the entry it changes.
 
 | # | Question | Needed by | Default if nobody decides |
 |---|---|---|---|
-| Q1 | Should a new week join the Eras whose dates contain it automatically? | Sprint 3 | No: users assign eras manually |
-| Q2 | Auth details: JWT in an httpOnly cookie or an `Authorization` header; expiry and refresh; Argon2id or BCrypt; email verification; password reset; login rate limiting | Sprint 5 | — |
-| Q3 | Account deletion and data export (privacy obligations) | Sprint 5 | — |
-| Q4 | PDF export: which library, and in Phase 2 or Phase 4? | Sprint 5 | — |
-| Q5 | Render's free tier sleeps and takes about a minute to wake; is that acceptable against the "loads in 2 seconds" goal? | Sprint 5 | — |
+| Q2 | Auth details: JWT in an httpOnly cookie or an `Authorization` header; expiry and refresh; Argon2id or BCrypt; email verification; password reset; login rate limiting; which email service sends verification, reset and unlock emails | Sprint 5 | — |
+| Q3 | Account deletion and data export (privacy obligations) | Sprint 5 | Export includes sealed entries only as locked placeholders (memory date and unlock date). Deleting an account first says how many sealed entries will be lost unseen |
+| Q4 | PDF export of a week (Phase 2): which library? | Sprint 5 | — |
+| Q5 | Render's free tier sleeps and takes about a minute to wake. Is that acceptable against the "loads in 2 seconds" goal? While it sleeps, scheduled jobs (unlock emails, sweeps) don't run, and `@Async` work is lost on a restart | Sprint 5 | Database rows are the queue (due, pending and stale rows). A sweep resumes them, started by an outside scheduler such as a GitHub Actions cron, and every job is safe to repeat |
 | Q6 | AI chat model, embedding provider and dimension; consent and retention wording for sending entries to an AI provider | Sprint 6 | — |
 | Q7 | Voice-to-text: Chrome's Web Speech API sends audio to Google. Acceptable, or transcribe on the server? | Sprint 7 | — |
 | Q8 | Group shape: one group per occasion (a trip), or one long-lived friend group that holds several trips? | Sprint 8 | One group per occasion |
-| Q9 | Shared story and consent: what each member agrees to before their contributions reach an AI provider, and what happens to a stored story when someone withdraws or leaves (see also Q6) | Sprint 8 (8b) | Opt-in per member per group; the stored story is deleted when anyone withdraws, opts out or leaves, and can be rebuilt |
-| Q10 | Trips shorter than a week: an Era holds whole weeks (Q1), so a weekend trip adds its entire week to the Trip Era (the week stays in its other Eras too, D-22). Accept that, or label individual entries with the trip instead? | Sprint 8 | Accept whole weeks |
-| Q11 | Invites and roles: expiring link only, or also email or username invites? Can any member invite, or only the owner? | Sprint 8 | The owner creates expiring links only |
+| Q9 | Shared story and consent: what each member agrees to before their contributions reach an AI provider, and what happens to a stored story when someone withdraws or leaves (see also Q6) | Sprint 8 (8b) | Opt-in per member per group, on top of each member's own AI consent. The stored story is deleted when anyone withdraws, opts out or leaves, and can be rebuilt |
+| Q10 | Trips shorter than a week: an Era holds whole weeks (D-22), so a weekend trip adds its entire week to the Trip Era (the week stays in its other Eras too). Accept that, or label individual entries with the trip instead? | Sprint 8 | Accept whole weeks |
+| Q11 | Invites and roles: expiring link only, or also email or username invites? Can any member invite, or only the owner? How big can a group be, and who owns it when its owner deletes their account? | Sprint 8 | The owner creates expiring links only; at most 12 members; ownership passes to the longest-standing member |
 | Q12 | Handwriting recognition: which approach (a multimodal AI model, a dedicated handwriting service or on-device), which languages, the cost per page and any daily limit, and the consent and retention wording for sending page images to a provider (see Q6). The consent record itself is covered by D-21 | Sprint 6 (6c) | No provider chosen: pages stay photos and "Read this page" is hidden |
 | Q13 | Notebook import: should Phase 4 add bulk import of a whole notebook (many pages at once, one entry per page or per day, a review queue), or only single and multi-page entries? | Sprint 7 | Single and multi-page entries only |
-| Q14 | Help me think timing: how long a pause before the button appears, and whether the nudge is on by default | Sprint 6 | 10 seconds, on by default. The user can change the delay or turn the nudge off, and the AI is never called until the button is tapped |
-| Q15 | Paid features: which are paid (the writing coach? proactive insights?), how we learn a user's plan, and whether any have a free allowance | Sprint 9 | Everything is free and sits behind toggles; `FeatureGate` reads configuration |
+| Q14 | Help me think timing: how long a pause before the button appears, and whether the pause prompt is on by default | Sprint 6 | 10 seconds, on by default. The user can change the delay or turn the prompt off, and the AI is never called until the button is tapped |
+| Q15 | Paid features: which are paid (the writing coach? proactive insights?), how we learn a user's plan, and whether any have a free allowance | Sprint 9 | Everything is free and sits behind switches; `FeatureGate` reads configuration |
 | Q16 | Proactive insights: how often they appear, where (inbox only, or banners and notifications), and which kinds are on by default | Sprint 9 | Opt-in, inbox only, at most 3 a week |
 | Q17 | Withdrawing AI consent: does it also delete the summaries, profiles and cards already made? | Sprint 6 | Withdrawing stops all AI use at once. Existing results stay until the user chooses "delete AI-generated content", which removes everything derived |
 | Q18 | Overlapping Eras in the feed: a week can be in several Eras (D-22) but is listed once. Which Era is it grouped under, and are the others shown as chips? | Sprint 3 | The Era that started most recently, with the others as chips on the week |
+| Q19 | Share-link privacy: shared pages are built by `EntryMapper`, which includes private tags; a week link also shows entries added to that week later; and photos can carry GPS data | Sprint 5 | Shared and group views leave out tags and template; a week link shows only the entries it had when it was made; the server strips GPS data from photos on upload, keeping the capture date |
+| Q20 | Storage and backups: R2's free 10 GB holds about 4,000 phone photos across all users, and nothing restores data after a mistake or an outage | Sprint 5 | A per-user storage quota with a clear message; Neon point-in-time restore plus a scheduled copy of the bucket, with a restore tested before launch |
+| Q21 | Devices and sessions: two devices editing one entry (D-23 says last save wins), drafts left in local storage on a shared device, and CSRF if the token is in a cookie (Q2) | Sprint 5 | Optimistic locking on entries (`409` when stale); drafts kept per user and cleared on logout; a CSRF token if cookies are used |
+| Q22 | Encryption: entries aren't end-to-end encrypted, because the AI and share links need the server to read them. How do we say so? | Sprint 5 | Encrypted at rest by the providers, and said plainly in the privacy policy |
+| Q23 | AI summary lifecycle: adding an entry to, or moving one into, a week that already has a summary doesn't mark it stale (D-21 covers edit, seal, unlock and delete). Summaries and profiles also have no status for "not yet", "failed" or "nothing to say" | Sprint 6 | Adding or moving an entry marks that week's summary and its Eras' summaries stale. Each summary and profile has a `status`: `PENDING`, `READY`, `FAILED` or `SKIPPED` |
+| Q24 | Voice notes: the biographer and search can't read them. Transcribe them? | Sprint 7 (with Q7) | Optional and on tap, through the same `TranscriptionProvider` as pages |
+| Q25 | Writing time and mood: patterns such as "flat on Sunday evenings" need when an entry was really written (`created_at` is wrong for backdated and offline entries) and a mood for each entry | Sprint 7 (mood: Sprint 9) | Offline entries send a client `capturedAt`; Phase 6 adds a per-entry mood as derived AI data, with the usual seal and staleness rules |
+| Q26 | Group Loot Drop dates: if the owner moves the date later, entries added earlier still unlock on the old date; an entry already sealed for longer opens later; and withdrawing doesn't unseal | Sprint 8 | Group views hide content until the later of the entry's and the group's dates; the withdraw dialog says the entry stays sealed |

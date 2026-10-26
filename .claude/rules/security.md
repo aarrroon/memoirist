@@ -18,7 +18,8 @@ paths:
 
 ## Loot Drops (strict seal)
 "Sealed" means `unlockDate != null && unlockDate.isAfter(Instant.now(clock))`.
-- **Redaction:** responses go through `EntryMapper`. It nulls `title`, `contentJson`, `contentText` and `templateId`, empties `media` and `tags`, and sets `isLocked`. In `EntrySummary` it also nulls `previewLine` and the media counts.
+- **Redaction:** responses go through `EntryMapper`. It nulls `title`, `contentJson`, `contentText` and `templateId`, empties `media` and `tags`, and sets `isLocked`. In `EntrySummary` it also nulls `previewLine`, `firstMediaKind` and the media counts.
+- **Counts and filters:** sealed entries never appear in tag filters, tag counts, search results or any other count or filter; leave them out in the query itself (D-10). Unfiltered lists still show them as locked rows.
 - **Writes:** reject changes to title, content, date, template, tags and media with `EntrySealedException` (`409`). The unlock date may only move later. Delete is allowed.
 - **Never** presign media of a sealed entry, log its content, include it in AI input or summaries (Phase 3), or expose it through share links (Phase 2).
 
@@ -28,7 +29,7 @@ paths:
 
 ## Secrets and logs
 - Never read, print or commit `.env`. Read secrets from configuration and environment variables. New variables go in `.env.example` with a placeholder value.
-- Never log entry content, presigned URLs, tokens or passwords. Log IDs instead.
+- Never log entry content, search terms, presigned URLs, tokens or passwords. Log IDs instead.
 - Keep presigned URLs short-lived (60 minutes) and generate them only for media the caller may see.
 
 ## Network

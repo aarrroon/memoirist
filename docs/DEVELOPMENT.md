@@ -90,27 +90,16 @@ The full plan-to-code workflow, and how the docs stay in sync, is in [WORKFLOW.m
 - **Pick up the next task** from [SPRINT_PLAN.md](SPRINT_PLAN.md). Each one lists what to read and how to know it's done.
 - **Database changes** are always a new Flyway migration in `backend/src/main/resources/db/migration/`. Never edit one that's committed (a hook blocks it). Update [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) in the same change.
 - **API changes** start in [API_CONTRACT.md](API_CONTRACT.md); then run `npm run gen:api` so the frontend types follow.
-- **Decisions** go in [DECISIONS.md](DECISIONS.md), which wins when docs disagree.
+- **Which doc wins:** the [README](../README.md) on what users get and in which phase; [DECISIONS.md](DECISIONS.md) on how it works (D-27). Record decisions with `/record-decision`.
 - **Screens and end-to-end tests** follow [USER_FLOWS.md](USER_FLOWS.md); design work lives in [design/](design/).
 - **Secrets** stay in `.env`. New variables go in `.env.example` with a placeholder.
 - **Commits:** one per task, message `Sprint <id>: <summary>`.
 
 ## 6. Working with Claude Code
 
-The repo is set up so Claude follows the project's rules automatically:
-
-| What | Where | Use |
-|---|---|---|
-| Project instructions | [CLAUDE.md](../CLAUDE.md) | Loaded every session |
-| Rules for backend, API, frontend, security | `.claude/rules/` | Load when matching files are touched |
-| `/implement-task [id]` | `.claude/skills/` | Plan, build, test and tick one sprint task |
-| `/sprint-ready [n]` | | Check a sprint is ready before starting it |
-| `/new-migration`, `/new-endpoint` | | Recipes for schema and API changes |
-| `/sync-docs` | | Find drift between code and docs |
-| `/record-decision` | | Record a settled question in DECISIONS.md |
-| `spec-reviewer` subagent | `.claude/agents/` | "Have spec-reviewer check this task" |
-| Hooks | `.claude/settings.json` | Block edits to committed migrations; remind to sync docs |
-| context7 | `.mcp.json` | Current library docs |
+The repo is set up so Claude follows the project's rules automatically.
+- [CURRENT_SKILLS.md](CURRENT_SKILLS.md) lists every skill, subagent, hook, rule and prompt, and what Claude reads at the start of every session.
+- [WORKFLOW.md](WORKFLOW.md) says which tool to use when, with text to copy.
 
 A typical task: start a fresh session, run `/implement-task`, approve the plan, let it build and test, ask spec-reviewer to check, then commit.
 

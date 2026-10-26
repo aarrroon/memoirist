@@ -2,7 +2,7 @@
 
 > **Draft, written before any design exists.** It describes what the user does and what happens, step by step, including when things go wrong. It deliberately says nothing about look and feel: screen names, button labels and wording are placeholders in *italics* until `docs/design/DESIGN.md` exists.
 >
-> Sources: [PRD.md](PRD.md), [API_CONTRACT.md](API_CONTRACT.md), [DECISIONS.md](DECISIONS.md). If this file disagrees with them, they win. Gaps found while writing are listed at the end.
+> Sources: the [README](../README.md), [PRD.md](PRD.md), [API_CONTRACT.md](API_CONTRACT.md), [DECISIONS.md](DECISIONS.md). If this file disagrees with them, they win (the README on what and when, DECISIONS.md on how, D-27). Gaps found while writing are listed at the end.
 
 ## How to read this file
 - Each flow has an ID (`F-xx`). Playwright tests in task 4.12 and later are named after them, for example `f06-seal-entry.spec.ts`.
@@ -114,11 +114,11 @@ flowchart TD
 ---
 
 ## F-04 Add a paper diary page
-**Who / when:** the user writes on paper and wants a page in their timeline (D-20). Phase 1 treats a page as an ordinary photo; reading the handwriting is Phase 3 (F-23).
+**Who / when:** the user writes on paper and wants a page in their timeline (D-20). Phase 1 stores a page as a photo marked as a page; reading the handwriting is Phase 3 (F-23).
 **Starts from:** the capture view.
 
 **Happy path**
-1. The user photographs the page or picks the photo.
+1. The user photographs the page or picks the photo, and marks it as a diary page.
 2. They set the memory date to the day the page is about, which is usually in the past (→ F-05 rules).
 3. Optionally they add more pages to the same entry (up to 10) and a short caption.
 4. Save as in F-03. The entry is filed into the week of that date, so it may appear far down the feed rather than at the top.
@@ -144,6 +144,7 @@ flowchart TD
 |---|---|---|
 | Device clock or timezone says a different "today" | The app uses the user's timezone setting, not the device's | — |
 | A future date reaches the server | Field message on the date | `400 validation-failed` |
+| A date before 1900 (a typo such as 0202) | The picker doesn't offer it; if it reaches the server, a field message (D-09) | `400 validation-failed` |
 | Entry is sealed | Date can't be changed (F-07) | `409 entry-sealed` |
 
 ---
@@ -183,7 +184,7 @@ flowchart TD
 
 **Happy path**
 1. The vault card shows in its week like any other entry, with a live countdown in the user's timezone.
-2. When the unlock time passes and the user next sees the card (or refreshes), it shows the full entry again. A one-time *just unlocked* highlight is a design choice for DESIGN.md.
+2. When the unlock time passes, the entry appears in an *Opened* strip at the top of the feed until the user opens or dismisses it (`GET /entries/opened`, `POST /entries/{id}/mark-seen`, D-10). Its card in its own week shows the full entry again. How the opening looks is a design choice for DESIGN.md.
 
 **What the user can and can't do while it is sealed**
 | Action | Result | API |
@@ -198,6 +199,7 @@ flowchart TD
 | Situation | What the user sees |
 |---|---|
 | Countdown hits zero while the card is on screen | The card refreshes itself and opens |
+| It unlocks while the user is away | It waits in the Opened strip until they next open the app |
 | User changes timezone | The countdown and unlock date display in the new zone; the moment itself doesn't change |
 
 ---
@@ -206,7 +208,7 @@ flowchart TD
 **Who / when:** the main screen.
 
 **Happy path**
-1. Weeks are listed newest first, each with its date range, optional title and its entries in day order (API_CONTRACT §WeeklyLog).
+1. Above the weeks, an *Opened* strip shows any Loot Drops that have just opened (F-07). Weeks are listed newest first, each with its date range, optional title and its entries in day order (API_CONTRACT §WeeklyLog).
 2. Weeks are grouped under sticky Era headers. A week in several Eras appears once, under the Era that started most recently, with the other Eras as chips (Q18 default). Weeks in no Era sit under a neutral heading.
 3. Scrolling down loads the next page (`GET /feed?page=n`) until there are no more.
 4. Each entry card shows its title (if any), carousel (swipe, arrow keys or buttons), caption and tags. Voice notes play inline.
@@ -249,17 +251,19 @@ flowchart TD
 
 **Happy path**
 1. *Eras* lists chapters newest first. The user creates one with a title, start date, optional end date (blank = ongoing) and optional description (`POST /eras`).
-2. To put a week in Eras, the user opens the week's *Eras* picker and ticks one or more (`PUT /weekly-logs/{id}` with `eraIds`). Eras can overlap, so a trip can sit inside a longer chapter (D-22).
-3. The feed regroups that week under the right header.
+2. Every week whose dates overlap the Era joins it automatically, including weeks that already exist (D-22). The feed regroups those weeks under the right header.
+3. To adjust, the user opens a week's *Eras* picker. Eras the week joined by date are marked as automatic, and the user can tick more or untick any (`PUT /weekly-logs/{id}` with `eraIds`). Eras can overlap, so a trip can sit inside a longer chapter.
 4. Opening an Era shows its weeks (`GET /eras/{id}`).
 
 **Edge cases**
 | Situation | What the user sees | API |
 |---|---|---|
 | End date before start date | Field message | `400` |
-| More than 10 Eras on one week | The picker stops at 10 | `400` |
+| Changing an Era's dates | Weeks that now overlap join; automatic links that no longer overlap leave; weeks added or removed by hand stay as they are | `PUT /eras/{id}` |
+| Unticking an automatic Era on a week | It stays off, even if the Era's dates change later | `PUT /weekly-logs/{id}` |
+| More than 10 Eras on one week | The picker stops at 10; filing by date skips a full week | `400` |
 | Delete an Era | Confirmation says entries are kept; weeks just leave that Era | `DELETE /eras/{id}` |
-| New week falls inside an Era's dates | Not added automatically in Phase 1 (Q1 default: manual) | — |
+| A new week falls inside an Era's dates | It joins the Era automatically (D-22) | — |
 
 ---
 
@@ -275,6 +279,8 @@ flowchart TD
 | Situation | What the user sees |
 |---|---|
 | Template chosen after typing | Headings are inserted above the existing text (D-23) |
+| A prompt left empty | Its heading is removed when the entry is saved (D-06) |
+| A template entry in the timeline | Its preview skips the template headings, so entries aren't all named after the first prompt (D-24) |
 | Template edited or deleted later | Existing entries are unchanged |
 | No templates yet | *Use a template* links to creating one |
 
@@ -285,7 +291,7 @@ flowchart TD
 
 **Happy path**
 1. The user gives the week a title, for example "Grampians Trip Week" (`PUT /weekly-logs/{id}`).
-2. When the week feels done, they choose *close week* (`POST …/close`). In Phase 1 this only marks it; from Phase 3 it triggers the weekly summary (F-22).
+2. When the week feels done, they choose *close week* (`POST …/close`). In Phase 1 this only marks it. From Phase 3 it writes the weekly summary, and a *Wrap up* card at the top of the feed offers the latest finished week with one tap (D-28, F-22).
 3. A closed week can still be edited, and *reopen* undoes the close.
 
 **Edge cases**
@@ -330,7 +336,7 @@ flowchart TD
 
 **Happy path**
 1. The week summary opens (`GET /weekly-logs/{id}`): title, dates, Eras, how many entries, photos and voice notes, a few thumbnails, and the tags used that week.
-2. Below that, one **bar per entry**, in day order: its display title (title → first line of caption → *Photo* / *Voice note* / *Diary page*, D-24), the day, and small icons for photos or voice notes.
+2. Below that, one **bar per entry**, in day order: its display title (title → first line of the caption that isn't a heading → *Photo* / *Diary page* / *Voice note*, D-24), the day, and small icons for photos or voice notes.
 3. Tapping a bar opens that entry.
 4. From the summary the user can also rename, close or reopen the week and change its Eras (F-10, F-12).
 5. From Phase 3, the AI-written weekly summary appears at the top of this view (F-22).
@@ -356,7 +362,7 @@ flowchart TD
 **Edge cases**
 | Situation | What the user sees |
 |---|---|
-| A sealed entry | A row with a lock, its memory date and unlock date; no title or tags |
+| A sealed entry | A row with a lock, its memory date and unlock date; no title or tags. It is left out while a tag filter is on (D-10) |
 | No entries match a tag | *No entries with this tag yet* and a way to clear the filter |
 
 ---
@@ -377,6 +383,7 @@ flowchart TD
 | Renames to an existing name | Message suggesting the other tag | `409 conflict` |
 | More than 20 tags on one entry | The picker stops at 20 | `400` |
 | Entry is sealed | Tags hidden and can't be changed | `409 entry-sealed` |
+| Tag counts on the *Tags* screen | Never count sealed entries (D-10) | `GET /tags` |
 
 ---
 
@@ -386,17 +393,21 @@ These are kept short on purpose. Expand each one when its sprint is next, after 
 | ID | Flow | Phase | Key rules | Open questions |
 |---|---|---|---|---|
 | F-20 | Register, log in, log out | 2 | Same screens after login as Phase 1 | Q2 |
-| F-21 | Share an entry or week by link; revoke it | 2 | Sealed entries stay redacted on shared pages | Q2 |
-| F-22 | Give AI consent; *Help me think* while writing; accept suggested tags; read weekly summaries (at the top of F-15) and Era summaries; manage friend profiles | 3 | Nothing sent until a tap; never on sealed entries; two-option cards only (D-21) | Q6, Q14, Q17 |
-| F-23 | *Read this page* on a diary photo; review the transcript; use it as the caption; accept a detected date | 3 | Transcript is a suggestion; saved only through the normal edit (D-20) | Q12 |
-| F-24 | Install the app; capture offline; sync later; scan mode | 4 | Client `id`s make retries safe | Q7, Q13 |
-| F-25 | Create a trip group; invite; contribute and withdraw entries; group Loot Drop; trip Era | 5 | Contributions are links; personal endpoints never widen (D-19) | Q8–Q11 |
+| F-21 | Share an entry or week by link; revoke it | 2 | Sealed entries stay redacted on shared pages | Q2, Q19 |
+| F-22 | Give AI consent; *Help me think* while writing; accept suggested tags; close a week (often from the *Wrap up* card) and read its summary at the top of F-15; close an Era and read its summary; manage friend profiles and explore the friendship map; search by word or by feeling | 3 | Nothing sent until a tap; never on sealed entries; two-option cards only (D-21); summaries only for closed weeks and Eras (D-28) | Q6, Q14, Q17, Q23 |
+| F-23 | *Read this page* on a diary photo; review the transcript; use it as the caption; accept a detected date | 3 | Read only on a tap; the transcript is a suggestion, saved only through the normal edit (D-20) | Q12 |
+| F-24 | Install the app; capture offline; sync later; scan mode; unlock notifications | 4 | Client `id`s make retries safe | Q7, Q13, Q24, Q25 |
+| F-25 | Create a trip group, or start one from an entry; invite; contribute and withdraw entries; group Loot Drop; trip Era | 5 | Contributions are links; personal endpoints never widen (D-19) | Q8–Q11, Q26 |
 | F-26 | Insight inbox; highlight reels; writing coach | 6 | Opt-in, capped, dismissible, never chat (D-21) | Q15, Q16 |
 
 ---
 
 ## Gaps found while drafting
-All eight gaps (G-01 to G-08) were settled on 2026-10-27: G-01 to G-07 in D-23, and G-08 in D-25 (with D-24 entry titles and D-26 manual tags following from it). New gaps go here with the next number until they are recorded with `/record-decision`.
+All eight gaps (G-01 to G-08) were settled on 2026-10-27: G-01 to G-07 in D-23, and G-08 in D-25 (with D-24 entry titles and D-26 manual tags following from it).
+
+G-09 to G-13, found while syncing the docs with the README, were settled the same day: sealed entries in tag filters and counts (G-09, D-10), surfacing opened Loot Drops (G-10, D-10), previews of template entries (G-11, D-06 and D-24), sample content for building the UI (G-12, task 3.11), and the earliest memory date (G-13, D-09).
+
+New gaps go here with the next number until they are recorded with `/record-decision`.
 
 | # | Question | Needed by | Suggested default |
 |---|---|---|---|

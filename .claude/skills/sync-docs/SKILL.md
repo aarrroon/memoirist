@@ -1,6 +1,6 @@
 ---
 name: sync-docs
-description: Check that docs/API_CONTRACT.md and docs/DATABASE_SCHEMA.md still match the memoirist code, and fix drift. Use after changing endpoints, DTOs, migrations or entities, at the end of a sprint, or when asked whether the docs are up to date.
+description: Check that docs/API_CONTRACT.md and docs/DATABASE_SCHEMA.md still match the memoirist code, and fix drift. Use after changing endpoints, DTOs, migrations or entities, at the end of a sprint, or when asked whether the docs are up to date. For drift between the README and the docs, use sync-readme instead.
 ---
 
 # Sync docs with code

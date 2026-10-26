@@ -6,12 +6,12 @@
 
 | Phase | Backend | Frontend | Infrastructure |
 |---|---|---|---|
-| 1. Local MVP | Java 21, Spring Boot 4.x, Spring Web/Data JPA/Validation, Flyway, springdoc-openapi, AWS SDK v2 (S3), Actuator | React 19, Vite, TypeScript, Tailwind v4, Motion, TipTap, TanStack Query, Zustand, React Router, Embla, openapi-fetch, shadcn/ui (Radix), Sonner, dnd-kit, Vaul, react-day-picker, browser-image-compression, yet-another-react-lightbox, react-error-boundary | Docker Compose: Postgres 17 (pgvector image) and SeaweedFS |
-| 2. Cloud and auth | Spring Security (JWT), share links | Auth screens, share view | Vercel, Render, Neon (Postgres 17), Cloudflare R2, GitHub Actions |
-| 3. AI biographer | Spring AI, pgvector (HNSW), Spring events + `@Async`; one shared AI layer (D-21); a `TranscriptionProvider` for reading handwriting (6c) | Help me think, tags, Era summaries, Cast of Characters with friend profiles, friendship map, read-a-page review | AI providers (decided at Phase 3) |
-| 4. Mobile and offline | Endpoints for sync if needed | `vite-plugin-pwa`, Dexie, dictation, inline media node, zine export, scan mode | — |
-| 5. Groups and shared memories | A `group` package: membership check, invites, contributions. Reuses `EntryMapper`, the seal rules and Spring AI | Group screens, group feed, shared story | — |
-| 6. Insights and coaching | A `Retriever` over entry embeddings, scheduled and event-driven insight jobs, the writing coach | Insights inbox, highlight reels, coach card, AI switches | — |
+| 1. The core journal (local MVP) | Java 21, Spring Boot 4.x, Spring Web/Data JPA/Validation, Flyway, springdoc-openapi, AWS SDK v2 (S3), Actuator | React 19, Vite, TypeScript, Tailwind v4, Motion, TipTap, TanStack Query, Zustand, React Router, Embla, openapi-fetch, shadcn/ui (Radix), Sonner, dnd-kit, Vaul, react-day-picker, browser-image-compression, yet-another-react-lightbox, react-error-boundary | Docker Compose: Postgres 17 (pgvector image) and SeaweedFS |
+| 2. Online, with accounts | Spring Security (JWT), share links, unlock emails | Auth screens, share view | Vercel, Render, Neon (Postgres 17), Cloudflare R2, GitHub Actions |
+| 3. The AI biographer | Spring AI, pgvector (HNSW), Postgres full-text search, Spring events + `@Async`; one shared AI layer (D-21); a `TranscriptionProvider` for reading handwriting (6c) | Help me think, tag suggestions, Wrap up card, Era summaries, Cast of Characters with friend profiles, friendship map, search, read-a-page review | AI providers (decided at Phase 3) |
+| 4. On your phone | Endpoints for sync if needed | `vite-plugin-pwa`, Dexie, dictation, inline media node, zine export, scan mode, unlock notifications (web push) | — |
+| 5. Memories with friends | A `group` package: membership check, invites, contributions. Reuses `EntryMapper`, the seal rules and Spring AI | Group screens, group feed, shared story | — |
+| 6. Looking back with you | A `Retriever` over entry embeddings, scheduled and event-driven insight jobs, the writing coach | Insights inbox, highlight reels, coach card, AI switches | — |
 
 ## 1. Local development
 
@@ -47,10 +47,11 @@ com.memoirist
 ├── era/
 ├── template/
 ├── tag/           # Tag, entry tags (D-26)
-├── week/          # WeeklyLog, WeekCalendar (date → Monday in user tz), feed endpoint
-├── entry/         # Entry, EntryMapper (the ONLY Entry→DTO path), content validation + text extraction, seal rules
+├── week/          # WeeklyLog, WeeklyLogEra, WeekCalendar (date → Monday in user tz), Era filing by date (D-22), feed endpoint
+├── entry/         # Entry, EntryMapper (the ONLY Entry→DTO path), content validation + text extraction, seal rules, opened Loot Drops
 ├── media/
-└── storage/       # StorageService, StorageProperties, local bucket bootstrap
+├── storage/       # StorageService, StorageProperties, local bucket bootstrap
+└── dev/           # local-profile-only sample content (task 3.11)
 ```
 
 Each feature folder contains:
@@ -64,7 +65,7 @@ Each feature folder contains:
 ### Profiles
 | Profile | Used for | Notable settings |
 |---|---|---|
-| `local` | Running on your machine against Docker Compose | Imports `../.env`; Flyway locations `db/migration` + `db/seed-local`; dev-header user provider; creates the bucket at startup if missing |
+| `local` | Running on your machine against Docker Compose | Imports `../.env`; Flyway locations `db/migration` + `db/seed-local`; dev-header user provider; creates the bucket at startup if missing; optional sample content (task 3.11) |
 | `test` | Testcontainers integration tests | Same Flyway locations as `local`; dev-header provider |
 | `prod` | Phase 2 deployment | Flyway `db/migration` only; JWT provider; R2 settings from the environment |
 
@@ -84,19 +85,21 @@ Each feature folder contains:
 - **Multipart limits:** `spring.servlet.multipart.max-file-size=25MB`, `max-request-size=30MB`. Spring's default of 1 MB would reject phone photos.
 
 ### Entries, content and Loot Drops
-- **Content:** `EntryContentValidator` checks the TipTap JSON against an allow-list and the 200 KB cap. `ContentTextExtractor` walks the JSON and produces `content_text`.
+- **Content:** `EntryContentValidator` checks the TipTap JSON against an allow-list and the 200 KB cap. `ContentTextExtractor` walks the JSON and produces `content_text` and `preview_line` (the first non-empty line that isn't a heading, or the first heading if there's nothing else, D-24).
   - Allowed nodes: `doc`, `paragraph`, `text`, `heading` (levels 1–3), `bulletList`, `orderedList`, `listItem`, `blockquote`, `hardBreak`, `horizontalRule`.
   - Allowed marks: `bold`, `italic`, `strike`, `code`, `link` (protocols `http`, `https`, `mailto`).
-- **Redaction:** `EntryMapper` is the only place an `Entry` becomes a DTO, both the full `Entry` (`toResponse(entry, now)`) and the list row `EntrySummary` (`toSummary(entry, now)`). If `unlockDate` is after `now`, it nulls `title`, `contentJson`, `contentText`, `templateId`, `previewLine` and the media counts, empties `media` and `tags`, and sets `isLocked = true`. Feed, week detail, create, update, seal, share links (Phase 2) and AI (Phase 3) all go through it.
-- **Seal guard:** `EntryService` rejects edits to content, date, template and media on sealed entries with `409`. The unlock date may only move later.
-- **Unlock notifications (future):** `unlock_notified` plus a partial index lets a `@Scheduled` job find newly unlocked entries cheaply.
+- **Redaction:** `EntryMapper` is the only place an `Entry` becomes a DTO, both the full `Entry` (`toResponse(entry, now)`) and the list row `EntrySummary` (`toSummary(entry, now)`). If `unlockDate` is after `now`, it nulls `title`, `contentJson`, `contentText`, `templateId`, `previewLine`, `firstMediaKind` and the media counts, empties `media` and `tags`, and sets `isLocked = true`. Feed, week detail, create, update, seal, share links (Phase 2) and group views (Phase 5) all go through it. AI input doesn't: it comes only from `AiContentSource`, which skips sealed entries (D-21).
+- **Counts and filters:** queries that count or filter by content (tag filters, tag counts, search, people stats) leave sealed entries out in the query itself (D-10).
+- **Seal guard:** `EntryService` rejects edits to title, content, date, template, tags and media on sealed entries with `409`. The unlock date may only move later.
+- **Opened Loot Drops (D-10):** sealing clears `unlock_seen_at`, and `GET /entries/opened` finds unlocked, unseen entries through a partial index. `unlock_notified` is a separate flag for the background unlock job (unlock emails from Phase 2, refreshing AI results from Phase 3), which has its own partial index.
 
 ### Weeks and the feed
 - **Creating an entry:**
-  1. Resolve the memory date (default: today in the user's zone; reject future dates).
+  1. Resolve the memory date (default: today in the user's zone; reject future dates and dates before 1900-01-01).
   2. Compute its Monday.
-  3. `INSERT … ON CONFLICT (user_id, start_date) DO NOTHING`, then select the week.
+  3. `INSERT … ON CONFLICT (user_id, start_date) DO NOTHING`, then select the week. If the week is new, link it to every Era of the user whose dates overlap it (`source = AUTO`), stopping at 10 (D-22).
   4. Insert the entry.
+- **Era dates change** (create or update): recompute that Era's automatic links. Add weeks that overlap it unless they are in `weekly_log_era_exclusions` or already in 10 Eras, and remove `AUTO` links that no longer overlap. Links added by hand are never touched. Removing an Era from a week by hand writes an exclusion; adding it back deletes it.
 - **Feed:** `GET /feed` loads a page of non-empty weeks (newest first), then their entries in one query, then their media in batched queries (`@BatchSize(50)` / `IN (…)`). Two collections are never fetch-joined at once (avoids `MultipleBagFetchException` and N+1 queries). A week's Eras (a join table, D-22) come from one more batched query.
 
 ### Storage
@@ -119,7 +122,7 @@ Each feature folder contains:
 src/
 ├── api/          # schema.d.ts (generated — never hand-edit), client.ts (openapi-fetch), queryKeys.ts
 ├── features/
-│   ├── feed/     # FeedPage, WeekSection, sticky era headers
+│   ├── feed/     # FeedPage, WeekSection, sticky era headers, OpenedStrip (D-10)
 │   ├── week/     # WeekSummaryPage with one bar per entry (D-25)
 │   ├── timeline/ # TimelinePage: every entry, one row each, tag filter (D-25)
 │   ├── entry/    # EntryCard, MediaCarousel, CaptureModal, SealDialog, SealedCard, VoiceRecorder, displayTitle()
@@ -141,7 +144,7 @@ src/
   - TanStack Query owns all server data. `staleTime` stays below the 60-minute presign TTL (for example, 30 minutes), and queries refetch on window focus.
 - **State:** Zustand holds UI state only.
 - **Time:** every timestamp shown and every "today" is computed in the user's timezone from `GET /users/me`, using `@date-fns/tz`.
-- **Editor:** TipTap with StarterKit plus Link. Its extensions must match the backend allow-list. Read-only captions are rendered from JSON (TipTap's static renderer or a small JSON→React renderer), never through `dangerouslySetInnerHTML`.
+- **Editor:** TipTap with StarterKit plus Link. Its extensions must match the backend allow-list. Choosing a template inserts its headings above any existing text, and headings left empty are removed on save (D-06). Read-only captions are rendered from JSON (TipTap's static renderer or a small JSON→React renderer), never through `dangerouslySetInnerHTML`.
 - **UI building blocks (D-13):**
   - Dialogs, menus, popovers and tabs come from shadcn/ui (Radix underneath), so focus handling and keyboard support are built in. They live in `components/ui/` and are restyled to DESIGN.md.
   - Toasts use Sonner (saved, upload failed, sealed). Dates use react-day-picker with future days disabled where D-09 requires.
@@ -150,7 +153,7 @@ src/
 - **Media:**
   - An Embla carousel shows images and an audio player in `displayOrder`. Tapping a photo opens yet-another-react-lightbox (full screen, pinch-zoom).
   - In capture, the staging strip is reordered with dnd-kit (pointer, touch and keyboard).
-  - Before upload, `lib/images.ts` compresses photos to roughly 2–3 MB with browser-image-compression. Page scans (D-20) use a gentler setting so handwriting stays readable. Audio is uploaded as recorded.
+  - Before upload, `lib/images.ts` compresses photos to roughly 2–3 MB with browser-image-compression. Photos marked as diary pages (`purpose = PAGE_SCAN`, D-20) use a gentler setting so handwriting stays readable. Audio is uploaded as recorded.
   - Voice notes use `MediaRecorder` with the first supported type of `audio/webm;codecs=opus` or `audio/mp4`.
 - **Capture flow:**
   1. `POST /entries` with a client UUID.
@@ -182,10 +185,12 @@ src/
 - **Media (R2):** a private bucket; credentials come from Render environment variables.
 - **CI (GitHub Actions):** backend tests (Testcontainers on `ubuntu-latest`), plus frontend lint, typecheck, unit tests and build.
 
-## 6. Phase 3, 4 and 5 notes
+## 6. Notes for Phases 3 to 6
 - **Phase 3:**
   - Spring AI (the Boot 4 line). The provider and the `vector(N)` dimension are decided first (D-18).
-  - Closing a week publishes `WeeklyLogClosedEvent`. An `@Async` listener builds the summary and embedding. Sealed entries are excluded.
+  - Closing a week publishes `WeeklyLogClosedEvent`, the only trigger for a weekly summary (D-28). An `@Async` listener builds the summary and embedding. Sealed entries are excluded.
+  - **Closing an Era (D-28):** `POST /eras/{id}/close` closes the Era's open weeks (each publishes `WeeklyLogClosedEvent`) and marks the Era closed. The Era summary job runs once those week summaries are done, and builds from them. `GET /wrap-up` backs the Wrap up card and the gentle reminder.
+  - **Search (D-29):** word search uses a GIN full-text index over title and `content_text`, filtered in the query to the caller's unsealed entries. Search by feeling compares an embedding of the query with the `ai_summaries` embeddings of closed weeks. Search terms travel in request bodies and are never logged.
   - **Paper diaries (D-20, tasks 6.6–6.8):**
     - **Provider port:** `TranscriptionProvider` takes image bytes and a content type and returns text, a language, an optional detected date and an optional confidence. The adapter is chosen by configuration, like `StorageProperties`. `local` and `test` use a fake adapter, so tests never touch the network. A real adapter can wrap Spring AI's multimodal support, a dedicated handwriting service or an on-device engine. Swapping one changes no table or endpoint.
     - **Flow:** `POST /entries/{id}/transcriptions` inserts `PENDING` rows and publishes an event after commit. An `@Async` listener re-checks that the entry isn't sealed, loads the image through `StorageService`, downscales it, strips location metadata, calls the provider, and saves `READY` or `FAILED` in its own transaction. A sweep marks rows stuck in `PENDING` as `FAILED` (`timeout`). The client polls `GET /entries/{id}/transcriptions` while any row is pending.
@@ -206,18 +211,21 @@ src/
   - `vite-plugin-pwa`.
   - Dexie stores pending creates keyed by client UUID, and a sync queue replays them.
   - A TipTap inline image node stores `mediaId` and resolves the URL at render time.
+  - **Unlock notifications (D-10, task 7.7):** opt-in web push from the installed PWA when a Loot Drop opens.
   - **Scan mode (D-20, task 7.6):** a camera screen for diary pages in `features/scan/` (edge detection, crop, straighten, brighten) with a file-picker fallback. Pages upload with `purpose = PAGE_SCAN` and ride the offline queue. The image-processing approach is chosen when the task starts, and a new dependency needs approval first.
 - **Phase 5 (D-19):**
   - A new `group` package follows the same controller, service and repository split. No new libraries are expected: invite tokens reuse the share-link pattern, and the shared story reuses Spring AI.
   - **Access rule:** personal endpoints stay owner-only. Every `/groups/**` endpoint starts with one membership check (`404` for a non-member, `403` for a member without the role). Nothing else decides who may see a contribution.
   - **Contributions are links** (`group_entries`), so an author's edits show up in the group and withdrawing is deleting the link.
+  - **Starting from an entry (D-19):** `POST /groups` with an `entryId` creates the group and its first contribution in one transaction.
+  - **Trip Eras** fill by the trip dates like any other Era (D-22).
   - **Output:** a contribution becomes a DTO only through `EntryMapper`, and media is presigned only after the membership check. A sealed contribution is therefore redacted without any group-specific code.
   - **Group Loot Drop:** contributing to a group with a future `unlock_date` seals the entry through the existing seal path, so there is still one definition of "sealed".
   - **Leaving and deleting:** deleting a membership row deletes that member's `group_entries` rows through the composite foreign key. A service step also unlinks the member's trip Era and deletes the group's stored story.
   - **Shared story:** an `@Async` job like the weekly summary. Its input excludes sealed entries and members without `ai_consent`.
 - **Phase 6 (D-21):**
   - **Retrieval:** a `Retriever` searches the caller's own entry chunks and summaries by vector similarity. It never returns sealed or stale material, and it returns the sources it used. A card must cite at least one source or it is dropped. Filtering one user's rows out of an HNSW index can return too few results when many users share a table, so task 9.1 checks the pinned pgvector version's iterative index scans (or partitioning by user) with a multi-user test.
-  - **Triggers:** a weekly job in each user's timezone, an Era ending, and a saved entry that closely matches earlier moments. All of them respect the user's weekly cap and each card's `dedupe_key`.
+  - **Triggers:** a weekly job in each user's timezone, an Era being closed, and a saved entry that closely matches earlier moments. All of them respect the user's weekly cap and each card's `dedupe_key`.
   - **Highlight reels** store entry IDs only and are built through `EntryMapper` when read, so an entry sealed later drops out.
   - **Writing coach:** a draft is sent only while its switch is on. A cheap pre-check decides whether to call the model at all, and most calls return nothing.
   - **Plans:** `FeatureGate` is the only place that knows about plans (Q15).

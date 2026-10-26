@@ -6,7 +6,7 @@
 
 | Unit | Example | Where it's defined | Sessions |
 |---|---|---|---|
-| **Phase** | Phase 1: Local MVP | [PRD.md §5](PRD.md) | Many |
+| **Phase** | Phase 1: The core journal | [README Timeline](../README.md#timeline) and [PRD.md §5](PRD.md) | Many |
 | **Feature** | `P1-04` Loot Drops | `docs/features/` (brief per feature) | A few |
 | **Task** | `3.5` Entries API | [SPRINT_PLAN.md](SPRINT_PLAN.md) | One |
 
@@ -73,6 +73,7 @@ If you worked on a branch, merge it into `main` now.
 | Claude asks a question you've now answered | `/record-decision "<the answer>"` |
 | You're unsure how a library works today | "Use context7 to check …" |
 | The docs and code disagree | `/sync-docs`, then answer its questions |
+| You edited the README | `/sync-readme`, then answer its questions |
 | The session got long or confused | `/clear`, then restart the current step |
 | You want to go back to what you had | Ask Claude to rewind, or use git to restore the last commit |
 
@@ -82,13 +83,14 @@ If you worked on a branch, merge it into `main` now.
 - **Make it prove things.** Every "Done when" item is something Claude can run. Ask it to quote the test output.
 - **Use the right tool.** Subagents for independent review, context7 for current library docs, skills for recipes you repeat. Pasted the same instructions twice? Turn them into a skill.
 - **Run features in parallel only when they touch different files.** Check with `/parallel-check P1-04 P1-06`: it finds overlaps, reserves a migration number for each feature, gives a merge order, and writes a kickoff note to paste into each worktree session.
-- **Ask, don't let it guess.** When docs disagree or a question is open, Claude should stop and ask. Answer with `/record-decision`.
+- **Ask, don't let it guess.** When docs disagree or a question is open, Claude should stop and ask, as a short list of questions with a recommended answer for each. Answer with `/record-decision`.
+- **Check what Claude knows.** `/context` shows what's loaded, `/memory` opens CLAUDE.md and Claude's auto memory, and `/doctor prompt-audit` finds outdated or conflicting instructions. [CURRENT_SKILLS.md](CURRENT_SKILLS.md) lists what loads in every session.
 
 ## 3. Documents that evolve across phases
 
 There is **one living file per topic**, not a copy per phase.
 - Each spec has a section per phase, with a status: **Draft** (a later phase, not reviewed yet), **Planned** (reviewed and ready to build), or **Built** (matches the code).
-- **Earlier phases stay open.** A later phase never edits old SQL or rewrites old decisions. It adds a new migration and a new D-entry, and updates the living doc in place. D-22 (overlapping Eras) and D-26 (tags moved into Phase 1) are examples.
+- **Earlier phases stay open.** A later phase never edits committed SQL: it adds a new migration. When a decision changes, its D-entry is updated in place with an **Updated** date, and a new topic gets a new D-entry (D-22, overlapping Eras, and D-26, tags moved into Phase 1, are examples). Git keeps the old wording.
 - **History comes from git, not duplicate files.** Tag each finished phase:
   ```bash
   git tag phase-1-done
@@ -101,7 +103,8 @@ There is **one living file per topic**, not a copy per phase.
 ### Every fact has one home
 | Fact | Lives in | Everywhere else |
 |---|---|---|
-| Why something is the way it is | [DECISIONS.md](DECISIONS.md), which wins over every other doc | Links to the D-entry |
+| What users get, and in which phase | The project [README](../README.md), which wins on what and when (D-27) | PRD and SPRINT_PLAN follow it |
+| How and why something works | [DECISIONS.md](DECISIONS.md), which wins on how (D-27) | Links to the D-entry |
 | Tables and columns | [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md), then the migrations once built | Links |
 | Endpoints and shapes | [API_CONTRACT.md](API_CONTRACT.md), then `/v3/api-docs` once built | Links; frontend types are generated, never hand-written |
 | What the user does | [USER_FLOWS.md](USER_FLOWS.md) | Links to `F-xx` |
@@ -116,7 +119,9 @@ There is **one living file per topic**, not a copy per phase.
 |---|---|
 | `/record-decision` | A settled question not reflected in every doc that assumed otherwise |
 | `/sync-docs` | Drift between the code and the API contract or schema |
-| Stop hook | Code changed but the specs didn't |
+| `/sync-readme` | The README promising something the docs don't plan, or the reverse |
+| Stop hook | Code changed but its spec didn't; the README changed but the product docs didn't; Current focus fell behind |
+| SessionStart hook | A new session not knowing the next task or what blocks it |
 | `spec-reviewer` | A change that contradicts the specs or the security rules |
 | `/sprint-ready` | Missing sections, open questions or conflicts before you start |
 | `/parallel-check` | Two features that would edit the same files or claim the same migration number |
@@ -131,6 +136,7 @@ There is **one living file per topic**, not a copy per phase.
 | `F-xx` | User flow (also names its Playwright test) | USER_FLOWS.md |
 | `Pn-xx` | Feature | docs/features/ |
 | `n.n` | Sprint task | SPRINT_PLAN.md |
+| `R-xx` | Recommendation from the feature review | product/FEATURE_REVIEW.md |
 
 ## 5. Commits and milestones
 - Spec changes: `Spec P1-04: …`

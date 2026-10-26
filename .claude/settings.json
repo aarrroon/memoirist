@@ -12,7 +12,10 @@
       "Bash(docker compose ps*)",
       "Bash(docker compose logs*)",
       "Bash(docker compose stop*)",
-      "Bash(docker compose restart*)"
+      "Bash(docker compose restart*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)"
     ],
     "ask": [
       "Bash(docker compose down*)",
@@ -30,6 +33,17 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-context.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write",

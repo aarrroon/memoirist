@@ -47,6 +47,7 @@ Work through these steps in order. The HTTP rules are in `.claude/rules/api.md` 
    | Another user's resource (send a different `X-Dev-User-Id`) | 404 |
    | Referenced ID owned by another user | 404 |
    | Entry or media on a sealed entry (where relevant) | 409 `entry-sealed`, and nothing leaked in any response |
+   | A list, count, filter or search that could include a sealed entry (where relevant) | The sealed entry is left out of filtered results and counts (D-10) |
    | Create replay with the same `id` (where relevant) | 200 |
 
 8. **Verify and sync.**

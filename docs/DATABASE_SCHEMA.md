@@ -10,7 +10,7 @@
 - **Naming:** tables are plural snake_case. Constraints are named `uq_<table>_<cols>`, `chk_<table>_<rule>` and `idx_<table>_<cols>`.
 - **Foreign keys:** every foreign key states its `ON DELETE` behaviour.
 - **No URLs:** the database never stores a URL or storage host, only object keys.
-- **Ownership:** every user-owned table has `user_id` directly, except tables that hang off another owned table: `media` is owned through `entries`, `media_transcriptions` through `media`, `entry_tags` through `entries`, and `weekly_log_eras` through `weekly_logs`.
+- **Ownership:** every user-owned table has `user_id` directly, except tables that hang off another owned table: `media` is owned through `entries`, `media_transcriptions` through `media`, `entry_tags` through `entries`, and `weekly_log_eras` and `weekly_log_era_exclusions` through `weekly_logs`.
 
 ## Migration history
 
@@ -24,9 +24,10 @@
 | next | `V{n}__ai_suggestions.sql` | 3 (6a) | Draft below |
 | next | `V{n}__era_summaries.sql` | 3 (6b) | Draft below |
 | next | `V{n}__friend_profiles.sql` | 3 (6b) | Draft below |
+| next | `V{n}__entry_search.sql` | 3 (6b) | Draft below |
 | next | `V{n}__page_transcription.sql` | 3 (6c) | Draft below; the provider is decided in Q12 |
 | next | `V{n}__groups.sql` | 5 (8a) | Draft below |
-| next | `V{n}__group_story_and_cast_links.sql` | 5 (8b) | Draft below; needs the Phase 3 tables |
+| next | `V{n}__group_story.sql` | 5 (8b) | Draft below; needs the Phase 3 tables |
 | next | `V{n}__entry_embeddings.sql` | 6 | Draft below; dimension decided at Phase 3 |
 
 ---
@@ -78,15 +79,27 @@ Created automatically, one per user per Monday–Sunday week in the user's timez
 | created_at, updated_at | TIMESTAMPTZ | |
 
 ### `weekly_log_eras`
-Links a week to the Eras it belongs to. A week can be in several Eras, so chapters can overlap (D-22). A week with no rows is in no Era.
+Links a week to the Eras it belongs to. A week can be in several Eras, so chapters can overlap, and weeks join Eras by date (D-22). A week with no rows is in no Era.
 
 | Column | Type | Constraints and notes |
 |---|---|---|
 | weekly_log_id | UUID | NOT NULL → weekly_logs ON DELETE CASCADE |
 | era_id | UUID | NOT NULL → eras ON DELETE CASCADE. The Era must belong to the same user as the week (checked in the service) |
+| source | VARCHAR(10) | NOT NULL DEFAULT 'USER'. `AUTO` when the week joined by date, `USER` when it was added by hand. Changing an Era's dates only adds or removes `AUTO` links |
 | created_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() |
 
 The primary key is `(weekly_log_id, era_id)`. A week can be in at most 10 Eras (service check). Deleting an Era removes only its links.
+
+### `weekly_log_era_exclusions`
+Remembers that the user removed a week from an Era, so filing by date never adds it back (D-22). Adding the Era back by hand deletes the row.
+
+| Column | Type | Constraints and notes |
+|---|---|---|
+| weekly_log_id | UUID | NOT NULL → weekly_logs ON DELETE CASCADE |
+| era_id | UUID | NOT NULL → eras ON DELETE CASCADE |
+| created_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() |
+
+The primary key is `(weekly_log_id, era_id)`.
 
 ### `entries`
 One Instagram-style post. `user_id` is duplicated from the week so ownership checks are a single-column lookup. The service keeps it equal to the week's owner.
@@ -98,11 +111,13 @@ One Instagram-style post. `user_id` is duplicated from the week so ownership che
 | weekly_log_id | UUID | NOT NULL → weekly_logs ON DELETE CASCADE. The week containing `entry_date` |
 | template_id | UUID | NULL → templates ON DELETE SET NULL |
 | title | VARCHAR(150) | NULL. Optional title (D-24). If set, not blank |
-| entry_date | DATE | NOT NULL. Memory date; not after today in the user's zone (service check) |
+| entry_date | DATE | NOT NULL. Memory date; not after today in the user's zone (service check) and not before 1900-01-01 (CHECK, D-09) |
 | content_json | JSONB | NULL means no caption. TipTap doc; allow-listed and at most 200 KB (D-05) |
 | content_text | TEXT | NOT NULL DEFAULT ''. Plain text derived from `content_json` by the server |
+| preview_line | VARCHAR(120) | NULL. Derived by the server when content is saved: the first non-empty line that isn't a heading, or the first heading if there's nothing else (D-24) |
 | unlock_date | TIMESTAMPTZ | NULL. Sealed while `unlock_date > now()` (D-10) |
-| unlock_notified | BOOLEAN | NOT NULL DEFAULT FALSE. Hook for a future unlock-notification job |
+| unlock_notified | BOOLEAN | NOT NULL DEFAULT FALSE. Set by the background unlock job (unlock emails in Phase 2, refreshing AI results in Phase 3) |
+| unlock_seen_at | TIMESTAMPTZ | NULL. When the user saw the opened Loot Drop in the *Opened* strip; cleared whenever the entry is sealed (D-10) |
 | created_at, updated_at | TIMESTAMPTZ | |
 
 ### `media`
@@ -114,6 +129,7 @@ Carousel items (images and voice notes) belonging to an entry.
 | entry_id | UUID | NOT NULL → entries ON DELETE CASCADE. Delete the stored objects in the service *before* the cascade (TECH_STACK §2 Storage) |
 | object_key | VARCHAR(512) | NOT NULL UNIQUE. `users/{userId}/entries/{entryId}/{mediaId}.{ext}` |
 | media_type | VARCHAR(100) | NOT NULL. One of the D-17 MIME types |
+| purpose | VARCHAR(20) | NOT NULL DEFAULT 'PHOTO'. `PHOTO`, or `PAGE_SCAN` for a photo of a paper diary page, which must be an image. Checked in the service like `media_type`, so a new purpose needs no migration (D-20) |
 | display_order | INTEGER | NOT NULL, ≥ 0. UNIQUE `(entry_id, display_order)` DEFERRABLE INITIALLY DEFERRED, so a reorder can swap positions in one transaction |
 | file_size_bytes | BIGINT | NOT NULL, > 0, ≤ 25 MB (service check) |
 | uploaded_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() |
@@ -192,8 +208,18 @@ CREATE TABLE weekly_logs (
     CONSTRAINT chk_weekly_logs_seven_days CHECK (end_date = start_date + 6)
 );
 
--- A week can be in several Eras (D-22). Deleting an Era removes only its links.
+-- A week can be in several Eras and joins them by date (D-22). Deleting an Era removes only its links.
 CREATE TABLE weekly_log_eras (
+    weekly_log_id  UUID NOT NULL REFERENCES weekly_logs (id) ON DELETE CASCADE,
+    era_id         UUID NOT NULL REFERENCES eras (id) ON DELETE CASCADE,
+    source         VARCHAR(10) NOT NULL DEFAULT 'USER',  -- AUTO: joined by date; USER: added by hand
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (weekly_log_id, era_id),
+    CONSTRAINT chk_weekly_log_eras_source CHECK (source IN ('AUTO', 'USER'))
+);
+
+-- Weeks the user removed from an Era by hand, so filing by date never adds them back (D-22).
+CREATE TABLE weekly_log_era_exclusions (
     weekly_log_id  UUID NOT NULL REFERENCES weekly_logs (id) ON DELETE CASCADE,
     era_id         UUID NOT NULL REFERENCES eras (id) ON DELETE CASCADE,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -209,11 +235,14 @@ CREATE TABLE entries (
     entry_date       DATE NOT NULL,
     content_json     JSONB,
     content_text     TEXT NOT NULL DEFAULT '',
+    preview_line     VARCHAR(120),  -- derived on save: first non-heading line (D-24)
     unlock_date      TIMESTAMPTZ,
     unlock_notified  BOOLEAN NOT NULL DEFAULT FALSE,
+    unlock_seen_at   TIMESTAMPTZ,  -- the user saw it in the Opened strip; cleared on every seal (D-10)
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_entries_title CHECK (title IS NULL OR length(btrim(title)) > 0)
+    CONSTRAINT chk_entries_title CHECK (title IS NULL OR length(btrim(title)) > 0),
+    CONSTRAINT chk_entries_entry_date_min CHECK (entry_date >= DATE '1900-01-01')
 );
 
 CREATE TABLE media (
@@ -221,6 +250,7 @@ CREATE TABLE media (
     entry_id         UUID NOT NULL REFERENCES entries (id) ON DELETE CASCADE,
     object_key       VARCHAR(512) NOT NULL UNIQUE,
     media_type       VARCHAR(100) NOT NULL,
+    purpose          VARCHAR(20) NOT NULL DEFAULT 'PHOTO',  -- PHOTO or PAGE_SCAN, checked in the service (D-20)
     display_order    INTEGER NOT NULL,
     file_size_bytes  BIGINT NOT NULL,
     uploaded_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -257,11 +287,15 @@ CREATE INDEX idx_eras_user_start ON eras (user_id, start_date DESC);
 CREATE INDEX idx_templates_user ON templates (user_id);
 -- The primary key of weekly_log_eras already indexes (weekly_log_id, era_id).
 CREATE INDEX idx_weekly_log_eras_era ON weekly_log_eras (era_id);
+CREATE INDEX idx_weekly_log_era_exclusions_era ON weekly_log_era_exclusions (era_id);
 CREATE INDEX idx_entries_week_date ON entries (weekly_log_id, entry_date, created_at);
 CREATE INDEX idx_entries_user_date ON entries (user_id, entry_date DESC);
 CREATE INDEX idx_entries_template ON entries (template_id);
 CREATE INDEX idx_entries_pending_unlock ON entries (unlock_date)
     WHERE unlock_date IS NOT NULL AND unlock_notified = FALSE;
+-- Opened Loot Drops the user hasn't seen yet (D-10).
+CREATE INDEX idx_entries_opened_unseen ON entries (user_id, unlock_date)
+    WHERE unlock_date IS NOT NULL AND unlock_seen_at IS NULL;
 -- The primary key of entry_tags already indexes (entry_id, tag_id).
 CREATE INDEX idx_entry_tags_tag ON entry_tags (tag_id);
 ```
@@ -371,18 +405,12 @@ CREATE INDEX idx_friendship_edges_user_era ON friendship_edges (user_id, era_id)
 ## Phase 3 draft: paper diaries (page scans and transcription)
 Review this at the start of Sprint 6c, after open question Q12 is answered (D-20). It doesn't use the vector extension, so it can ship before or after the AI biographer migration.
 
-A photographed diary page is an ordinary `media` row and needs no schema change in Phase 1. This migration only labels a media item as a page and stores the optional result of reading it.
+A photographed diary page is an ordinary `media` row, marked by `media.purpose` from V1 (D-20). This migration only stores the optional result of reading it.
 
 `media_transcriptions` is owned through `media`, as `media` is through `entries`, so it has no `user_id`. It holds the user's private writing, so it is deleted with its media item or entry, and group endpoints (D-19) never return it.
 
 ```sql
 -- V{n}__page_transcription.sql  (Phase 3, Sprint 6c — draft)
-
--- What a media item is for. The service validates the value against its own list, as it does
--- for media_type, so a new purpose later needs no migration.
--- PHOTO is an ordinary photo. PAGE_SCAN is a photo of a paper diary page and must be an image.
-ALTER TABLE media
-    ADD COLUMN purpose VARCHAR(20) NOT NULL DEFAULT 'PHOTO';
 
 -- At most one transcription per media item. Reading a READY or FAILED page again replaces the row.
 CREATE TABLE media_transcriptions (
@@ -414,7 +442,7 @@ CREATE INDEX idx_media_transcriptions_pending ON media_transcriptions (requested
 - Because every result records its provider and model, a page can be read again with a better one without changing the schema.
 - A bulk notebook import (Q13) can add a batch table later that points at ordinary entries. No column here needs to change.
 
-## Phase 3 draft: settings, suggestions, tags, Era summaries and friend profiles
+## Phase 3 draft: settings, suggestions, tags, Era summaries, friend profiles and search
 Review this at the start of Sprint 6 (D-21). Each block below is its own migration. Everything the AI makes carries a provider and a model, and narratives carry an `is_stale` flag, so they can be rebuilt without their sources. These rows hold text derived from the user's entries, so each one is deleted with its entry, Era, character or user.
 
 ```sql
@@ -475,6 +503,10 @@ Tags (`tags`, `entry_tags`) are in V1 since D-26; Phase 3 only starts writing `s
 ```sql
 -- V{n}__era_summaries.sql  (Phase 3, task 6.13 — draft)
 
+-- Closing an Era writes its summary (D-28).
+ALTER TABLE eras
+    ADD COLUMN is_closed BOOLEAN NOT NULL DEFAULT FALSE;
+
 -- Built from the Era's weekly summaries, never from raw entries.
 CREATE TABLE era_summaries (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -506,6 +538,16 @@ ALTER TABLE characters
     ADD COLUMN profile_model         VARCHAR(100),
     ADD COLUMN profile_generated_at  TIMESTAMPTZ,
     ADD CONSTRAINT chk_characters_aliases_array CHECK (jsonb_typeof(aliases) = 'array');
+```
+
+```sql
+-- V{n}__entry_search.sql  (Phase 3, task 6.5 — draft)
+
+-- Word search over titles and captions (D-29). Queries must use the same expression and
+-- always filter to the caller's unsealed entries. Confirm the text-search configuration
+-- ('simple' here) when this migration is written.
+CREATE INDEX idx_entries_search ON entries
+    USING gin (to_tsvector('simple', coalesce(title, '') || ' ' || content_text));
 ```
 
 **Left open on purpose:**
@@ -580,7 +622,7 @@ CREATE INDEX idx_group_entries_group_user ON group_entries (group_id, user_id);
 ```
 
 ```sql
--- V{n}__group_story_and_cast_links.sql  (Phase 5b — draft; needs the Phase 3 tables)
+-- V{n}__group_story.sql  (Phase 5b — draft; needs the Phase 3 tables)
 
 -- The shared story. The service deletes the row when a contribution is withdrawn,
 -- a member opts out or a member leaves, so it never outlives the content it was built from.
@@ -590,12 +632,6 @@ CREATE TABLE group_stories (
     narrative_summary  TEXT NOT NULL,
     generated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
--- A Cast of Characters entry can point at a real group member. It exposes nothing of their journal.
-ALTER TABLE characters
-    ADD COLUMN linked_user_id UUID REFERENCES users (id) ON DELETE SET NULL;
-
-CREATE INDEX idx_characters_linked_user ON characters (linked_user_id) WHERE linked_user_id IS NOT NULL;
 ```
 
 ## Phase 6 draft: entry embeddings

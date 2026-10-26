@@ -27,9 +27,9 @@ Memoirist is being built in phases, so some of this is still on the way. The [Ti
 The AI in memoirist is a biographer, not a chatbot. It never starts a conversation, it never changes your entries on its own, and you can ignore it completely.
 
 - **Help me think.** Lost for words? After you pause, a "help me think" button appears. Tap it and you get a few quick two-choice questions, like "stress or excitement?", and suggested tags like *Work* or *Family*. One tap each. Nothing is sent anywhere until you tap the button.
-- **A summary of every week.** Your biographer writes a short account of how each week went, so you can see the story of your life taking shape.
-- **Chapter summaries.** When an Era wraps up, memoirist writes its story: what happened, what mattered and who was there.
-- **Your people, understood.** The friends and family who keep turning up in your story get their own profile: who they are to you, the moments you share and which chapters of your life they belong to. Add your own notes, rename anyone, or hide them.
+- **A summary of every week you close.** Close a week and your biographer writes a short account of how it went, so you can see the story of your life taking shape. When a new week starts, a "wrap up" card makes it one tap, and you can close an older week whenever you like to see how it went.
+- **Chapter summaries.** Wrap up an Era and memoirist writes its story: what happened, what mattered and who was there. Any weeks you hadn't closed are wrapped up with it.
+- **Your people, understood.** The friends and family who keep turning up in your story get their own profile: who they are to you, the moments you share and which chapters of your life they belong to. A friendship map shows who was around in each chapter, and who turns up together. Add your own notes, rename anyone, or hide them.
 
 The AI only runs after you've said yes, every feature has its own switch, and it never reads anything sealed as a Loot Drop.
 
@@ -74,20 +74,21 @@ Memoirist is being built in phases, in this order. Each one builds on the one be
 - Photos of paper diary pages, filed on the right day
 - Weeks and Eras, filed automatically
 - Tap a week for a quick summary of what happened, or scroll a simple timeline of every entry
-- Loot Drops, a scrollable feed and your settings
+- Loot Drops, with a heads-up when one opens, a scrollable feed and your settings
 
 ### Phase 2: Online, with accounts
 
 - Sign up and use memoirist from anywhere
 - Share an entry or a week with a link that expires
 - Export a week as a PDF, and export or delete all your data
+- An email when a Loot Drop opens
 
 ### Phase 3: The AI biographer
 
 - Help me think, and tag suggestions
-- Weekly summaries and chapter (Era) summaries
-- Profiles of the people in your story
-- Search by feeling, like "when did I last feel like this?"
+- Weekly and chapter (Era) summaries, written when you close a week or an Era
+- Profiles of the people in your story, and a map of your friendships
+- Search by word, or by feeling, like "when did I last feel like this?"
 - Turn handwriting into text
 
 ### Phase 4: On your phone
@@ -95,6 +96,7 @@ Memoirist is being built in phases, in this order. Each one builds on the one be
 - Install it like an app and write offline
 - Scan mode for diary pages
 - Talk instead of type, photos inside your writing, and a printable scrapbook
+- A notification when a Loot Drop opens
 
 ### Phase 5: Memories with friends
 

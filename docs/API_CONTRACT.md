@@ -45,7 +45,7 @@
 | `internal-error` | 500 | Anything unexpected (no stack traces in the body) |
 
 ### Pagination
-Every paged endpoint takes `?page=0&size=10` (`size` max 50) and returns:
+Every paged endpoint takes `?page=0&size=10` (`size` max 50, unless the endpoint says otherwise) and returns:
 ```json
 { "items": [ ... ], "page": 0, "size": 10, "totalItems": 42, "totalPages": 5 }
 ```
@@ -110,23 +110,27 @@ A lightweight row for lists such as the all-entries timeline (D-25). No caption,
   "previewLine": "Just arrived at the campsite.",
   "photoCount": 3,
   "voiceNoteCount": 0,
+  "firstMediaKind": "PHOTO",
   "tags": [ { "id": "12341234-1234-1234-1234-123412341234", "name": "Trips", "source": "USER" } ],
   "createdAt": "2026-10-20T03:30:00Z",
   "unlockDate": null,
   "isLocked": false
 }
 ```
-- `previewLine` is the first line of the caption, up to 120 characters, or `null` if there is no caption. The client shows `title`, else `previewLine`, else *Photo* / *Voice note* (D-24).
-- Sealed: `title`, `previewLine`, `photoCount` and `voiceNoteCount` are `null` and `tags` is empty.
+- `previewLine` is the first line of the caption that isn't a heading, up to 120 characters; the first heading if the caption has nothing else; `null` if there is no caption (D-24).
+- `firstMediaKind` is `PHOTO`, `PAGE_SCAN` or `VOICE_NOTE` for the first media item, or `null` when there is none. The client shows `title`, else `previewLine`, else *Photo* / *Diary page* / *Voice note* (D-24).
+- `photoCount` counts every image, diary pages included.
+- Sealed: `title`, `previewLine`, `photoCount`, `voiceNoteCount` and `firstMediaKind` are `null` and `tags` is empty.
 
 ### `Media`
-`fileUrl` is a presigned GET URL that is valid for 60 minutes. Its host is the storage public endpoint (SeaweedFS locally, R2 in production).
+`fileUrl` is a presigned GET URL that is valid for 60 minutes. Its host is the storage public endpoint (SeaweedFS locally, R2 in production). `purpose` is `PHOTO`, or `PAGE_SCAN` for a photo of a paper diary page (D-20).
 ```json
 {
   "id": "55554444-3333-2222-1111-000099998888",
   "entryId": "99887766-5544-3322-1100-aabbccddeeff",
   "fileUrl": "http://localhost:8333/memoirist-media/users/00000000-0000-0000-0000-000000000001/entries/99887766-5544-3322-1100-aabbccddeeff/55554444-3333-2222-1111-000099998888.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=3600&X-Amz-Signature=…",
   "mediaType": "image/jpeg",
+  "purpose": "PHOTO",
   "displayOrder": 0,
   "fileSizeBytes": 2483011,
   "uploadedAt": "2026-10-20T03:31:00Z"
@@ -134,7 +138,7 @@ A lightweight row for lists such as the all-entries timeline (D-25). No caption,
 ```
 
 ### `WeeklyLog`
-Used by the feed and by week detail. `eras` lists every Era the week is in, latest start first, so `eras[0]` is the one the feed groups it under (Q18). It is empty for a week in no Era. Entries are ordered by `entryDate`, then `createdAt`, ascending, so each week reads as that week's story.
+Used by the feed and by week detail. `eras` lists every Era the week is in, latest start first, so `eras[0]` is the one the feed groups it under (Q18). It is empty for a week in no Era. Each Era's `source` says whether the week joined it by date (`AUTO`) or by hand (`USER`) (D-22). Entries are ordered by `entryDate`, then `createdAt`, ascending, so each week reads as that week's story.
 ```json
 {
   "id": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
@@ -142,7 +146,7 @@ Used by the feed and by week detail. `eras` lists every Era the week is in, late
   "startDate": "2026-10-19",
   "endDate": "2026-10-25",
   "isClosed": false,
-  "eras": [ { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "title": "Monash Double Degree Era" } ],
+  "eras": [ { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "title": "Monash Double Degree Era", "source": "AUTO" } ],
   "entries": [ { "...": "Entry" } ]
 }
 ```
@@ -160,10 +164,10 @@ Used by the feed and by week detail. `eras` lists every Era the week is in, late
 ### Eras (tag: Eras)
 | Method and path | Body | Success |
 |---|---|---|
-| `POST /eras` | `{ "id"?, "title": string(1–150), "description"?: string, "startDate": date, "endDate"?: date ≥ startDate }` | `201` era |
+| `POST /eras` | `{ "id"?, "title": string(1–150), "description"?: string, "startDate": date, "endDate"?: date ≥ startDate }` | `201` era. Every existing week whose dates overlap the Era joins it (D-22) |
 | `GET /eras` | — | `200` array of eras, `startDate` descending |
 | `GET /eras/{eraId}` | — | `200` era plus `"weeklyLogs": [{ "id", "title", "startDate", "endDate", "isClosed", "entryCount" }]`, newest first |
-| `PUT /eras/{eraId}` | Same as POST without `id` (full replace) | `200` era |
+| `PUT /eras/{eraId}` | Same as POST without `id` (full replace) | `200` era. If the dates changed, weeks that now overlap join and automatic links that no longer overlap are removed; links added or removed by hand stay |
 | `DELETE /eras/{eraId}` | — | `204`. Its weeks keep their entries and just leave that Era; they stay in any other Eras |
 
 Era shape: `{ "id", "title", "description", "startDate", "endDate", "createdAt", "updatedAt" }`.
@@ -180,7 +184,7 @@ Era shape: `{ "id", "title", "description", "startDate", "endDate", "createdAt",
 Template shape: `{ "id", "name", "subheadings": ["What triggered the spiral?", "..."], "createdAt", "updatedAt" }`.
 
 ### Tags (tag: Tags)
-Manual tags are Phase 1 (D-26). `Tag`: `{ "id", "name", "entryCount" }`.
+Manual tags are Phase 1 (D-26). `Tag`: `{ "id", "name", "entryCount" }`. `entryCount` never counts sealed entries (D-10).
 
 | Method and path | Body | Success |
 |---|---|---|
@@ -202,19 +206,21 @@ Weeks are created automatically when an entry is created (D-08). There is no cre
 | Method and path | Body | Success |
 |---|---|---|
 | `GET /weekly-logs/{logId}` | — | `200` `WeeklyLog` |
-| `PUT /weekly-logs/{logId}` | `{ "title": string(0–200) or null, "eraIds": [uuid] }` (full replace; every Era in the list must be the user's) | `200` `WeeklyLog` |
-| `POST /weekly-logs/{logId}/close` | — | `200` `WeeklyLog` with `isClosed: true` (idempotent). Phase 3: publishes `WeeklyLogClosedEvent` |
+| `PUT /weekly-logs/{logId}` | `{ "title": string(0–200) or null, "eraIds": [uuid] }` (full replace; every Era in the list must be the user's) | `200` `WeeklyLog`. An Era removed from the list is remembered, so filing by date doesn't add it back; an Era added by hand stays even outside its dates (D-22). More than 10 Eras: `400` |
+| `POST /weekly-logs/{logId}/close` | — | `200` `WeeklyLog` with `isClosed: true` (idempotent). Phase 3: writes the week's summary through `WeeklyLogClosedEvent` (D-28) |
 | `POST /weekly-logs/{logId}/reopen` | — | `200` `WeeklyLog` with `isClosed: false` (idempotent) |
 
 ### Entries (tag: Entries)
 | Method and path | Body | Success |
 |---|---|---|
-| `POST /entries` | `{ "id"?, "entryDate"?: date (default today in the user's zone; not after today), "templateId"?: uuid, "title"?: string(1–150) or null, "contentJson"?: TipTap doc or null, "tagIds"?: [uuid] (at most 20, the user's own) }` | `201` `Entry`, filed into the right week (created if needed). Replay of an existing own `id`: `200`. An entry may be created empty because media are uploaded afterwards (D-23) |
-| `GET /entries?page=0&size=50&tagId={uuid}` | — | `200` `PageResponse<EntrySummary>` of every entry, `entryDate` then `createdAt`, newest first. `tagId` is optional and filters by tag. `size` max 100 here. Backs the all-entries timeline (D-25) |
+| `POST /entries` | `{ "id"?, "entryDate"?: date (default today in the user's zone; not after today; not before 1900-01-01), "templateId"?: uuid, "title"?: string(1–150) or null, "contentJson"?: TipTap doc or null, "tagIds"?: [uuid] (at most 20, the user's own) }` | `201` `Entry`, filed into the right week (created if needed). Replay of an existing own `id`: `200`. An entry may be created empty because media are uploaded afterwards (D-23) |
+| `GET /entries?page=0&size=50&tagId={uuid}` | — | `200` `PageResponse<EntrySummary>` of every entry, `entryDate` then `createdAt`, newest first. `tagId` is optional and filters by tag; sealed entries are left out while filtering (D-10). `size` max 100 here. Backs the all-entries timeline (D-25) |
+| `GET /entries/opened` | — | `200` `EntrySummary[]`: Loot Drops whose unlock time has passed and that haven't been marked seen, most recently opened first, at most 20 (D-10). Backs the *Opened* strip |
 | `GET /entries/{entryId}` | — | `200` `Entry` (redacted if sealed) |
 | `PUT /entries/{entryId}` | `{ "entryDate": date, "templateId": uuid or null, "title": string or null, "contentJson": doc or null, "tagIds": [uuid] }` (full replace; a date change moves the entry to the matching week) | `200` `Entry`. Sealed: `409 entry-sealed`. A tag ID that isn't the user's: `404` |
 | `DELETE /entries/{entryId}` | — | `204`. Allowed even when sealed; deletes its stored media files too |
-| `POST /entries/{entryId}/seal` | `{ "unlockDate": instant }`: after now, at most 100 years ahead; if already sealed, must be later than the current `unlockDate` | `200` `Entry` (now redacted). Earlier date on a sealed entry: `409 entry-sealed` |
+| `POST /entries/{entryId}/seal` | `{ "unlockDate": instant }`: after now, at most 100 years ahead; if already sealed, must be later than the current `unlockDate` | `200` `Entry` (now redacted). Earlier date on a sealed entry: `409 entry-sealed`. Sealing clears the entry's seen mark, so it shows in the Opened strip again when it opens |
+| `POST /entries/{entryId}/mark-seen` | — | `204`. Records that the user has seen an opened Loot Drop; safe to repeat. Still sealed: `409 entry-sealed` |
 
 **Content rules (D-05):**
 - Root `type` is `"doc"`.
@@ -228,7 +234,7 @@ Every media endpoint returns `409 entry-sealed` when the entry is sealed.
 
 | Method and path | Body | Success |
 |---|---|---|
-| `POST /entries/{entryId}/media` | multipart: `file` (required), `displayOrder` (optional int; default appends) | `201` `Media` |
+| `POST /entries/{entryId}/media` | multipart: `file` (required), `displayOrder` (optional int; default appends), `purpose` (optional: `PHOTO`, the default, or `PAGE_SCAN`) | `201` `Media`. `PAGE_SCAN` must be an image, otherwise `415`; an unknown purpose is `400` (D-20) |
 | `PUT /entries/{entryId}/media/order` | `{ "mediaIds": [uuid, …] }`: exactly the entry's current media, in the new order | `200` `Media[]` in the new order. Missing, extra or duplicate IDs: `400` |
 | `DELETE /media/{mediaId}` | — | `204`. Removes the stored file and the row; later items move up to close the gap |
 
@@ -240,7 +246,7 @@ Every media endpoint returns `409 entry-sealed` when the entry is sealed.
 ---
 
 ## Phase 2 endpoints (draft; tag: Auth & Sharing)
-Finalise after open questions Q2–Q4.
+Finalise after open questions Q2–Q5 and Q19–Q21.
 
 | Method and path | Notes |
 |---|---|
@@ -249,18 +255,29 @@ Finalise after open questions Q2–Q4.
 | `POST /shares` | `{ "entryId" }` or `{ "weeklyLogId" }`, plus `expiresAt` → `{ "id", "url", "expiresAt" }`. The raw token appears only in this response |
 | `DELETE /shares/{shareId}` | Revoke |
 | `GET /public/shares/{token}` | No auth. Read-only `Entry` or `WeeklyLog`, with Loot Drop redaction applied. Expired or revoked: `404` |
+| Week PDF export | Rendered in the browser or on the server, depending on the library chosen in Q4. If the server renders it: `GET /weekly-logs/{logId}/pdf`. Sealed entries are redacted |
+| `POST /users/me/export` | Builds a download of everything the user owns (Q3). Sealed entries appear only as locked placeholders |
+| `DELETE /users/me` | Deletes the account and its stored files, after a confirmation that says how many sealed entries will be lost unseen (Q3) |
+| `PATCH /users/me` | Gains `"emailOnUnlock": boolean` (default `true`): an email when a Loot Drop opens (task 5.7) |
 
 ## Phase 3 endpoints (draft; tag: AI Biographer)
 Sealed entries are never analysed (`409 entry-sealed`) and never included in summaries.
 
 | Method and path | Notes |
 |---|---|
-| `GET /weekly-logs/{logId}/ai-summary` | The generated weekly summary, or `404` if it isn't ready |
-| `GET /characters` | Cast of Characters plus friendship-edge graph data. Hidden people are left out. A person's record, profile and merging are below |
-| `POST /insights/query` | `{ "query" }`: semantic search over weekly summaries |
+| `GET /weekly-logs/{logId}/ai-summary` | The summary written when the week was closed (D-28), or `404` if there isn't one yet (see Q23) |
+| `GET /characters` | Cast of Characters plus the friendship map's graph data. Hidden people are left out. A person's record, profile and merging are below |
+
+## Phase 3 endpoints: search (draft; tag: Search)
+D-29. Search terms go in the request body, never in the URL, and are never logged.
+
+| Method and path | Body | Success |
+|---|---|---|
+| `POST /search/words` | `{ "query": string(1–200), "tagId"?: uuid, "page"?: int, "size"?: int (max 50) }` | `200` `PageResponse<EntrySummary>`: the caller's entries whose title or caption match, best match first. Sealed entries never match. Needs no AI |
+| `POST /search/feeling` | `{ "query": string(1–500) }` | `200` up to 10 `{ "weeklyLogId", "startDate", "endDate", "title", "summaryExcerpt", "score" }`: closed weeks whose summaries are closest in meaning. Needs AI consent, otherwise `403 consent-required` |
 
 ## Phase 3 endpoints: paper diaries (draft; tag: Transcriptions)
-Tasks 6.6–6.8 (D-20). Finalise after open question Q12. A photographed diary page is an ordinary photo and works from Phase 1. These additions only label a photo as a page and add the optional step of reading the handwriting.
+Tasks 6.6–6.8 (D-20). Finalise after open question Q12. A photographed diary page is an ordinary photo, marked as a page, and works from Phase 1. This section adds the optional step of reading the handwriting.
 
 Rules:
 - Reading a page is always an explicit request. A sealed entry can't be read: every endpoint below returns `409 entry-sealed` for it.
@@ -276,9 +293,8 @@ New problem type:
 | `rate-limited` | 429 | The user has reached the daily limit for pages read (the limit is decided in Q12) |
 
 ### Changes to media
-- `Media` gains `"purpose"`: `PHOTO` (the default) or `PAGE_SCAN`. Group views return it too, so members see a page as a page.
-- `POST /entries/{entryId}/media` accepts an optional multipart field `purpose`. `PAGE_SCAN` must be an image, otherwise `415`. An unknown value is `400`.
-- `PUT /media/{mediaId}` with `{ "purpose": "PHOTO" }` or `{ "purpose": "PAGE_SCAN" }` returns `200` `Media`. This lets a photo uploaded before this feature existed be marked as a page. Sealed: `409 entry-sealed`.
+- `Media.purpose` and the upload field are Phase 1 (D-20). Group views return `purpose` too, so members see a page as a page.
+- `PUT /media/{mediaId}` with `{ "purpose": "PHOTO" }` or `{ "purpose": "PAGE_SCAN" }` returns `200` `Media`, to fix a photo marked the wrong way. Sealed: `409 entry-sealed`.
 
 ### `Transcription`
 ```json
@@ -307,8 +323,8 @@ New problem type:
 | `GET /entries/{entryId}/transcriptions` | — | `200` `Transcription[]` for the pages that have one, in `displayOrder`. The client polls this every couple of seconds while any item is `PENDING` |
 | `DELETE /transcriptions/{transcriptionId}` | — | `204`. Discards the transcript; the photo and the entry are untouched |
 
-## Phase 3 endpoints: AI settings, Help me think, tags, Era summaries and friend profiles (draft)
-Tasks 6.2 and 6.9–6.15 (D-21). Finalise after open questions Q14 and Q17. These replace the earlier drafts of `POST /entries/{entryId}/analyze` and `PATCH /entries/{entryId}/ai-confirm`.
+## Phase 3 endpoints: AI settings, Help me think, tags, closing Eras, Wrap up and friend profiles (draft)
+Tasks 6.2 and 6.9–6.16 (D-21, D-28). Finalise after open questions Q14, Q17 and Q23.
 
 Rules for every AI endpoint, including reading pages (D-20):
 - The user must have given AI consent, otherwise `403 consent-required`. A feature the user has switched off, or that isn't available to them, returns `403 feature-unavailable`.
@@ -324,15 +340,20 @@ New problem types:
 |---|---|---|
 | `consent-required` | 403 | The user hasn't accepted the AI notice, or has withdrawn it |
 | `feature-unavailable` | 403 | The feature is switched off in the user's settings, or isn't available to them |
-| `not-enough-content` | 409 | There is nothing to summarise yet, for example an Era with no weekly summaries |
+| `not-enough-content` | 409 | There is too little to work with yet, for example a person mentioned too rarely for a profile |
 
 ### Settings and consent (tag: Users)
-`UserSettings` has one block per AI feature. `available` is set by the server (from configuration today, from a plan later) and is ignored if sent. `aiConsent` is read-only here and is `null` until the user accepts.
+`UserSettings` has one block per AI feature, because the README promises every feature its own switch, plus the Wrap up reminder (D-28). `available` is set by the server (from configuration today, from a plan later) and is ignored if sent. `aiConsent` is read-only here and is `null` until the user accepts. `people` covers friend profiles and the friendship map; `pageReading` stays unavailable until Q12 picks a provider.
 ```json
 {
-  "helpMeThink": { "available": true, "enabled": true, "nudgeSeconds": 10 },
+  "helpMeThink": { "available": true, "enabled": true, "pauseSeconds": 10 },
+  "weeklySummaries": { "available": true, "enabled": true },
+  "eraSummaries": { "available": true, "enabled": true },
+  "people": { "available": true, "enabled": true },
+  "pageReading": { "available": false, "enabled": false },
   "writingCoach": { "available": false, "enabled": false },
   "proactiveInsights": { "available": true, "enabled": false, "maxPerWeek": 3 },
+  "wrapUpReminder": { "enabled": true },
   "aiConsent": { "acceptedAt": "2026-10-27T01:00:00Z", "version": 1 }
 }
 ```
@@ -380,13 +401,21 @@ A `Suggestion` is one question or card. Its `kind` says which, and `QUESTION` an
 ### Tags
 Tags and their endpoints are Phase 1 (D-26). Phase 3 adds only `TAG` suggestions: answering *Add tag* links the tag with `source: "AI"`.
 
-### Era summaries (tag: Eras)
-`EraSummary`: `{ "eraId", "narrative", "themes": [string], "weekCount", "isStale", "generatedAt" }`. One is made automatically when an Era ends. A stale summary can still be read until it is rebuilt.
+### Closing an Era and its summary (tag: Eras)
+D-28. The `Era` shape gains `"isClosed"`. `EraSummary`: `{ "eraId", "narrative", "themes": [string], "weekCount", "isStale", "generatedAt" }`. A stale summary can still be read until it is rebuilt in the background.
 
 | Method and path | Body | Success |
 |---|---|---|
-| `GET /eras/{eraId}/summary` | — | `200` `EraSummary`, or `404` if there isn't one yet |
-| `POST /eras/{eraId}/summary` | — | `202`. Builds or rebuilds it in the background from the Era's weekly summaries. None yet: `409 not-enough-content` |
+| `POST /eras/{eraId}/close` | — | `200` Era with `isClosed: true` (safe to repeat). Its open weeks are closed too; their summaries are written in the background within the daily limit, and then the Era summary. If the Era has no end date, it gets the end date of its latest week |
+| `POST /eras/{eraId}/reopen` | — | `200` Era with `isClosed: false` (safe to repeat). The summary stays |
+| `GET /eras/{eraId}/summary` | — | `200` `EraSummary`, or `404` if there isn't one yet (see Q23) |
+
+### Wrap up (tag: Weekly Logs)
+D-28. Backs the *Wrap up* card and the gentle reminder at the top of the feed.
+
+| Method and path | Body | Success |
+|---|---|---|
+| `GET /wrap-up` | — | `200` `{ "week": { "id", "title", "startDate", "endDate", "entryCount" } or null, "endedEras": [Era], "openFinishedWeeks": integer }`. `week` is the most recent finished week (its Sunday has passed in the user's timezone) that has entries and is still open. `endedEras` are Eras whose end date has passed but that aren't closed. `openFinishedWeeks` drives the reminder |
 
 ### Friend profiles (tag: AI Biographer)
 `GET /characters` lists people with their stats. A person's full record:
@@ -403,13 +432,11 @@ Tags and their endpoints are Phase 1 (D-26). Phase 3 adds only `TAG` suggestions
     "lastMentionedOn": "2026-10-20",
     "eras": [ { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "title": "Monash Double Degree Era", "mentionCount": 33 } ]
   },
-  "profile": { "summary": "…", "isStale": false, "generatedAt": "2026-10-27T01:00:00Z" },
-  "linkedMember": null
+  "profile": { "summary": "…", "isStale": false, "generatedAt": "2026-10-27T01:00:00Z" }
 }
 ```
-- `stats` always come from the database, never from the AI. `profile` is `null` until one is made.
+- `stats` always come from the database, never from the AI, and never count sealed entries (D-10). `profile` is `null` until one is made.
 - A profile is made automatically once someone is mentioned in several entries, and rebuilt in the background when it goes stale. `userNotes` are the user's own words and are never overwritten.
-- `linkedMember` is the Phase 5 link to a group member.
 
 | Method and path | Body | Success |
 |---|---|---|
@@ -444,7 +471,7 @@ New problem types:
 ### Groups and members
 | Method and path | Body | Success |
 |---|---|---|
-| `POST /groups` | `{ "title": string(1–150), "description"?: string, "startDate"?: date, "endDate"?: date ≥ startDate, "unlockDate"?: instant after now }` | `201` `Group`. The caller becomes its `OWNER` |
+| `POST /groups` | `{ "title": string(1–150) (optional with entryId), "description"?: string, "startDate"?: date, "endDate"?: date ≥ startDate, "unlockDate"?: instant after now, "entryId"?: uuid, "confirmUnlockDate"?: instant }` | `201` `Group`. The caller becomes its `OWNER`. With `entryId` (*share with friends*, D-19), the title and dates default to that entry's, and the entry becomes the first contribution under the rules of `POST /groups/{groupId}/entries` |
 | `GET /groups` | — | `200` array of the caller's groups, newest first |
 | `GET /groups/{groupId}` | — | `200` `Group` plus `"members": [GroupMember]` |
 | `PUT /groups/{groupId}` | Same as POST (full replace) | `200` `Group`. Owner only. Moving `unlockDate` earlier: `409 group-sealed` |
@@ -463,16 +490,13 @@ New problem types:
 | `GET /groups/{groupId}/entries?page=0&size=10` | — | `200` `PageResponse<GroupEntry>`, ordered by `entryDate` then `createdAt`, ascending |
 | `DELETE /groups/{groupId}/entries/{entryId}` | — | `204`. Withdraws the caller's own contribution; the entry itself is untouched. Allowed even when sealed |
 
-**Trips as Eras** has no endpoint of its own. When a member joins a group that has a `startDate`, the service creates an Era in their timeline from the group's title and dates. When they contribute, it adds that week to the Era, and the week stays in its other Eras (see Q10).
+**Trips as Eras** has no endpoint of its own. When a member joins a group that has a `startDate`, the service creates an Era in their timeline from the group's title and dates, and weeks inside those dates join it by date (D-22). When they contribute from a week outside the dates, that week is added too. Every week stays in its other Eras (see Q10).
 
-### Shared story and friendship map (8b)
+### Shared story (8b)
 | Method and path | Body | Success |
 |---|---|---|
 | `POST /groups/{groupId}/story` | — | `202`. Builds or rebuilds the shared story in the background from contributions by members who opted in. Sealed entries are never included. Fewer than two such members: `409 not-enough-contributions` |
 | `GET /groups/{groupId}/story` | — | `200` `{ "narrativeSummary", "contributorNames": [string], "generatedAt" }`, or `404` if there is none. It is deleted when anyone withdraws, opts out or leaves |
-| `PUT /characters/{characterId}/member` | `{ "memberId": uuid or null }` | `200` `Character`. Links it to a member of a group the caller also belongs to (any other ID: `404`); `null` unlinks. Nothing of that member's journal is exposed |
-
-`GET /characters` (Phase 3) gains `"linkedMember": { "displayName" }` on each character, or `null`.
 
 ## Phase 6 endpoints (draft; tag: Suggestions)
 Tasks 9.1–9.5 (D-21). Finalise after open questions Q15 and Q16. Insight cards are `Suggestion`s with new kinds. They use only the caller's own entries (never other members' contributions) and never sealed ones, and every card that draws on past material lists its `sources`. The rules and problem types of the Phase 3 AI section apply.

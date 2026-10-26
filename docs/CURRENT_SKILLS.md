@@ -16,6 +16,7 @@ Everything set up for working on memoirist with Claude Code, and when to use eac
 | Add or change an endpoint | `/new-endpoint` |
 | Get an independent review of your changes | `spec-reviewer` subagent |
 | Make sure the docs still match the code | `/sync-docs` |
+| Bring the docs in line after editing the README | `/sync-readme` |
 | Split the roadmap into features | [prompts/split-into-features.md](prompts/split-into-features.md) |
 | Look up current library docs | context7 |
 
@@ -26,12 +27,13 @@ Type `/name` to run one. Skills marked **You only** run only when you type them;
 
 | Skill | What it does | When to use it | Changes files? | Who starts it |
 |---|---|---|---|---|
-| `/implement-task [id]` | Plans one sprint task, waits for your OK, then builds it, tests it, updates the docs and ticks it off | Every task in [SPRINT_PLAN.md](SPRINT_PLAN.md) | Yes | You or Claude |
+| `/implement-task [id]` | Reads the task, its README promise and (for screens) its user flow; plans and waits for your OK; builds, tests and updates the docs; has spec-reviewer check it; then ticks it off | Every task in [SPRINT_PLAN.md](SPRINT_PLAN.md) | Yes | You or Claude |
 | `/new-migration [description]` | The safe recipe for a database change: next version number, conventions, entities, schema doc, tests | Any time a table or column changes | Yes | You or Claude |
 | `/new-endpoint [resource]` | The recipe for an API endpoint: contract → DTOs → service → mapper → controller → tests | Adding or changing anything under `/api/v1` | Yes | You or Claude |
 | `/sync-docs` | Compares the code with API_CONTRACT and DATABASE_SCHEMA and fixes drift (asks you when behaviour differs) | After endpoint or schema work, and at the end of each feature | Yes (docs) | You or Claude |
-| `/sprint-ready [n]` | Reports blocking questions, untestable "Done when" items, missing doc sections and conflicts for a sprint. Verdict: Ready / Ready with warnings / Blocked | Before starting a sprint or feature | No | **You only** |
-| `/record-decision [decision]` | Adds a D-entry to DECISIONS.md, closes the matching question, and updates every doc that assumed otherwise | Whenever you answer a Q-x or change your mind about something | Yes (docs) | You or Claude |
+| `/sync-readme [section]` | Compares the README (what users get, and when) with PRD, SPRINT_PLAN, DECISIONS, USER_FLOWS and the specs; asks you about anything that needs a decision, then fixes the drift | After you edit the README, or when a hook says the README is newer than the docs | Yes (docs, after you agree) | You or Claude |
+| `/sprint-ready [n]` | Reports README items with no task, open questions and gaps that are due, untestable "Done when" items, missing doc sections, sealed-entry leaks and conflicts for a sprint. Verdict: Ready / Ready with warnings / Blocked | Before starting a sprint or feature | No | **You only** |
+| `/record-decision [decision]` | Records a decision in DECISIONS.md (a new entry, or an update to the one it changes), closes the matching question or gap, and updates every doc that assumed otherwise. Asks before changing the README | Whenever you answer a Q-x or change your mind about something | Yes (docs) | You or Claude |
 | `/parallel-check [P1-04 P1-06]` | Checks dependencies and file overlaps between features, reserves migration numbers, gives a merge order, and writes a kickoff note for each session | Before building two or more features at the same time | No | **You only** |
 | `ui-ux-pro-max` | Design intelligence: styles, palettes, fonts, UX checks (you installed it yourself) | Design work and UI reviews | Depends on the request | You or Claude |
 
@@ -40,7 +42,7 @@ A subagent starts fresh, without your conversation, so it gives a more independe
 
 | Subagent | What it checks | How to ask | Changes files? |
 |---|---|---|---|
-| `spec-reviewer` | Your changes against API_CONTRACT, DATABASE_SCHEMA, DECISIONS, the security rules, the time rules, and the task's "Done when". Verdict: Pass / Pass with notes / Changes needed | "Use the spec-reviewer subagent to review my uncommitted changes for task 3.5" | No |
+| `spec-reviewer` | Your changes against the README, API_CONTRACT, DATABASE_SCHEMA, DECISIONS, USER_FLOWS, all four rule files (with a checklist for sealed-entry leaks) and the task's "Done when". Verdict: Pass / Pass with notes / Changes needed | "Use the spec-reviewer subagent to review my uncommitted changes for task 3.5" | No (a hook keeps it read-only) |
 
 ## Hooks
 Hooks run automatically; you don't start them. They're configured in [.claude/settings.json](../.claude/settings.json).
@@ -48,7 +50,9 @@ Hooks run automatically; you don't start them. They're configured in [.claude/se
 | Hook | Runs when | What it does |
 |---|---|---|
 | Migration guard ([protect-migrations.mjs](../.claude/hooks/protect-migrations.mjs)) | Before Claude edits or writes a file | Blocks changes to a Flyway migration that's already committed; tells Claude to add a new one instead |
-| Doc-sync reminder ([doc-sync-reminder.mjs](../.claude/hooks/doc-sync-reminder.mjs)) | When Claude is about to finish a turn | If controllers, DTOs, entities or migrations changed but the spec docs didn't, asks Claude to run `/sync-docs` or explain why not. At most once per turn |
+| Doc-sync reminder ([doc-sync-reminder.mjs](../.claude/hooks/doc-sync-reminder.mjs)) | When Claude is about to finish a turn | Reminds Claude when entities or migrations changed after DATABASE_SCHEMA; controllers, DTOs or mappers changed after API_CONTRACT; the README changed after the product docs (`/sync-readme`); a ticked task left CLAUDE.md's Current focus behind; or API code changed after the frontend types were generated. Each reminder at most once per session |
+| Session summary ([session-context.mjs](../.claude/hooks/session-context.mjs)) | When a session starts, resumes, is cleared or is compacted | Tells Claude the next task, any open questions blocking its sprint, how many files are uncommitted, and whether the README is newer than the docs |
+| Read-only guard ([readonly-bash.mjs](../.claude/hooks/readonly-bash.mjs)) | Before the spec-reviewer subagent runs a shell command | Allows only read commands (git status, diff, log and show; grep; ls; cat…), so the reviewer can't change anything |
 
 ## Rules (load automatically)
 Path-scoped instructions in [.claude/rules/](../.claude/rules/). Claude reads each one when it touches matching files.
@@ -56,9 +60,24 @@ Path-scoped instructions in [.claude/rules/](../.claude/rules/). Claude reads ea
 | Rule file | Loads for | Covers |
 |---|---|---|
 | `backend.md` | `backend/**` | Structure, Java style, persistence, time, Flyway, testing |
-| `api.md` | Backend Java and API_CONTRACT.md | Paths, status codes, errors, pagination, uploads, OpenAPI |
-| `security.md` | Backend and frontend source | Ownership, the dev header, Loot Drop redaction, content safety, secrets |
+| `api.md` | Backend Java and API_CONTRACT.md | Paths, status codes, errors, pagination, uploads, OpenAPI, private input |
+| `security.md` | Backend and frontend source | Ownership, the dev header, Loot Drop redaction (counts and filters too), content safety, secrets |
 | `frontend.md` | `frontend/**` | Structure, data fetching, time, editor, capture, styling, tests |
+| `docs.md` | `docs/**`, `README.md` | Which doc wins, changing every mention together, IDs, README edits only with approval, house style |
+| `claude-config.md` | `.claude/**`, `CLAUDE.md`, `.mcp.json` | Keeping CLAUDE.md short, where instructions belong, writing and testing hooks, keeping this file current |
+
+## What Claude reads in every new session
+
+| What | Where | When it loads |
+|---|---|---|
+| Project instructions | [CLAUDE.md](../CLAUDE.md) | Every session. Keep it under 200 lines |
+| Your private notes (optional) | `CLAUDE.local.md` (gitignored) | Every session, after CLAUDE.md |
+| Claude's auto memory | `~/.claude/projects/<project>/memory/` | Every session (the first 200 lines). Claude adds to it from your corrections |
+| Session summary | The SessionStart hook above | At start, resume, `/clear` and after compaction |
+| Skill and subagent descriptions | `.claude/skills/`, `.claude/agents/` | The descriptions always; the full instructions only when one is used |
+| Rules | `.claude/rules/` | Only when Claude touches matching files |
+
+`/context` shows what's loaded and how much room it takes. `/memory` opens CLAUDE.md, `CLAUDE.local.md` and the auto memory.
 
 ## Connections (MCP)
 
@@ -79,6 +98,8 @@ These come with Claude Code.
 | Command | Use it for |
 |---|---|
 | `/clear` | Start fresh between tasks |
+| `/context` | See which instruction files are loaded and how much context they use |
+| `/memory` | Open CLAUDE.md, `CLAUDE.local.md` and Claude's auto memory |
 | `/code-review` | A bug-focused review of your changes |
 | `/security-review` | A security review before Phase 2 and Phase 5 |
 | `/simplify` | Tidy up changed code (quality only, not bugs) |
@@ -100,7 +121,8 @@ One ready-to-copy example for each tool. Swap in your own task, feature or quest
 | `/sync-docs` | `/sync-docs` |
 | | `Run /sync-docs for the Tags work only and show me the drift table before changing anything.` |
 | `/sprint-ready` | `/sprint-ready 3` |
-| `/record-decision` | `/record-decision "Q1: new weeks do NOT join Eras automatically; users assign them by hand"` |
+| `/sync-readme` | `/sync-readme` *(after you edit the README)* |
+| `/record-decision` | `/record-decision "Q18: group a week under the Era that started most recently, with the others as chips"` |
 | | `/record-decision "Use Lucide icons only; no second icon library"` |
 | `/parallel-check` | `/parallel-check P1-04 P1-06` |
 | `ui-ux-pro-max` | `Use ui-ux-pro-max to propose 3 clearly different design directions for a private journaling PWA: one scrapbook, one editorial, one dark "time capsule". Give a palette, font pairing and card style for each.` |
@@ -118,6 +140,8 @@ Hooks run by themselves, so there's nothing to type. To check one is working:
 |---|---|
 | Migration guard | `Try to add a comment to V1__core_schema.sql and tell me what the hook says.` *(after V1 is committed; it should be blocked)* |
 | Doc-sync reminder | Nothing to do: if you change a controller and finish without touching the docs, Claude will be reminded to run `/sync-docs` |
+| Session summary | Start a new session and ask `What's next?` |
+| Read-only guard | `Ask the spec-reviewer subagent to delete a scratch file and tell me what the hook said.` *(it should be blocked)* |
 
 ### Connections
 | Tool | Example |

@@ -8,7 +8,7 @@ Where everything lives. For what the app is, see the [project README](../README.
 | [WORKFLOW.md](WORKFLOW.md) | How features go from plan to code, and how docs stay in sync |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Setup, commands, ports, troubleshooting |
 | [CURRENT_SKILLS.md](CURRENT_SKILLS.md) | Every Claude Code skill, subagent, hook, rule and prompt, and when to use each |
-| [DECISIONS.md](DECISIONS.md) | Every settled decision (D-xx) and open question (Q-xx). **Wins when docs disagree** |
+| [DECISIONS.md](DECISIONS.md) | Every settled decision (D-xx) and open question (Q-xx). **Wins on how things work; the project README wins on what users get and when (D-27)** |
 
 ## Product
 | Doc | What it's for |
@@ -16,7 +16,8 @@ Where everything lives. For what the app is, see the [project README](../README.
 | [PRD.md](PRD.md) | Vision, personas, glossary, phased roadmap |
 | [USER_FLOWS.md](USER_FLOWS.md) | Step-by-step flows (F-xx) with edge cases |
 | [design/](design/) | Design directions now; mockups and DESIGN.md later |
-| [product/](product/) | Market research (not needed for coding) |
+| [product/COMPETITOR_NOTES.md](product/COMPETITOR_NOTES.md) | Competitors and positioning (not needed for coding) |
+| [product/FEATURE_REVIEW.md](product/FEATURE_REVIEW.md) | Review of every feature: scores, gaps, proposed changes (R-xx) and new ideas, each with a status (not needed for coding) |
 
 ## Specs (living, one section per phase)
 | Doc | What it's for |
