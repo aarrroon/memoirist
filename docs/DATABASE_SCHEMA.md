@@ -10,7 +10,7 @@
 - **Naming:** tables are plural snake_case. Constraints are named `uq_<table>_<cols>`, `chk_<table>_<rule>` and `idx_<table>_<cols>`.
 - **Foreign keys:** every foreign key states its `ON DELETE` behaviour.
 - **No URLs:** the database never stores a URL or storage host, only object keys.
-- **Ownership:** every user-owned table has `user_id` directly, except `media`, which is owned through `entries`.
+- **Ownership:** every user-owned table has `user_id` directly, except tables that hang off another owned table: `media` is owned through `entries`, `media_transcriptions` through `media`, and `entry_tags` through `entries`.
 
 ## Migration history
 
@@ -20,6 +20,15 @@
 | R | `db/seed-local/R__seed_dev_user.sql` | 1 | Planned (Sprint 2, task 2.3); `local` and `test` profiles only |
 | next | `V{n}__auth_and_sharing.sql` | 2 | Draft below |
 | next | `V{n}__ai_biographer.sql` | 3 | Draft below; dimension decided at Phase 3 |
+| next | `V{n}__user_settings.sql` | 3 (6a) | Draft below |
+| next | `V{n}__ai_suggestions.sql` | 3 (6a) | Draft below |
+| next | `V{n}__tags.sql` | 3 (6a) | Draft below |
+| next | `V{n}__era_summaries.sql` | 3 (6b) | Draft below |
+| next | `V{n}__friend_profiles.sql` | 3 (6b) | Draft below |
+| next | `V{n}__page_transcription.sql` | 3 (6c) | Draft below; the provider is decided in Q12 |
+| next | `V{n}__groups.sql` | 5 (8a) | Draft below |
+| next | `V{n}__group_story_and_cast_links.sql` | 5 (8b) | Draft below; needs the Phase 3 tables |
+| next | `V{n}__entry_embeddings.sql` | 6 | Draft below; dimension decided at Phase 3 |
 
 ---
 
@@ -235,7 +244,7 @@ Review this at the start of Sprint 6. `<DIM>` depends on the embedding model cho
 
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Per-entry analysis and one-tap confirmations (never run on sealed entries)
+-- Facts from answered Help me think questions (never recorded for sealed entries)
 ALTER TABLE entries
     ADD COLUMN ai_metadata     JSONB NOT NULL DEFAULT '{}'::jsonb,
     ADD COLUMN ai_confirmed_at TIMESTAMPTZ;
@@ -248,6 +257,9 @@ CREATE TABLE ai_summaries (
     structured_themes  JSONB NOT NULL DEFAULT '[]'::jsonb,
     emotional_state    VARCHAR(100),
     embedding          vector(<DIM>),
+    is_stale           BOOLEAN NOT NULL DEFAULT FALSE,  -- set when a source entry changes; rebuilt in the background (D-21)
+    provider           VARCHAR(50) NOT NULL,
+    model              VARCHAR(100),
     generated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -288,3 +300,287 @@ CREATE TABLE friendship_edges (
 CREATE INDEX idx_characters_user ON characters (user_id);
 CREATE INDEX idx_friendship_edges_user_era ON friendship_edges (user_id, era_id);
 ```
+
+## Phase 3 draft: paper diaries (page scans and transcription)
+Review this at the start of Sprint 6c, after open question Q12 is answered (D-20). It doesn't use the vector extension, so it can ship before or after the AI biographer migration.
+
+A photographed diary page is an ordinary `media` row and needs no schema change in Phase 1. This migration only labels a media item as a page and stores the optional result of reading it.
+
+`media_transcriptions` is owned through `media`, as `media` is through `entries`, so it has no `user_id`. It holds the user's private writing, so it is deleted with its media item or entry, and group endpoints (D-19) never return it.
+
+```sql
+-- V{n}__page_transcription.sql  (Phase 3, Sprint 6c — draft)
+
+-- What a media item is for. The service validates the value against its own list, as it does
+-- for media_type, so a new purpose later needs no migration.
+-- PHOTO is an ordinary photo. PAGE_SCAN is a photo of a paper diary page and must be an image.
+ALTER TABLE media
+    ADD COLUMN purpose VARCHAR(20) NOT NULL DEFAULT 'PHOTO';
+
+-- At most one transcription per media item. Reading a READY or FAILED page again replaces the row.
+CREATE TABLE media_transcriptions (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    media_id         UUID NOT NULL REFERENCES media (id) ON DELETE CASCADE,
+    status           VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    transcript_text  TEXT,                  -- NULL until READY; capped at 50 KB (service check)
+    language         VARCHAR(35),           -- BCP 47 tag such as 'en' or 'en-AU'
+    detected_date    DATE,                  -- a date read from the page, if it had one
+    confidence       NUMERIC(4,3),          -- 0 to 1, advisory; NULL if the provider gives none
+    provider         VARCHAR(50) NOT NULL,  -- which TranscriptionProvider adapter produced it
+    model            VARCHAR(100),          -- the provider's model or version, so a page can be read again later
+    failure_reason   VARCHAR(100),          -- a short code such as 'timeout'; never page content
+    requested_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at     TIMESTAMPTZ,
+    CONSTRAINT uq_media_transcriptions_media UNIQUE (media_id),
+    CONSTRAINT chk_media_transcriptions_status CHECK (status IN ('PENDING', 'READY', 'FAILED')),
+    CONSTRAINT chk_media_transcriptions_ready CHECK (status <> 'READY' OR transcript_text IS NOT NULL),
+    CONSTRAINT chk_media_transcriptions_confidence CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1))
+);
+
+-- uq_media_transcriptions_media already indexes media_id.
+-- This one lets the timeout sweep find rows stuck in PENDING.
+CREATE INDEX idx_media_transcriptions_pending ON media_transcriptions (requested_at) WHERE status = 'PENDING';
+```
+
+**Left open on purpose:**
+- `purpose`, `provider`, `model` and `language` are plain strings checked in the service. Only the status lifecycle is constrained in the database.
+- Because every result records its provider and model, a page can be read again with a better one without changing the schema.
+- A bulk notebook import (Q13) can add a batch table later that points at ordinary entries. No column here needs to change.
+
+## Phase 3 draft: settings, suggestions, tags, Era summaries and friend profiles
+Review this at the start of Sprint 6 (D-21). Each block below is its own migration. Everything the AI makes carries a provider and a model, and narratives carry an `is_stale` flag, so they can be rebuilt without their sources. These rows hold text derived from the user's entries, so each one is deleted with its entry, Era, character or user.
+
+```sql
+-- V{n}__user_settings.sql  (Phase 3, task 6.9 — draft)
+
+-- No row means defaults. `settings` holds the per-feature switches and options as a typed record,
+-- and the API rejects unknown keys. Consent is in columns, not JSON, because every AI path reads it.
+CREATE TABLE user_settings (
+    user_id             UUID PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    settings            JSONB NOT NULL DEFAULT '{}'::jsonb,
+    ai_consent_at       TIMESTAMPTZ,  -- NULL: not accepted, or withdrawn
+    ai_consent_version  INTEGER,      -- which wording they accepted
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_user_settings_object CHECK (jsonb_typeof(settings) = 'object'),
+    CONSTRAINT chk_user_settings_consent CHECK ((ai_consent_at IS NULL) = (ai_consent_version IS NULL))
+);
+```
+
+```sql
+-- V{n}__ai_suggestions.sql  (Phase 3, task 6.2 — draft)
+
+-- Every question, tag suggestion, writing insight and insight card is one row.
+CREATE TABLE ai_suggestions (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    -- The entry it is about. NULL for a draft that isn't saved yet, and for journal-wide cards.
+    entry_id     UUID REFERENCES entries (id) ON DELETE CASCADE,
+    -- QUESTION and TAG now; later WRITING_INSIGHT, PATTERN, GROWTH_REMINDER, SIMILAR_PAST and
+    -- HIGHLIGHT_REEL. Checked in the service, so a new kind needs no migration.
+    kind         VARCHAR(40) NOT NULL,
+    status       VARCHAR(20) NOT NULL DEFAULT 'OPEN',
+    -- What to show. For a question this also holds the server-only effect of each option.
+    payload      JSONB NOT NULL,
+    -- What it was built from: [{ "type": "ENTRY", "id": "..." }]. Types: ENTRY, WEEKLY_SUMMARY, ERA_SUMMARY.
+    sources      JSONB NOT NULL DEFAULT '[]'::jsonb,
+    answer       JSONB,                 -- { "optionId": "..." } or { "feedback": "USEFUL" }
+    dedupe_key   VARCHAR(120),          -- stops the same card being offered twice
+    provider     VARCHAR(50) NOT NULL,  -- 'internal' for a card made without a model
+    model        VARCHAR(100),
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    answered_at  TIMESTAMPTZ,
+    expires_at   TIMESTAMPTZ,           -- cards from unsaved drafts expire within hours; NULL means no expiry
+    CONSTRAINT chk_ai_suggestions_status CHECK (status IN ('PENDING', 'OPEN', 'ANSWERED', 'DISMISSED', 'EXPIRED', 'FAILED')),
+    CONSTRAINT chk_ai_suggestions_sources_array CHECK (jsonb_typeof(sources) = 'array')
+);
+
+CREATE UNIQUE INDEX uq_ai_suggestions_user_dedupe ON ai_suggestions (user_id, dedupe_key) WHERE dedupe_key IS NOT NULL;
+CREATE INDEX idx_ai_suggestions_entry ON ai_suggestions (entry_id) WHERE entry_id IS NOT NULL;
+CREATE INDEX idx_ai_suggestions_user_open ON ai_suggestions (user_id, created_at DESC) WHERE status IN ('PENDING', 'OPEN');
+CREATE INDEX idx_ai_suggestions_expiry ON ai_suggestions (expires_at) WHERE expires_at IS NOT NULL AND status IN ('PENDING', 'OPEN');
+-- Finds the cards that cite an entry when it is edited, sealed or deleted.
+CREATE INDEX idx_ai_suggestions_sources ON ai_suggestions USING gin (sources jsonb_path_ops);
+```
+
+```sql
+-- V{n}__tags.sql  (Phase 3, task 6.11 — draft)
+
+CREATE TABLE tags (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    name        VARCHAR(50) NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_tags_name CHECK (length(btrim(name)) > 0)
+);
+
+-- Names are unique per user, ignoring case.
+CREATE UNIQUE INDEX uq_tags_user_name ON tags (user_id, lower(name));
+
+-- Owned through entries and tags; the service keeps both with the same user.
+CREATE TABLE entry_tags (
+    entry_id    UUID NOT NULL REFERENCES entries (id) ON DELETE CASCADE,
+    tag_id      UUID NOT NULL REFERENCES tags (id) ON DELETE CASCADE,
+    source      VARCHAR(10) NOT NULL DEFAULT 'USER',  -- AI when the user accepted a suggestion
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (entry_id, tag_id),
+    CONSTRAINT chk_entry_tags_source CHECK (source IN ('USER', 'AI'))
+);
+
+CREATE INDEX idx_entry_tags_tag ON entry_tags (tag_id);
+```
+
+```sql
+-- V{n}__era_summaries.sql  (Phase 3, task 6.13 — draft)
+
+-- Built from the Era's weekly summaries, never from raw entries.
+CREATE TABLE era_summaries (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    era_id        UUID NOT NULL UNIQUE REFERENCES eras (id) ON DELETE CASCADE,
+    narrative     TEXT NOT NULL,
+    themes        JSONB NOT NULL DEFAULT '[]'::jsonb,
+    week_count    INTEGER NOT NULL,  -- how many weekly summaries it was built from
+    is_stale      BOOLEAN NOT NULL DEFAULT FALSE,
+    provider      VARCHAR(50) NOT NULL,
+    model         VARCHAR(100),
+    generated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_era_summaries_week_count CHECK (week_count > 0),
+    CONSTRAINT chk_era_summaries_themes_array CHECK (jsonb_typeof(themes) = 'array')
+);
+```
+
+```sql
+-- V{n}__friend_profiles.sql  (Phase 3, task 6.14 — draft)
+
+-- `relationship_summary` (from the AI biographer migration) holds the generated profile text.
+-- Mention counts, first and last mention and the Eras a person appears in are computed from
+-- character_mentions, so they are never stored and never come from the AI.
+ALTER TABLE characters
+    ADD COLUMN aliases               JSONB NOT NULL DEFAULT '[]'::jsonb,  -- other names for the same person, added by merging
+    ADD COLUMN user_notes            TEXT,                               -- the user's own words; the AI never edits them
+    ADD COLUMN is_hidden             BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN profile_is_stale      BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN profile_provider      VARCHAR(50),
+    ADD COLUMN profile_model         VARCHAR(100),
+    ADD COLUMN profile_generated_at  TIMESTAMPTZ,
+    ADD CONSTRAINT chk_characters_aliases_array CHECK (jsonb_typeof(aliases) = 'array');
+```
+
+**Left open on purpose:**
+- `kind`, `provider` and `model` are plain strings checked in the service, and `payload` and `sources` are JSONB, so a new kind of card needs no migration. Only the status lifecycle is constrained in the database.
+- A new kind of narrative (a year in review, say) is one more table with a real foreign key and the same three columns: `is_stale`, provider and model.
+- Merging two people (task 6.14) is a service step: move `character_mentions` rows (skipping duplicates), add the old name to `aliases`, and combine their `friendship_edges`.
+
+## Phase 5 draft: groups and shared memories
+Review this at the start of Sprint 8, after open questions Q8–Q11 are answered (D-19). There are two migrations: 8a has no AI, and 8b needs the Phase 3 tables.
+
+Group tables are owned through membership rather than a single `user_id`. In `group_entries`, `user_id` is the contributor, and the service keeps it equal to the entry's owner. Members are addressed by `group_members.id`, never by user ID, so no request carries another user's ID.
+
+```sql
+-- V{n}__groups.sql  (Phase 5a — draft)
+
+CREATE TABLE groups (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title        VARCHAR(150) NOT NULL,
+    description  TEXT,
+    start_date   DATE,
+    end_date     DATE,
+    -- Group Loot Drop: contributions are sealed until at least this instant.
+    -- It can only move later (service rule, as for entries).
+    unlock_date  TIMESTAMPTZ,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_groups_dates CHECK (end_date IS NULL OR (start_date IS NOT NULL AND end_date >= start_date))
+);
+
+CREATE TABLE group_members (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_id    UUID NOT NULL REFERENCES groups (id) ON DELETE CASCADE,
+    user_id     UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    role        VARCHAR(20) NOT NULL DEFAULT 'MEMBER',
+    -- Opt-in: may this member's contributions feed the shared story? (Q9)
+    ai_consent  BOOLEAN NOT NULL DEFAULT FALSE,
+    joined_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_group_members_group_user UNIQUE (group_id, user_id),
+    CONSTRAINT chk_group_members_role CHECK (role IN ('OWNER', 'MEMBER'))
+);
+
+CREATE TABLE group_invites (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_id    UUID NOT NULL REFERENCES groups (id) ON DELETE CASCADE,
+    token_hash  VARCHAR(64) NOT NULL UNIQUE,  -- SHA-256 hex; the raw token is shown once, never stored
+    expires_at  TIMESTAMPTZ NOT NULL,
+    revoked_at  TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- A contribution is a link, never a copy. The composite foreign key deletes a member's
+-- contributions when their membership ends; the entries themselves are untouched.
+CREATE TABLE group_entries (
+    group_id        UUID NOT NULL,
+    entry_id        UUID NOT NULL REFERENCES entries (id) ON DELETE CASCADE,
+    user_id         UUID NOT NULL,
+    contributed_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (group_id, entry_id),
+    FOREIGN KEY (group_id, user_id) REFERENCES group_members (group_id, user_id) ON DELETE CASCADE
+);
+
+-- A member's own Era created from a trip. If the group goes away the Era stays, unlinked.
+ALTER TABLE eras
+    ADD COLUMN group_id UUID REFERENCES groups (id) ON DELETE SET NULL;
+
+CREATE UNIQUE INDEX uq_eras_user_group ON eras (user_id, group_id) WHERE group_id IS NOT NULL;
+CREATE INDEX idx_eras_group ON eras (group_id) WHERE group_id IS NOT NULL;
+CREATE INDEX idx_group_members_user ON group_members (user_id);
+CREATE INDEX idx_group_invites_group ON group_invites (group_id);
+CREATE INDEX idx_group_entries_entry ON group_entries (entry_id);
+CREATE INDEX idx_group_entries_group_user ON group_entries (group_id, user_id);
+```
+
+```sql
+-- V{n}__group_story_and_cast_links.sql  (Phase 5b — draft; needs the Phase 3 tables)
+
+-- The shared story. The service deletes the row when a contribution is withdrawn,
+-- a member opts out or a member leaves, so it never outlives the content it was built from.
+CREATE TABLE group_stories (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_id           UUID NOT NULL UNIQUE REFERENCES groups (id) ON DELETE CASCADE,
+    narrative_summary  TEXT NOT NULL,
+    generated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- A Cast of Characters entry can point at a real group member. It exposes nothing of their journal.
+ALTER TABLE characters
+    ADD COLUMN linked_user_id UUID REFERENCES users (id) ON DELETE SET NULL;
+
+CREATE INDEX idx_characters_linked_user ON characters (linked_user_id) WHERE linked_user_id IS NOT NULL;
+```
+
+## Phase 6 draft: entry embeddings
+Review this at the start of Sprint 9, after open questions Q15 and Q16 (D-21). Proactive insights and the writing coach need no other new table: they are `ai_suggestions` rows with new kinds.
+
+`<DIM>` is the dimension chosen in Phase 3. If a later embedding model changes the dimension, add a new table and backfill it. The `model` column says which model made each row.
+
+```sql
+-- V{n}__entry_embeddings.sql  (Phase 6 — draft)
+
+-- Sealed entries have no rows: the service removes them when an entry is sealed and adds them
+-- when it unlocks. `user_id` is repeated here so a search can filter to one user.
+CREATE TABLE entry_embeddings (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    entry_id     UUID NOT NULL REFERENCES entries (id) ON DELETE CASCADE,
+    chunk_index  INTEGER NOT NULL,
+    embedding    vector(<DIM>) NOT NULL,
+    model        VARCHAR(100) NOT NULL,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_entry_embeddings_entry_chunk UNIQUE (entry_id, chunk_index),
+    CONSTRAINT chk_entry_embeddings_chunk CHECK (chunk_index >= 0)
+);
+
+CREATE INDEX idx_entry_embeddings_hnsw ON entry_embeddings USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX idx_entry_embeddings_user ON entry_embeddings (user_id);
+```
+
+A search that filters one user's rows out of an HNSW index can return too few results when many users share the table. The same applies to `ai_summaries`. Task 9.1 checks this with a multi-user test and, if needed, uses pgvector's iterative index scans or partitions by user.

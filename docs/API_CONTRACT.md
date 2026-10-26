@@ -217,8 +217,242 @@ Sealed entries are never analysed (`409 entry-sealed`) and never included in sum
 
 | Method and path | Notes |
 |---|---|
-| `POST /entries/{entryId}/analyze` | Under 5 s. Returns `{ "entryId", "suggestedThemes": [], "emotionalState", "detectedCharacters": [], "confirmationQuestions": [{ "id", "question", "field", "value" }] }` |
-| `PATCH /entries/{entryId}/ai-confirm` | `{ "confirmedThemes": [], "confirmedCharacters": [] }` |
 | `GET /weekly-logs/{logId}/ai-summary` | The generated weekly summary, or `404` if it isn't ready |
-| `GET /characters` | Cast of Characters plus friendship-edge graph data |
+| `GET /characters` | Cast of Characters plus friendship-edge graph data. Hidden people are left out. A person's record, profile and merging are below |
 | `POST /insights/query` | `{ "query" }`: semantic search over weekly summaries |
+
+## Phase 3 endpoints: paper diaries (draft; tag: Transcriptions)
+Tasks 6.6–6.8 (D-20). Finalise after open question Q12. A photographed diary page is an ordinary photo and works from Phase 1. These additions only label a photo as a page and add the optional step of reading the handwriting.
+
+Rules:
+- Reading a page is always an explicit request. A sealed entry can't be read: every endpoint below returns `409 entry-sealed` for it.
+- A transcript never changes an entry by itself. The client builds the caption from the text and saves it with `PUT /entries/{entryId}`, so the TipTap rules (D-05) are the only way in.
+- Transcriptions belong to the entry's owner. No group endpoint returns them (D-19).
+- Another user's entry, media item or transcription is `404`.
+- Needs the user's AI consent: otherwise `403 consent-required` (D-21).
+
+New problem type:
+
+| `type` suffix | Status | When |
+|---|---|---|
+| `rate-limited` | 429 | The user has reached the daily limit for pages read (the limit is decided in Q12) |
+
+### Changes to media
+- `Media` gains `"purpose"`: `PHOTO` (the default) or `PAGE_SCAN`. Group views return it too, so members see a page as a page.
+- `POST /entries/{entryId}/media` accepts an optional multipart field `purpose`. `PAGE_SCAN` must be an image, otherwise `415`. An unknown value is `400`.
+- `PUT /media/{mediaId}` with `{ "purpose": "PHOTO" }` or `{ "purpose": "PAGE_SCAN" }` returns `200` `Media`. This lets a photo uploaded before this feature existed be marked as a page. Sealed: `409 entry-sealed`.
+
+### `Transcription`
+```json
+{
+  "id": "44443333-2222-1111-0000-ffffeeeedddd",
+  "mediaId": "55554444-3333-2222-1111-000099998888",
+  "status": "READY",
+  "text": "Tuesday 12 March. Got the keys to the flat today.",
+  "language": "en",
+  "detectedDate": "2019-03-12",
+  "confidence": 0.87,
+  "failureReason": null,
+  "requestedAt": "2026-10-26T01:00:00Z",
+  "completedAt": "2026-10-26T01:00:12Z"
+}
+```
+- `status` is `PENDING`, `READY` or `FAILED`. `text`, `language`, `detectedDate` and `confidence` are `null` until `READY`.
+- `detectedDate` is a date the provider read from the page, or `null`. It is only a suggestion: the client offers it as a chip, and `entryDate` changes only when the user accepts it with `PUT /entries/{entryId}`. A date after today is never offered.
+- `confidence` is advisory (0 to 1) and `null` when the provider gives none.
+- `failureReason` is a short code such as `timeout`, `unreadable` or `provider-error`, set only when `FAILED`. It never contains page text.
+
+### Endpoints
+| Method and path | Body | Success |
+|---|---|---|
+| `POST /entries/{entryId}/transcriptions` | `{ "mediaIds"?: [uuid] }`, images of this entry. Default: every `PAGE_SCAN` that has no `READY` transcription | `202` `Transcription[]` in page order. A page that is already `PENDING` is returned as it is. A `READY` or `FAILED` page named in `mediaIds` is read again and replaced. Nothing to read: `200` with an empty array. An ID that isn't a media item of this entry: `400`. A media item that isn't an image: `415`. Over the daily limit: `429 rate-limited` |
+| `GET /entries/{entryId}/transcriptions` | — | `200` `Transcription[]` for the pages that have one, in `displayOrder`. The client polls this every couple of seconds while any item is `PENDING` |
+| `DELETE /transcriptions/{transcriptionId}` | — | `204`. Discards the transcript; the photo and the entry are untouched |
+
+## Phase 3 endpoints: AI settings, Help me think, tags, Era summaries and friend profiles (draft)
+Tasks 6.2 and 6.9–6.15 (D-21). Finalise after open questions Q14 and Q17. These replace the earlier drafts of `POST /entries/{entryId}/analyze` and `PATCH /entries/{entryId}/ai-confirm`.
+
+Rules for every AI endpoint, including reading pages (D-20):
+- The user must have given AI consent, otherwise `403 consent-required`. A feature the user has switched off, or that isn't available to them, returns `403 feature-unavailable`.
+- A sealed entry is never read: `409 entry-sealed`. Entry text reaches the AI only through `AiContentSource`.
+- Text from an unsaved draft (`contentJson`) is checked against the TipTap rules (D-05), processed in memory and never stored.
+- Nothing the AI suggests changes data until the user taps. The client sends only the option the user chose; the server holds what each option does.
+- Another user's entry, suggestion, tag, Era or character is `404`.
+- Calls are limited per user per day: `429 rate-limited`. The limits are configuration.
+
+New problem types:
+
+| `type` suffix | Status | When |
+|---|---|---|
+| `consent-required` | 403 | The user hasn't accepted the AI notice, or has withdrawn it |
+| `feature-unavailable` | 403 | The feature is switched off in the user's settings, or isn't available to them |
+| `not-enough-content` | 409 | There is nothing to summarise yet, for example an Era with no weekly summaries |
+
+### Settings and consent (tag: Users)
+`UserSettings` has one block per AI feature. `available` is set by the server (from configuration today, from a plan later) and is ignored if sent. `aiConsent` is read-only here and is `null` until the user accepts.
+```json
+{
+  "helpMeThink": { "available": true, "enabled": true, "nudgeSeconds": 10 },
+  "writingCoach": { "available": false, "enabled": false },
+  "proactiveInsights": { "available": true, "enabled": false, "maxPerWeek": 3 },
+  "aiConsent": { "acceptedAt": "2026-10-27T01:00:00Z", "version": 1 }
+}
+```
+
+| Method and path | Body | Success |
+|---|---|---|
+| `GET /users/me/settings` | — | `200` `UserSettings`. Defaults apply until the user changes something |
+| `PUT /users/me/settings` | `UserSettings` without the read-only fields (full replace) | `200` `UserSettings`. An unknown key or an out-of-range value: `400`. Turning on a feature that isn't `available`: `403 feature-unavailable` |
+| `POST /users/me/ai-consent` | `{ "version": integer }`: the wording version the user was shown | `200` `{ "acceptedAt", "version" }`. Safe to repeat |
+| `DELETE /users/me/ai-consent` | — | `204`. Stops all AI use at once. Existing results stay until the user deletes them (Q17) |
+| `DELETE /users/me/ai-data` | — | `204`. Deletes everything the AI made: summaries, Era summaries, profiles, suggestion cards, embeddings and AI facts. Entries, tags and the user's own notes are untouched |
+
+### Suggestions: Help me think (tag: Suggestions)
+A `Suggestion` is one question or card. Its `kind` says which, and `QUESTION` and `TAG` always have exactly two options.
+```json
+{
+  "id": "66665555-4444-3333-2222-111100009999",
+  "kind": "QUESTION",
+  "status": "OPEN",
+  "entryId": null,
+  "prompt": "Did that feel more like stress or excitement?",
+  "options": [
+    { "id": "a", "label": "Stress" },
+    { "id": "b", "label": "Excitement" }
+  ],
+  "sources": [],
+  "createdAt": "2026-10-27T01:00:00Z",
+  "expiresAt": "2026-10-27T13:00:00Z"
+}
+```
+- `kind` is `QUESTION`, or `TAG` (for example "Add the tag Work?" with the options "Add tag" and "No thanks"). Phase 6 adds `WRITING_INSIGHT`, `PATTERN`, `GROWTH_REMINDER`, `SIMILAR_PAST` and `HIGHLIGHT_REEL`. A client ignores kinds it doesn't know, so new kinds don't break old clients.
+- `status` is `PENDING` (still being made), `OPEN`, `ANSWERED`, `DISMISSED`, `EXPIRED` or `FAILED`.
+- `entryId` is `null` for a card made from an unsaved draft, and for journal-wide cards.
+- `sources` lists what a card was built from, for example `[{ "type": "ENTRY", "id": "…" }]`. The types are `ENTRY`, `WEEKLY_SUMMARY` and `ERA_SUMMARY`.
+- A card made from an unsaved draft expires within hours.
+
+| Method and path | Body | Success |
+|---|---|---|
+| `POST /suggestions` | `{ "feature": "helpMeThink", "entryId"?: uuid, "contentJson"?: TipTap doc }`. Exactly one of `entryId` and `contentJson` | `201` `Suggestion[]` (1–3), or `200` with `[]` when there is nothing worth asking, for example too little text. Under 5 s. Sealed entry: `409 entry-sealed` |
+| `GET /suggestions?entryId={uuid}` | — | `200` `Suggestion[]`: the entry's `OPEN` cards, so they survive a reload |
+| `GET /suggestions/{suggestionId}` | — | `200` `Suggestion` |
+| `POST /suggestions/{suggestionId}/answer` | `{ "optionId": string, "entryId"?: uuid }`. `entryId` is required for a card made from a draft, and names the saved entry | `200` `Suggestion` (`ANSWERED`). The server applies the option's effect once, for example adding a tag. Repeating the same answer is harmless; a different one is `409 conflict` |
+| `POST /suggestions/{suggestionId}/dismiss` | — | `200` `Suggestion` (`DISMISSED`) |
+
+### Tags (tag: Tags)
+`Tag`: `{ "id", "name", "entryCount" }`. `Entry` gains `"tags": [{ "id", "name", "source" }]`, where `source` is `USER` or `AI` (an AI suggestion the user accepted). The list is empty when the entry is sealed.
+
+| Method and path | Body | Success |
+|---|---|---|
+| `POST /tags` | `{ "name": string(1–50) }` | `201` `Tag`. A name that already exists, ignoring case, returns the existing tag with `200` |
+| `GET /tags` | — | `200` `Tag[]`, by name |
+| `PUT /tags/{tagId}` | `{ "name": string(1–50) }` | `200` `Tag`. Renaming to a name that exists: `409 conflict` |
+| `DELETE /tags/{tagId}` | — | `204`. Entries keep their content and lose the tag |
+| `PUT /entries/{entryId}/tags` | `{ "tagIds": [uuid] }` (at most 20; full replace) | `200` `Entry`. Sealed: `409 entry-sealed` |
+| `GET /tags/{tagId}/entries?page=0&size=10` | — | `200` `PageResponse<Entry>`, newest first, redacted |
+
+### Era summaries (tag: Eras)
+`EraSummary`: `{ "eraId", "narrative", "themes": [string], "weekCount", "isStale", "generatedAt" }`. One is made automatically when an Era ends. A stale summary can still be read until it is rebuilt.
+
+| Method and path | Body | Success |
+|---|---|---|
+| `GET /eras/{eraId}/summary` | — | `200` `EraSummary`, or `404` if there isn't one yet |
+| `POST /eras/{eraId}/summary` | — | `202`. Builds or rebuilds it in the background from the Era's weekly summaries. None yet: `409 not-enough-content` |
+
+### Friend profiles (tag: AI Biographer)
+`GET /characters` lists people with their stats. A person's full record:
+```json
+{
+  "id": "22223333-4444-5555-6666-777788889999",
+  "name": "Amogh",
+  "aliases": ["Mo"],
+  "isHidden": false,
+  "userNotes": "Met in orientation week.",
+  "stats": {
+    "mentionCount": 41,
+    "firstMentionedOn": "2019-03-12",
+    "lastMentionedOn": "2026-10-20",
+    "eras": [ { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "title": "Monash Double Degree Era", "mentionCount": 33 } ]
+  },
+  "profile": { "summary": "…", "isStale": false, "generatedAt": "2026-10-27T01:00:00Z" },
+  "linkedMember": null
+}
+```
+- `stats` always come from the database, never from the AI. `profile` is `null` until one is made.
+- A profile is made automatically once someone is mentioned in several entries, and rebuilt in the background when it goes stale. `userNotes` are the user's own words and are never overwritten.
+- `linkedMember` is the Phase 5 link to a group member.
+
+| Method and path | Body | Success |
+|---|---|---|
+| `GET /characters/{characterId}` | — | `200` the record above |
+| `PUT /characters/{characterId}` | `{ "name": string(1–150), "userNotes": string or null, "isHidden": boolean }` | `200` the record. Renaming to another person's name: `409 conflict` (merge them instead) |
+| `POST /characters/{characterId}/profile` | — | `202`. Rebuilds the AI profile. Too few mentions: `409 not-enough-content` |
+| `POST /characters/{characterId}/merge` | `{ "intoCharacterId": uuid }` | `200` the surviving record. Mentions move across and the old name becomes an alias |
+| `GET /characters/{characterId}/entries?page=0&size=10` | — | `200` `PageResponse<Entry>` of entries that mention them, newest first, redacted |
+
+## Phase 5 endpoints (draft; tag: Groups)
+Finalise after open questions Q8–Q11 (D-19). The rules:
+- Personal endpoints are unchanged. Another member's entry is still `404` at `GET /entries/{entryId}`; members read contributions only through the endpoints below.
+- A group the caller isn't a member of is `404`. A member without the role for an action gets `403`.
+- Members are addressed by `memberId` (the `group_members` row), never by a user ID.
+- Contributions are built with `EntryMapper`, so sealed ones are redacted as in D-10. Media URLs are presigned only after the membership check.
+
+New problem types:
+
+| `type` suffix | Status | When |
+|---|---|---|
+| `forbidden` | 403 | A group member lacks the role for the action, for example a non-owner editing the group |
+| `group-sealed` | 409 | Moving a group's unlock date earlier |
+| `not-enough-contributions` | 409 | Asking for a shared story when fewer than two members who opted in have contributions |
+| `conflict` | 409 | Also used when the only owner tries to leave a group |
+
+### Shapes
+- `Group`: `{ "id", "title", "description", "startDate", "endDate", "unlockDate", "isLocked", "myRole", "memberCount", "contributionCount", "createdAt", "updatedAt" }`. `isLocked` is true while `unlockDate` is in the future.
+- `GroupMember`: `{ "id", "displayName", "role", "contributionCount" }`, where `role` is `OWNER` or `MEMBER`.
+- `GroupEntry`: `{ "entry": Entry, "author": { "memberId", "displayName" }, "contributedAt" }`. A sealed contribution shows its author, date and unlock date, but no content or media.
+- `Era` (the Phase 1 shape) gains `"groupId"`: set on an Era created from a trip, otherwise `null`.
+
+### Groups and members
+| Method and path | Body | Success |
+|---|---|---|
+| `POST /groups` | `{ "title": string(1–150), "description"?: string, "startDate"?: date, "endDate"?: date ≥ startDate, "unlockDate"?: instant after now }` | `201` `Group`. The caller becomes its `OWNER` |
+| `GET /groups` | — | `200` array of the caller's groups, newest first |
+| `GET /groups/{groupId}` | — | `200` `Group` plus `"members": [GroupMember]` |
+| `PUT /groups/{groupId}` | Same as POST (full replace) | `200` `Group`. Owner only. Moving `unlockDate` earlier: `409 group-sealed` |
+| `DELETE /groups/{groupId}` | — | `204`. Owner only. Contributions are unlinked; no entry is deleted |
+| `POST /groups/{groupId}/invites` | `{ "expiresAt": instant }` | `201` `{ "id", "url", "expiresAt" }`. Owner only. The raw token appears only in this response |
+| `DELETE /groups/{groupId}/invites/{inviteId}` | — | `204`. Owner only. Revokes the link |
+| `POST /group-invites/{token}/accept` | — | `200` `Group`; the caller becomes a `MEMBER` (already a member: unchanged). Unknown, expired or revoked token: `404` |
+| `PUT /groups/{groupId}/members/me` | `{ "aiConsent": boolean }` | `200` `GroupMember`. Opting out deletes the stored shared story |
+| `DELETE /groups/{groupId}/members/me` | — | `204`. Leaves the group: the caller's contributions are unlinked, and their trip Era stays but is unlinked. The only owner can't leave: `409 conflict` |
+| `DELETE /groups/{groupId}/members/{memberId}` | — | `204`. Owner only, and not for themself (they use `members/me`) |
+
+### Contributions
+| Method and path | Body | Success |
+|---|---|---|
+| `POST /groups/{groupId}/entries` | `{ "entryId": uuid, "confirmUnlockDate"?: instant }` | `201` `GroupEntry` (already added: `200`). The entry must be the caller's own, otherwise `404`. If the group is locked, `confirmUnlockDate` must equal the group's `unlockDate` (otherwise `400`) and the entry is sealed until at least that time; an entry already sealed for longer keeps its date |
+| `GET /groups/{groupId}/entries?page=0&size=10` | — | `200` `PageResponse<GroupEntry>`, ordered by `entryDate` then `createdAt`, ascending |
+| `DELETE /groups/{groupId}/entries/{entryId}` | — | `204`. Withdraws the caller's own contribution; the entry itself is untouched. Allowed even when sealed |
+
+**Trips as Eras** has no endpoint of its own. When a member joins a group that has a `startDate`, the service creates an Era in their timeline from the group's title and dates. When they contribute, it files that week under the Era if the week has none (see Q10).
+
+### Shared story and friendship map (8b)
+| Method and path | Body | Success |
+|---|---|---|
+| `POST /groups/{groupId}/story` | — | `202`. Builds or rebuilds the shared story in the background from contributions by members who opted in. Sealed entries are never included. Fewer than two such members: `409 not-enough-contributions` |
+| `GET /groups/{groupId}/story` | — | `200` `{ "narrativeSummary", "contributorNames": [string], "generatedAt" }`, or `404` if there is none. It is deleted when anyone withdraws, opts out or leaves |
+| `PUT /characters/{characterId}/member` | `{ "memberId": uuid or null }` | `200` `Character`. Links it to a member of a group the caller also belongs to (any other ID: `404`); `null` unlinks. Nothing of that member's journal is exposed |
+
+`GET /characters` (Phase 3) gains `"linkedMember": { "displayName" }` on each character, or `null`.
+
+## Phase 6 endpoints (draft; tag: Suggestions)
+Tasks 9.1–9.5 (D-21). Finalise after open questions Q15 and Q16. Insight cards are `Suggestion`s with new kinds. They use only the caller's own entries (never other members' contributions) and never sealed ones, and every card that draws on past material lists its `sources`. The rules and problem types of the Phase 3 AI section apply.
+
+Insight cards add `title` and `body` (plain text). A `HIGHLIGHT_REEL` also has `reel`: `{ "entries": [Entry] }`, filled in when the card is read, so redaction always applies and an entry sealed after the reel was made simply drops out.
+
+| Method and path | Body | Success |
+|---|---|---|
+| `GET /suggestions?inbox=true&page=0&size=10` | — | `200` `PageResponse<Suggestion>`: the caller's journal-wide cards, newest first. Give exactly one of `inbox` and `entryId`. Needs `proactiveInsights` on |
+| `POST /suggestions/{suggestionId}/feedback` | `{ "value": "USEFUL" }` or `{ "value": "NOT_USEFUL" }` | `200` `Suggestion` (`ANSWERED`). Feedback tunes how often similar cards appear |
+| `POST /highlight-reels` | Exactly one of `{ "eraId" }`, `{ "characterId" }` or `{ "from": date, "to": date }` | `202` `Suggestion` (kind `HIGHLIGHT_REEL`, status `PENDING`). Poll `GET /suggestions/{suggestionId}` |
+| `POST /suggestions` | `{ "feature": "writingCoach", "entryId"?: uuid, "contentJson"?: TipTap doc }` | `201` with one `WRITING_INSIGHT`, or `200` with `[]`, which is the usual answer. Needs `writingCoach` on. Over the daily cap: `429 rate-limited` |

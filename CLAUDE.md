@@ -4,7 +4,10 @@ A private journaling PWA.
 - Users capture messy text, photos and voice notes as Instagram-style entries.
 - The app files entries into automatic weeks and user-named life "Eras".
 - Users can seal entries as "Loot Drops" until a future date.
-- In Phase 3, an AI biographer summarises each week.
+- In Phase 3, an AI biographer summarises weeks and Eras, profiles friends and offers two-option "Help me think" questions (D-21).
+- Photos of paper diary pages work from Phase 1; Phase 3 can also read the handwriting (D-20).
+- In Phase 5, friends can add entries to private groups for shared trips (D-19).
+- In Phase 6, opt-in insight cards and an optional writing coach (D-21).
 
 ## Current focus
 **Phase 1, Sprint 1. Next task: 1.2** (machine prerequisites).

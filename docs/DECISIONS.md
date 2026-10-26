@@ -24,6 +24,9 @@ Each entry says what was decided and why, so it can be revisited knowingly. Add 
 | D-16 | Flyway migration rules | 2026-10-25 |
 | D-17 | Media types and limits | 2026-10-25 |
 | D-18 | AI providers deferred to Phase 3 | 2026-10-25 |
+| D-19 | Groups are contribution-based; entries stay personal | 2026-10-26 |
+| D-20 | Paper diaries: pages are media; reading them is optional and provider-agnostic | 2026-10-26 |
+| D-21 | One AI layer: ask, generate and surface, never chat | 2026-10-27 |
 
 ---
 
@@ -143,6 +146,73 @@ These were chosen during setup as sensible defaults. Change them freely, but rec
 ## D-18 AI providers deferred to Phase 3
 The chat model, the embedding provider and therefore the `vector(N)` dimension are decided when Phase 3 starts. Nothing in Phases 1–2 depends on them. Earlier drafts named `gpt-4o-mini`, `text-embedding-3-small` and `claude-3-haiku`; treat those as outdated.
 
+## D-19 Groups are contribution-based; entries stay personal
+Phase 5 adds private groups so friends can build shared memories, for example a trip. A group never owns an entry; it holds links to entries that members choose to add.
+- A **group** has members (an owner plus the people they invite) and, optionally, trip dates and a shared unlock date.
+- A **contribution** is a row in `group_entries` linking a group to one of the contributor's own entries. Nothing is copied. The entry stays in the author's journal and can be withdrawn at any time.
+- **Personal endpoints don't change.** `GET /entries/{id}` for another member's entry still returns `404`, even when it sits in a shared group. Members read contributions only through `/groups/**`, which checks membership first. A non-member gets `404`. A member who lacks the role for an action (such as an owner-only edit) gets `403`, because the group's existence is no secret from them.
+- **Redaction is unchanged.** Every contribution becomes a DTO through `EntryMapper`, so a sealed one is redacted exactly as in D-10. Media is presigned only after the membership check.
+- A **group Loot Drop** is a group with an `unlock_date`. Contributing to it seals the entry until at least that date, using the existing seal rules: the contributor confirms the date first, and the group's date, like an entry's, can only move later.
+- **Leaving, removal and account deletion** unlink the member's contributions. Their entries, and any Era they created from the trip, stay with them.
+- **AI:** group content reaches an AI provider only from members who opted in, and never while sealed (extends D-10 and D-18).
+- **Not a social network:** no followers, likes, public groups or discovery. Groups are small and invite-only.
+
+**Why:**
+- The private journal stays private. A person shares only what they choose to add.
+- The Phase 1 rules (D-10, D-11, CLAUDE.md rules 3 and 4) keep working, because the personal endpoints never widen.
+- Leaving or deleting is a simple unlink, and the seal and redaction code is reused instead of copied.
+
+**Consequences:**
+- Phase 1 needs no schema or API change. What keeps the door open is already a rule: one Entry→DTO path, object keys with presigned URLs, and user-scoped finders.
+- Groups need real accounts (Phase 2). The shared story and the friendship map also need the AI work (Phase 3). Phase 5 can be built before or after Phase 4.
+- Draft tables and endpoints are in DATABASE_SCHEMA.md and API_CONTRACT.md. Task 8.1 extends `.claude/rules/security.md` with the membership rule.
+- Open questions Q8–Q11 are settled before Sprint 8.
+
+## D-20 Paper diaries: pages are media; reading them is optional and provider-agnostic
+People who write by hand can bring paper diaries in by photographing the pages.
+- A **page scan** is an ordinary `media` image with `purpose = PAGE_SCAN`. The original photo is always kept and is the record. Text read from it is a derived suggestion that may be wrong.
+- Pages go into ordinary entries. The page's date becomes the entry's memory date (backdating, D-09) and the entry is filed into its week as usual. Several pages can share one entry (10 media at most, D-17), and are read in `display_order`.
+- **Transcription** (reading the handwriting) is a separate, optional, asynchronous step. The user taps "Read this page", the result is stored in `media_transcriptions`, and the user reviews it. Nothing reaches the caption until the user chooses to use it, and then it is saved with the normal `PUT /entries/{id}` and validated like any other content (D-05). There is no special write path into entry content.
+- It runs behind a `TranscriptionProvider` interface, so the approach (a multimodal model, a dedicated handwriting service or on-device recognition) can change without touching the schema or the API. Each result records its provider and model, so a page can be read again later with a better one.
+- **Privacy:** a page image leaves the system only when the user taps "Read this page", never for a sealed entry (extends D-10 and D-18), and never with location metadata. Transcripts are visible only to the entry's owner, including when the entry is in a group (D-19).
+- **Seal last (D-10):** read the pages, then seal. A sealed entry can't be read.
+- **Phase placement:** photos of pages work from Phase 1 with no changes. Transcription is Phase 3 (Sprint 6c), because it needs the AI provider decision. A camera "scan mode" (crop, straighten, several pages, offline) is Phase 4.
+
+**Why:**
+- Many people write by hand, and a photographed page is the lowest-friction way in.
+- Keeping the photo means a wrong transcript never loses anything, and the handwriting itself is part of the nostalgia.
+- Separating "store the page" from "read the page" lets the first part work from day one while the second waits for the AI decisions (D-18, Q6, Q12).
+
+**Consequences:**
+- Phase 1 needs no schema or API change. A page photo is just a photo.
+- The Phase 3 migration adds `media.purpose` and `media_transcriptions`. Drafts are in DATABASE_SCHEMA.md and API_CONTRACT.md.
+- An applied transcript lives in `content_text`, so weekly summaries, the Cast of Characters and search (Phase 3) include paper diaries with no extra work.
+- Q12 (recognition approach and consent) is settled before Sprint 6c, and Q13 (bulk notebook import) before Sprint 7.
+
+## D-21 One AI layer: ask, generate and surface, never chat
+The AI features share one layer instead of each building their own: Help me think, tags, Era summaries and friend profiles (Phase 3), and proactive insights and the writing coach (Phase 6).
+- **Three modes.** *Ask*: short questions and tag suggestions answered with one tap ("Help me think"). *Generate*: stored narratives such as weekly summaries, Era summaries and friend profiles. *Surface*: cards drawn from the user's history, such as patterns, growth reminders and highlight reels. The AI never opens a chat. Everything it offers is a card the user can ignore.
+- **Suggestions.** Questions, tag suggestions, writing insights and insight cards are rows in `ai_suggestions`, told apart by `kind` (a string checked in the service, so a new kind needs no migration). A question or tag suggestion always has exactly two options. The server stores what each option would do; the client sends only the option the user chose, and the server then applies a whitelisted effect (add a tag, record a fact). Nothing the AI says changes data on its own.
+- **Drafts.** Help me think and the writing coach can work on text that isn't saved yet. The draft is processed in memory and never stored; only the resulting cards are, and they expire. A card made from a draft is answered once the entry is saved, by naming its id.
+- **One reader.** Every AI feature gets entry text, tags and AI facts from a single `AiContentSource`, which leaves out sealed entries, applies group consent (D-19) and returns plain text with ids. No other code loads entries for AI. This puts the sealed rule (D-10, D-18, D-20) in one place.
+- **Sources and invalidation.** Every AI output records its provider, model and the sources it was built from. Editing, sealing, unlocking or deleting an entry deletes the cards that cite it and marks the summaries and profiles built from it stale, so they are rebuilt without it. A stale narrative is never used as input to another. This also covers an old entry that is sealed after the AI has already read it.
+- **Consent and toggles.** One AI consent (with its wording version) is stored per user, and every AI endpoint needs it (`403 consent-required`), including reading pages (D-20). Each feature also has a user toggle. Whether a feature is available at all goes through a `FeatureGate`, which reads configuration today and can read a plan later, so a feature can become paid without changing the API (Q15).
+- **Providers stay swappable.** Chat, embedding and transcription are separate interfaces (D-18, D-20). Entry text is treated as data, never as instructions: model output is parsed against a schema, and unknown fields and effects are dropped.
+- **Phase placement:** Help me think, tags, Era summaries and friend profiles are Phase 3. Proactive insights and the writing coach are Phase 6 (Sprint 9), because they need built-up history, entry-level retrieval and an answer on paid features.
+- **The positioning stays:** "a biographer, not a therapist". Insight cards and the writing coach are opt-in, capped and dismissible, and never conversational.
+
+**Why:**
+- These features share the same risks: leaking sealed content, sending data without consent, and derived text outliving its source. Solving each once is safer than solving it five times.
+- One suggestions model gives questions, tags, coach nudges and insight cards the same lifecycle, feedback and expiry. A new kind of card is a new string and a new renderer, not a new table and endpoint.
+- Two-option questions and whitelisted effects keep the AI a helper, not an editor.
+
+**Consequences:**
+- Replaces the Phase 3 draft endpoints `analyze` and `ai-confirm` with `POST /suggestions` and `POST /suggestions/{id}/answer`. Nothing was built yet.
+- Phase 1 needs no schema or API change. In Phase 3, `EntryMapper` gains `tags` (empty when sealed).
+- New tables are drafted in DATABASE_SCHEMA.md (`user_settings`, `tags`, `entry_tags`, `ai_suggestions`, `era_summaries`, and `entry_embeddings` in Phase 6), with the endpoints in API_CONTRACT.md. `ai_summaries` gains `is_stale`, `provider` and `model`.
+- Templates (D-06) already cover custom subheadings, so they need no change.
+- Open questions Q14–Q17 are settled before Sprint 6 (Q14, Q17) and Sprint 9 (Q15, Q16).
+
 ---
 
 ## Open questions
@@ -158,3 +228,13 @@ Decide each one before the phase that needs it, then turn it into a D-entry.
 | Q5 | Render's free tier sleeps and takes about a minute to wake; is that acceptable against the "loads in 2 seconds" goal? | Sprint 5 | — |
 | Q6 | AI chat model, embedding provider and dimension; consent and retention wording for sending entries to an AI provider | Sprint 6 | — |
 | Q7 | Voice-to-text: Chrome's Web Speech API sends audio to Google. Acceptable, or transcribe on the server? | Sprint 7 | — |
+| Q8 | Group shape: one group per occasion (a trip), or one long-lived friend group that holds several trips? | Sprint 8 | One group per occasion |
+| Q9 | Shared story and consent: what each member agrees to before their contributions reach an AI provider, and what happens to a stored story when someone withdraws or leaves (see also Q6) | Sprint 8 (8b) | Opt-in per member per group; the stored story is deleted when anyone withdraws, opts out or leaves, and can be rebuilt |
+| Q10 | Trips shorter than a week: an Era holds whole weeks (Q1), so a weekend trip pulls its entire week into the Era. Accept that, or label individual entries with the trip instead? | Sprint 8 | Accept whole weeks |
+| Q11 | Invites and roles: expiring link only, or also email or username invites? Can any member invite, or only the owner? | Sprint 8 | The owner creates expiring links only |
+| Q12 | Handwriting recognition: which approach (a multimodal AI model, a dedicated handwriting service or on-device), which languages, the cost per page and any daily limit, and the consent and retention wording for sending page images to a provider (see Q6). The consent record itself is covered by D-21 | Sprint 6 (6c) | No provider chosen: pages stay photos and "Read this page" is hidden |
+| Q13 | Notebook import: should Phase 4 add bulk import of a whole notebook (many pages at once, one entry per page or per day, a review queue), or only single and multi-page entries? | Sprint 7 | Single and multi-page entries only |
+| Q14 | Help me think timing: how long a pause before the button appears, and whether the nudge is on by default | Sprint 6 | 10 seconds, on by default. The user can change the delay or turn the nudge off, and the AI is never called until the button is tapped |
+| Q15 | Paid features: which are paid (the writing coach? proactive insights?), how we learn a user's plan, and whether any have a free allowance | Sprint 9 | Everything is free and sits behind toggles; `FeatureGate` reads configuration |
+| Q16 | Proactive insights: how often they appear, where (inbox only, or banners and notifications), and which kinds are on by default | Sprint 9 | Opt-in, inbox only, at most 3 a week |
+| Q17 | Withdrawing AI consent: does it also delete the summaries, profiles and cards already made? | Sprint 6 | Withdrawing stops all AI use at once. Existing results stay until the user chooses "delete AI-generated content", which removes everything derived |
