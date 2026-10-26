@@ -96,7 +96,7 @@ Each feature folder contains:
   2. Compute its Monday.
   3. `INSERT … ON CONFLICT (user_id, start_date) DO NOTHING`, then select the week.
   4. Insert the entry.
-- **Feed:** `GET /feed` loads a page of non-empty weeks (newest first), then their entries in one query, then their media in batched queries (`@BatchSize(50)` / `IN (…)`). Two collections are never fetch-joined at once (avoids `MultipleBagFetchException` and N+1 queries).
+- **Feed:** `GET /feed` loads a page of non-empty weeks (newest first), then their entries in one query, then their media in batched queries (`@BatchSize(50)` / `IN (…)`). Two collections are never fetch-joined at once (avoids `MultipleBagFetchException` and N+1 queries). A week's Eras (a join table, D-22) come from one more batched query.
 
 ### Storage
 - **Clients:**
@@ -184,7 +184,7 @@ src/
     - **Gate:** every AI endpoint calls `FeatureGate` in order: consent, the user's switch, then availability. It reads configuration today and can read a plan later.
     - **Suggestions:** `POST /suggestions` builds a prompt from the saved entry or the draft and asks the model for output that matches a JSON schema. Anything that doesn't fit is dropped: unknown fields, unknown effects, or a number of options other than two. Effects come from a short whitelist (add a tag, record a fact) and run only after the user's tap. Entry text is treated as data, never as instructions. A draft is processed in memory and never stored.
     - **Narratives:** weekly summaries, Era summaries and friend profiles are built by `@Async` jobs. An Era summary reads the Era's weekly summaries, not raw entries. Each has an `is_stale` flag, a provider and a model.
-    - **Invalidation:** `EntryService` publishes an event when an entry is edited, sealed, unlocked or deleted. Listeners delete the cards that cite it (found through a GIN index on `sources`), mark the week's summary, the Era summary and the profiles of people mentioned in it as stale, and rebuild them in the background. Stale narratives are excluded as input to other AI work. The unlock job (`unlock_notified`) publishes the same event.
+    - **Invalidation:** `EntryService` publishes an event when an entry is edited, sealed, unlocked or deleted. Listeners delete the cards that cite it (found through a GIN index on `sources`), mark the week's summary, the summaries of all the week's Eras and the profiles of people mentioned in it as stale, and rebuild them in the background. Stale narratives are excluded as input to other AI work. The unlock job (`unlock_notified`) publishes the same event.
     - **Cost and abuse:** per-feature daily limits (`429`), cheap checks before any model call, and logs that carry IDs, kinds and token counts but never text.
     - **Left open on purpose:** a new kind of card is a new `kind` string, a generator and a renderer. A new kind of narrative is a table with real foreign keys and the same three columns (`is_stale`, provider, model). Another provider is another adapter.
 - **Phase 4:**

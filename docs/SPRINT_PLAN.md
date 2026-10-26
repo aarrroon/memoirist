@@ -104,6 +104,7 @@
   - **Done when:** the workflow passes on GitHub. If no remote exists yet, the YAML validates and the job's commands pass locally.
 
 ### Sprint 3: Phase 1 API
+**Decide first:** Q18 (how the feed shows a week that is in several Eras, D-22). Record it in DECISIONS.md.
 
 - [ ] **3.1 Storage service**
   - **Read:** TECH_STACK §2 (Storage), D-03, D-17.
@@ -118,7 +119,7 @@
   - **Done when:** GET and PATCH work; an invalid timezone returns `400`; tests pass.
 
 - [ ] **3.3 Eras CRUD** (`/new-endpoint`)
-  - **Done when:** every row of API_CONTRACT §Eras works and is tested, including another user's era returning `404` and deleting an era leaving its weeks era-less.
+  - **Done when:** every row of API_CONTRACT §Eras works and is tested, including another user's era returning `404` and deleting an Era removing it from its weeks while their other Eras stay.
 
 - [ ] **3.4 Templates CRUD** (`/new-endpoint`)
   - **Done when:** every row of §Templates works and is tested; subheading limits are enforced.
@@ -147,9 +148,9 @@
 - [ ] **3.7 Weekly logs and feed**
   - **Read:** API_CONTRACT §Feed and §Weekly logs, TECH_STACK §2 (Weeks and the feed), Q1.
   - **Done when:**
-    - the feed returns only non-empty weeks, newest first, with era and redacted entries
+    - the feed returns only non-empty weeks, newest first, with their Eras and redacted entries
     - the query count for a page doesn't grow with the number of entries or media (assert with Hibernate statistics)
-    - PUT, close and reopen work, and an era owned by another user returns `404`
+    - PUT (with `eraIds`), close and reopen work, a week can be in several Eras, and an Era owned by another user returns `404`
 
 - [ ] **3.8 API review**
   - **Do:** run `/sync-docs`; check that every endpoint has its tag and documented error responses in Swagger.
@@ -183,7 +184,7 @@
   - **Done when:** time utilities have unit tests covering a Melbourne daylight-saving change and a non-Melbourne zone.
 
 - [ ] **4.4 Feed**
-  - **Do:** infinite scroll over `GET /feed` (`useInfiniteQuery`), sticky era headers and week sections.
+  - **Do:** infinite scroll over `GET /feed` (`useInfiniteQuery`), sticky era headers and week sections. A week in several Eras is grouped under `eras[0]`, with the others as chips (Q18).
   - **Done when:** the feed shows seeded data; there are empty, loading and error states; component tests pass.
 
 - [ ] **4.5 Entry card**
@@ -208,7 +209,7 @@
   - **Done when:** sealing an entry turns it into a vault card; the countdown is correct in the user's zone.
 
 - [ ] **4.9 Eras, templates and settings pages**
-  - **Do:** CRUD for eras and templates; assign a week to an era; settings for display name and timezone.
+  - **Do:** CRUD for eras and templates; assign a week to one or more Eras; settings for display name and timezone.
   - **Done when:** changing the timezone changes the displayed times; component tests pass.
 
 - [ ] **4.10 End-to-end smoke test and CI: frontend**
@@ -287,7 +288,7 @@
 - [ ] **8.2 Invite links.** Hashed tokens, expiry, revoke and accept. **Done when:** the raw token appears only in the create response, expired, revoked and unknown tokens return `404`, and accepting twice is harmless.
 - [ ] **8.3 Contributions and the group feed.** **Done when:** tests prove a member reads another member's contribution only through `/groups/**` while `GET /entries/{id}` still returns `404`; a withdrawn contribution disappears from the group while the entry survives; and a non-member never gets a presigned media URL.
 - [ ] **8.4 Group Loot Drops.** **Done when:** tests prove contributing to a locked group needs the matching `confirmUnlockDate` and seals the entry until at least the group's date; nobody, including the author and the group owner, can read a sealed contribution early; the group's date can't move earlier (`409 group-sealed`); and members can see who has contributed but not what.
-- [ ] **8.5 Trips as Eras.** **Done when:** joining a dated group creates an Era in the member's own timeline; contributing files an Era-less week under it; leaving keeps the Era but unlinks it; and deleting the Era doesn't change membership.
+- [ ] **8.5 Trips as Eras.** **Done when:** joining a dated group creates an Era in the member's own timeline; contributing adds that week to it; leaving keeps the Era but unlinks it; and deleting the Era doesn't change membership.
 - [ ] **8.6 Groups UI.** Group list and create, invite sheet, group feed with author names, an "Add to group" action on entries (with the unlock-date confirmation for locked groups), a group vault card with a countdown, and the trip Era in the feed. **Done when:** a Playwright flow with two accounts creates a group, invites, has both people contribute, and shows both entries in the group feed.
 
 **8b: AI-powered (needs Phase 3)**

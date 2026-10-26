@@ -109,7 +109,7 @@ Every paged endpoint takes `?page=0&size=10` (`size` max 50) and returns:
 ```
 
 ### `WeeklyLog`
-Used by the feed and by week detail. Entries are ordered by `entryDate`, then `createdAt`, ascending, so each week reads as that week's story.
+Used by the feed and by week detail. `eras` lists every Era the week is in, latest start first, so `eras[0]` is the one the feed groups it under (Q18). It is empty for a week in no Era. Entries are ordered by `entryDate`, then `createdAt`, ascending, so each week reads as that week's story.
 ```json
 {
   "id": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
@@ -117,7 +117,7 @@ Used by the feed and by week detail. Entries are ordered by `entryDate`, then `c
   "startDate": "2026-10-19",
   "endDate": "2026-10-25",
   "isClosed": false,
-  "era": { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "title": "Monash Double Degree Era" },
+  "eras": [ { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "title": "Monash Double Degree Era" } ],
   "entries": [ { "...": "Entry" } ]
 }
 ```
@@ -139,7 +139,7 @@ Used by the feed and by week detail. Entries are ordered by `entryDate`, then `c
 | `GET /eras` | — | `200` array of eras, `startDate` descending |
 | `GET /eras/{eraId}` | — | `200` era plus `"weeklyLogs": [{ "id", "title", "startDate", "endDate", "isClosed", "entryCount" }]`, newest first |
 | `PUT /eras/{eraId}` | Same as POST without `id` (full replace) | `200` era |
-| `DELETE /eras/{eraId}` | — | `204`. Its weeks keep their entries and become era-less |
+| `DELETE /eras/{eraId}` | — | `204`. Its weeks keep their entries and just leave that Era; they stay in any other Eras |
 
 Era shape: `{ "id", "title", "description", "startDate", "endDate", "createdAt", "updatedAt" }`.
 
@@ -157,7 +157,7 @@ Template shape: `{ "id", "name", "subheadings": ["What triggered the spiral?", "
 ### Feed (tag: Feed)
 | Method and path | Success |
 |---|---|
-| `GET /feed?page=0&size=10` | `200` `PageResponse<WeeklyLog>`. Only weeks with at least one entry, `startDate` descending. Each week's entries are included, redacted and presigned. One request renders a page of the feed |
+| `GET /feed?page=0&size=10` | `200` `PageResponse<WeeklyLog>`. Only weeks with at least one entry, `startDate` descending. Each week's entries are included, redacted and presigned. A week in several Eras is listed once. One request renders a page of the feed |
 
 ### Weekly logs (tag: Weekly Logs)
 Weeks are created automatically when an entry is created (D-08). There is no create or delete endpoint.
@@ -165,7 +165,7 @@ Weeks are created automatically when an entry is created (D-08). There is no cre
 | Method and path | Body | Success |
 |---|---|---|
 | `GET /weekly-logs/{logId}` | — | `200` `WeeklyLog` |
-| `PUT /weekly-logs/{logId}` | `{ "title": string(0–200) or null, "eraId": uuid or null }` (full replace; the era must be the user's) | `200` `WeeklyLog` |
+| `PUT /weekly-logs/{logId}` | `{ "title": string(0–200) or null, "eraIds": [uuid] }` (full replace; every Era in the list must be the user's) | `200` `WeeklyLog` |
 | `POST /weekly-logs/{logId}/close` | — | `200` `WeeklyLog` with `isClosed: true` (idempotent). Phase 3: publishes `WeeklyLogClosedEvent` |
 | `POST /weekly-logs/{logId}/reopen` | — | `200` `WeeklyLog` with `isClosed: false` (idempotent) |
 
@@ -434,7 +434,7 @@ New problem types:
 | `GET /groups/{groupId}/entries?page=0&size=10` | — | `200` `PageResponse<GroupEntry>`, ordered by `entryDate` then `createdAt`, ascending |
 | `DELETE /groups/{groupId}/entries/{entryId}` | — | `204`. Withdraws the caller's own contribution; the entry itself is untouched. Allowed even when sealed |
 
-**Trips as Eras** has no endpoint of its own. When a member joins a group that has a `startDate`, the service creates an Era in their timeline from the group's title and dates. When they contribute, it files that week under the Era if the week has none (see Q10).
+**Trips as Eras** has no endpoint of its own. When a member joins a group that has a `startDate`, the service creates an Era in their timeline from the group's title and dates. When they contribute, it adds that week to the Era, and the week stays in its other Eras (see Q10).
 
 ### Shared story and friendship map (8b)
 | Method and path | Body | Success |

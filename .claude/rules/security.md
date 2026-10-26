@@ -10,7 +10,7 @@ paths:
 - The current user comes only from `CurrentUserProvider`.
 - Load user data only through user-scoped finders (`findByIdAndUserId`, or through the owning entry for media).
 - A resource that is missing or not owned throws `NotFoundException`, which becomes `404`. Never `403`, which would reveal that it exists.
-- When a request references another resource (an `eraId` on a week, a `templateId` on an entry), check that the referenced one is also owned. Otherwise return `404`.
+- When a request references another resource (the `eraIds` on a week, a `templateId` on an entry), check that the referenced one is also owned. Otherwise return `404`.
 
 ## Dev user header
 - `DevHeaderCurrentUserProvider` is annotated `@Profile({"local","test"})`. No other profile may resolve `X-Dev-User-Id`.

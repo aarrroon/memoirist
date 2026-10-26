@@ -27,6 +27,7 @@ Each entry says what was decided and why, so it can be revisited knowingly. Add 
 | D-19 | Groups are contribution-based; entries stay personal | 2026-10-26 |
 | D-20 | Paper diaries: pages are media; reading them is optional and provider-agnostic | 2026-10-26 |
 | D-21 | One AI layer: ask, generate and surface, never chat | 2026-10-27 |
+| D-22 | Eras can overlap: a week can belong to several Eras | 2026-10-27 |
 
 ---
 
@@ -74,7 +75,7 @@ Locally the image is `pgvector/pgvector:pg17`; production is Neon on Postgres 17
 ## D-08 Weeks are automatic
 - A week runs Monday to Sunday in the user's timezone.
 - Creating an entry finds or creates the week containing its memory date. The database enforces uniqueness on `(user_id, start_date)`; the service inserts with `ON CONFLICT DO NOTHING` and then selects the row.
-- Users can give a week a title, assign it to an era, and close or reopen it. There is no "create week" step.
+- Users can give a week a title, assign it to one or more Eras (D-22), and close or reopen it. There is no "create week" step.
 - Weeks with no entries are hidden from the feed.
 
 ## D-09 Entries have a memory date
@@ -213,6 +214,25 @@ The AI features share one layer instead of each building their own: Help me thin
 - Templates (D-06) already cover custom subheadings, so they need no change.
 - Open questions Q14–Q17 are settled before Sprint 6 (Q14, Q17) and Sprint 9 (Q15, Q16).
 
+## D-22 Eras can overlap
+Chapters of life overlap: a trip happens inside a year at university, and a relationship runs across several jobs. So a week can belong to more than one Era.
+- A week is linked to its Eras through a join table, `weekly_log_eras`. This replaces the single `weekly_logs.era_id` column in the Phase 1 design.
+- Era date ranges may overlap (they always could). Assignment is still manual by default (Q1), and a week can be in as many Eras as the user likes, up to 10.
+- Deleting an Era removes only its links. The weeks, and their other Eras, stay.
+- The API shows a week's Eras as a list (`eras`), and `PUT /weekly-logs/{id}` takes `eraIds`.
+- The feed lists each week once. Which Era it is grouped under is open question Q18; the default is the Era that started most recently, with the others shown as chips on the week.
+- Trip Eras (D-19) are ordinary Eras linked to a group. A week where the user adds to a trip joins the Trip Era and stays in its other Eras.
+- Anything counted per Era counts a week once for each Era it is in: Era summaries, the friendship map and a person's mentions per Era (D-21).
+
+**Why:**
+- "Trips become chapters" (Phase 5) needs a short Era inside a long one.
+- A join table from the start is a small change while nothing is built. Moving a single `era_id` column into a join table later would need a data migration and a breaking API change.
+
+**Consequences:**
+- Amends D-08 and the Phase 1 design: the V1 migration, the `WeeklyLog` shape, `PUT /weekly-logs/{id}`, and tasks 3.3, 3.7, 4.4, 4.9 and 8.5.
+- Phase 1 stays about the same size: one join table instead of one column.
+- Open question Q18 is settled before Sprint 3.
+
 ---
 
 ## Open questions
@@ -221,7 +241,7 @@ Decide each one before the phase that needs it, then turn it into a D-entry.
 
 | # | Question | Needed by | Default if nobody decides |
 |---|---|---|---|
-| Q1 | Should a new week join the era whose dates contain it automatically? | Sprint 3 | No: users assign eras manually |
+| Q1 | Should a new week join the Eras whose dates contain it automatically? | Sprint 3 | No: users assign eras manually |
 | Q2 | Auth details: JWT in an httpOnly cookie or an `Authorization` header; expiry and refresh; Argon2id or BCrypt; email verification; password reset; login rate limiting | Sprint 5 | — |
 | Q3 | Account deletion and data export (privacy obligations) | Sprint 5 | — |
 | Q4 | PDF export: which library, and in Phase 2 or Phase 4? | Sprint 5 | — |
@@ -230,7 +250,7 @@ Decide each one before the phase that needs it, then turn it into a D-entry.
 | Q7 | Voice-to-text: Chrome's Web Speech API sends audio to Google. Acceptable, or transcribe on the server? | Sprint 7 | — |
 | Q8 | Group shape: one group per occasion (a trip), or one long-lived friend group that holds several trips? | Sprint 8 | One group per occasion |
 | Q9 | Shared story and consent: what each member agrees to before their contributions reach an AI provider, and what happens to a stored story when someone withdraws or leaves (see also Q6) | Sprint 8 (8b) | Opt-in per member per group; the stored story is deleted when anyone withdraws, opts out or leaves, and can be rebuilt |
-| Q10 | Trips shorter than a week: an Era holds whole weeks (Q1), so a weekend trip pulls its entire week into the Era. Accept that, or label individual entries with the trip instead? | Sprint 8 | Accept whole weeks |
+| Q10 | Trips shorter than a week: an Era holds whole weeks (Q1), so a weekend trip adds its entire week to the Trip Era (the week stays in its other Eras too, D-22). Accept that, or label individual entries with the trip instead? | Sprint 8 | Accept whole weeks |
 | Q11 | Invites and roles: expiring link only, or also email or username invites? Can any member invite, or only the owner? | Sprint 8 | The owner creates expiring links only |
 | Q12 | Handwriting recognition: which approach (a multimodal AI model, a dedicated handwriting service or on-device), which languages, the cost per page and any daily limit, and the consent and retention wording for sending page images to a provider (see Q6). The consent record itself is covered by D-21 | Sprint 6 (6c) | No provider chosen: pages stay photos and "Read this page" is hidden |
 | Q13 | Notebook import: should Phase 4 add bulk import of a whole notebook (many pages at once, one entry per page or per day, a review queue), or only single and multi-page entries? | Sprint 7 | Single and multi-page entries only |
@@ -238,3 +258,4 @@ Decide each one before the phase that needs it, then turn it into a D-entry.
 | Q15 | Paid features: which are paid (the writing coach? proactive insights?), how we learn a user's plan, and whether any have a free allowance | Sprint 9 | Everything is free and sits behind toggles; `FeatureGate` reads configuration |
 | Q16 | Proactive insights: how often they appear, where (inbox only, or banners and notifications), and which kinds are on by default | Sprint 9 | Opt-in, inbox only, at most 3 a week |
 | Q17 | Withdrawing AI consent: does it also delete the summaries, profiles and cards already made? | Sprint 6 | Withdrawing stops all AI use at once. Existing results stay until the user chooses "delete AI-generated content", which removes everything derived |
+| Q18 | Overlapping Eras in the feed: a week can be in several Eras (D-22) but is listed once. Which Era is it grouped under, and are the others shown as chips? | Sprint 3 | The Era that started most recently, with the others as chips on the week |

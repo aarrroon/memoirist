@@ -36,7 +36,7 @@ memoirist is a private Progressive Web App that acts as an automated biographer.
 | **Entry** | One post: an optional rich-text caption plus 0–10 photos or voice notes. It belongs to one memory date. |
 | **Memory date** | The day an entry is *about*. Defaults to today and can be backdated, never set in the future. |
 | **Week** | Monday–Sunday in the user's timezone. Created automatically for the first entry dated in it. Users can title, close and reopen it. Stored as `weekly_logs`. |
-| **Era** | A user-named chapter of life with a start date and an optional end date (for example, "Monash Double Degree Era"). Holds many weeks. |
+| **Era** | A user-named chapter of life with a start date and an optional end date (for example, "Monash Double Degree Era"). Holds many weeks. A week can belong to several Eras, so chapters can overlap (D-22). |
 | **Template** | A reusable list of prompts (for example, "Spiralling Check-in") inserted as headings when writing an entry. |
 | **Loot Drop** | An entry sealed until a future unlock date. Nobody, including its author, can read or change it until then. |
 | **Closing a week** | Marks a week as done. In Phase 3 this triggers the AI weekly summary. A closed week can still be edited and reopened. |
@@ -76,11 +76,11 @@ memoirist is a private Progressive Web App that acts as an automated biographer.
 Everything runs locally with Docker Compose: Postgres plus SeaweedFS for object storage.
 - **Entries:** create, edit and delete, with an optional TipTap caption, a memory date (backdating allowed) and an optional template.
 - **Media carousel:** images and voice notes stored privately and served through short-lived presigned URLs. Upload, reorder, delete.
-- **Automatic weeks:** title, assign to an era, close and reopen.
-- **Eras:** create, edit and delete chapters; assign weeks to them.
+- **Automatic weeks:** title, assign to one or more Eras, close and reopen.
+- **Eras:** create, edit and delete chapters; assign weeks to them. Chapters can overlap, so a trip can sit inside a longer chapter (D-22).
 - **Templates:** create, edit and delete prompt lists.
 - **Loot Drops:** strict seal with server-side redaction everywhere.
-- **Feed:** paged, newest weeks first, grouped by era.
+- **Feed:** paged, newest weeks first, grouped by Era. A week in several Eras is listed once, under the one that started most recently, with the others as chips (Q18).
 - **Settings:** display name and timezone (default Australia/Melbourne).
 - **Dev user:** a seeded local user, with no login yet.
 - **API docs:** Swagger UI at `/swagger-ui.html`.
@@ -118,7 +118,7 @@ Friends build shared memories from their own journals, for example after a trip 
 - **Groups:** create a private group with a title and optional trip dates, invite friends with an expiring link, and leave at any time (your contributions leave with you). The owner can remove members or delete the group.
 - **Contributions:** add any of your own entries to a group and withdraw them whenever you like. The group feed shows everyone's contributions in date order, with who wrote each.
 - **Group Loot Drops:** give a group one shared unlock date. Everything added to it is sealed until then and opens for everyone at once. Until then, members can see who has added something, but not what.
-- **Trips as Eras:** a group with trip dates appears in each member's own timeline as an Era, created automatically when they join. Weeks in which they add to the trip are filed under it unless they already belong to another Era (see Q10).
+- **Trips as Eras:** a group with trip dates appears in each member's own timeline as an Era, created automatically when they join. Weeks in which they add to the trip are added to it, and stay in their other Eras too (see Q10).
 
 **8b: needs the AI biographer**
 - **One trip, several perspectives:** the AI weaves everyone's contributions into one shared story. It uses only contributions from members who said yes, and never sealed entries.

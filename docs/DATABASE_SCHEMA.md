@@ -10,7 +10,7 @@
 - **Naming:** tables are plural snake_case. Constraints are named `uq_<table>_<cols>`, `chk_<table>_<rule>` and `idx_<table>_<cols>`.
 - **Foreign keys:** every foreign key states its `ON DELETE` behaviour.
 - **No URLs:** the database never stores a URL or storage host, only object keys.
-- **Ownership:** every user-owned table has `user_id` directly, except tables that hang off another owned table: `media` is owned through `entries`, `media_transcriptions` through `media`, and `entry_tags` through `entries`.
+- **Ownership:** every user-owned table has `user_id` directly, except tables that hang off another owned table: `media` is owned through `entries`, `media_transcriptions` through `media`, `entry_tags` through `entries`, and `weekly_log_eras` through `weekly_logs`.
 
 ## Migration history
 
@@ -72,12 +72,22 @@ Created automatically, one per user per Monday–Sunday week in the user's timez
 |---|---|---|
 | id | UUID | PK |
 | user_id | UUID | NOT NULL → users ON DELETE CASCADE |
-| era_id | UUID | NULL → eras ON DELETE SET NULL. The era must belong to the same user (checked in the service) |
 | title | VARCHAR(200) | NULL |
 | start_date | DATE | NOT NULL. Must be a Monday. UNIQUE `(user_id, start_date)` |
 | end_date | DATE | NOT NULL. CHECK `end_date = start_date + 6` |
 | is_closed | BOOLEAN | NOT NULL DEFAULT FALSE. Closed weeks stay editable and can be reopened |
 | created_at, updated_at | TIMESTAMPTZ | |
+
+### `weekly_log_eras`
+Links a week to the Eras it belongs to. A week can be in several Eras, so chapters can overlap (D-22). A week with no rows is in no Era.
+
+| Column | Type | Constraints and notes |
+|---|---|---|
+| weekly_log_id | UUID | NOT NULL → weekly_logs ON DELETE CASCADE |
+| era_id | UUID | NOT NULL → eras ON DELETE CASCADE. The Era must belong to the same user as the week (checked in the service) |
+| created_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() |
+
+The primary key is `(weekly_log_id, era_id)`. A week can be in at most 10 Eras (service check). Deleting an Era removes only its links.
 
 ### `entries`
 One Instagram-style post. `user_id` is duplicated from the week so ownership checks are a single-column lookup. The service keeps it equal to the week's owner.
@@ -149,7 +159,6 @@ CREATE TABLE templates (
 CREATE TABLE weekly_logs (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id     UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    era_id      UUID REFERENCES eras (id) ON DELETE SET NULL,
     title       VARCHAR(200),
     start_date  DATE NOT NULL,
     end_date    DATE NOT NULL,
@@ -159,6 +168,14 @@ CREATE TABLE weekly_logs (
     CONSTRAINT uq_weekly_logs_user_start UNIQUE (user_id, start_date),
     CONSTRAINT chk_weekly_logs_monday CHECK (EXTRACT(ISODOW FROM start_date) = 1),
     CONSTRAINT chk_weekly_logs_seven_days CHECK (end_date = start_date + 6)
+);
+
+-- A week can be in several Eras (D-22). Deleting an Era removes only its links.
+CREATE TABLE weekly_log_eras (
+    weekly_log_id  UUID NOT NULL REFERENCES weekly_logs (id) ON DELETE CASCADE,
+    era_id         UUID NOT NULL REFERENCES eras (id) ON DELETE CASCADE,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (weekly_log_id, era_id)
 );
 
 CREATE TABLE entries (
@@ -192,7 +209,8 @@ CREATE TABLE media (
 -- uq_media_entry_order already indexes (entry_id, display_order).
 CREATE INDEX idx_eras_user_start ON eras (user_id, start_date DESC);
 CREATE INDEX idx_templates_user ON templates (user_id);
-CREATE INDEX idx_weekly_logs_era ON weekly_logs (era_id);
+-- The primary key of weekly_log_eras already indexes (weekly_log_id, era_id).
+CREATE INDEX idx_weekly_log_eras_era ON weekly_log_eras (era_id);
 CREATE INDEX idx_entries_week_date ON entries (weekly_log_id, entry_date, created_at);
 CREATE INDEX idx_entries_user_date ON entries (user_id, entry_date DESC);
 CREATE INDEX idx_entries_template ON entries (template_id);
@@ -285,6 +303,7 @@ CREATE TABLE character_mentions (
 );
 
 -- One undirected edge per pair per era: store the smaller UUID first.
+-- A mention counts toward every Era its week belongs to (D-22).
 CREATE TABLE friendship_edges (
     id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id               UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
