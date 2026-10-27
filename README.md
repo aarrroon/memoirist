@@ -58,6 +58,9 @@ After a few months of entries, memoirist knows your story well enough to notice 
 - **Patterns, spotted.** "You've felt flat on most Sunday evenings this month." Gentle observations drawn from your own entries, with the entries that back them up.
 - **Reminders of how far you've come.** Worried about something? See what you wrote about a similar worry last year and how it turned out. Feeling stressed? Set today beside the last time you felt this way, and what got you through.
 - **Highlight reels.** The best moments of a chapter, a year or a friendship, gathered in one place and ready to relive.
+- **Predictions.** "Still at this job in a year?" Seal a yes-or-no bet with yourself. When it opens, answer again and see how well you knew yourself.
+- **Your year in review.** Each December, the chapters, people and best photos of your year, with a card you can share that shows nothing private.
+- **A gift of memories.** Gather your moments with a friend into a page you can share for their birthday.
 - **A nudge while you write (optional).** Turn it on and memoirist can quietly offer one sharp question, or a better way to say what you mean, only when it's really worth it. This one may become a paid extra.
 
 Insights are always opt-in, they wait in their own inbox instead of interrupting you, and they never use anything sealed as a Loot Drop.
@@ -69,46 +72,57 @@ Memoirist is being built in phases, in this order. Each one builds on the one be
 ### Phase 1: The core journal (in progress)
 
 - Write, add photos and record voice notes
-- Your own templates with custom subheadings
+- Photo dump: pick a batch of photos and they're filed into entries, one for each day they were taken
+- Your own templates with custom subheadings, or start from a few ready-made ones
 - Your own tags, like *Work* or *Family*, to sort entries your way
 - Photos of paper diary pages, filed on the right day
-- Weeks and Eras, filed automatically
+- A soundtrack from Spotify for an entry, a week or an Era
+- Weeks and Eras, filed automatically, with a cover photo for each Era
 - Tap a week for a quick summary of what happened, or scroll a simple timeline of every entry
+- On this day: memories from the same date in past years
 - A Recently deleted list, so you can bring an entry back within 30 days
-- Loot Drops, with a heads-up when one opens, a scrollable feed and your settings
+- Loot Drops, with quick unlock dates, a heads-up when one opens, and a reply to past you
+- A first letter to future you when you start
+- A scrollable feed and your settings
 
 ### Phase 2: Online, with accounts
 
 - Sign up and use memoirist from anywhere
+- Install it on your phone like an app, with an app lock to keep it private
 - Share an entry or a week with a link that expires
 - Export a week as a PDF, and export or delete all your data
 - An email when a Loot Drop opens
+- A yearly letter to future you, on a date you choose
 
-### Phase 3: The AI biographer
+### Phase 3: Memories with friends
 
-- Help me think, and tag suggestions
-- Weekly and chapter (Era) summaries, written when you close a week or an Era
-- Profiles of the people in your story, and a map of your friendships
-- Search by word, or by feeling, like "when did I last feel like this?"
-- Turn handwriting into text
-
-### Phase 4: On your phone
-
-- Install it like an app and write offline
-- Scan mode for diary pages
-- Talk instead of type, photos inside your writing, and a printable scrapbook
-- A notification when a Loot Drop opens
-
-### Phase 5: Memories with friends
-
-- Private groups and shared stories
+- Private groups
 - Seal a trip for later
 - One trip, every perspective
 - Trips become chapters
 
+### Phase 4: The AI biographer
+
+- Help me think, and tag suggestions
+- Weekly and chapter (Era) summaries, written when you close a week or an Era
+- Close an Era with a last word and a letter to open years later
+- A weekly email to wrap up your week and read its story
+- Profiles of the people in your story, and a map of your friendships
+- Search by word, or by feeling, like "when did I last feel like this?"
+- Turn handwriting into text
+- One shared story of a trip, woven from everyone's entries
+
+### Phase 5: On your phone
+
+- Write offline
+- Scan mode for diary pages
+- Talk instead of type, photos inside your writing, and a printable scrapbook
+- A notification when a Loot Drop opens
+
 ### Phase 6: Looking back with you
 
 - Patterns, reminders of how far you've come, and highlight reels
+- Predictions, your year in review, and a gift of memories for a friend
 - An optional nudge while you write
 
 Phases 4 and 5 can swap places, and the details inside each phase may shift as we learn what people use.

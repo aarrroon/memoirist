@@ -61,7 +61,7 @@ Path-scoped instructions in [.claude/rules/](../.claude/rules/). Claude reads ea
 |---|---|---|
 | `backend.md` | `backend/**` | Structure, Java style, persistence, time, Flyway, testing |
 | `api.md` | Backend Java and API_CONTRACT.md | Paths, status codes, errors, pagination, uploads, OpenAPI, private input |
-| `security.md` | Backend and frontend source | Ownership (deleted entries count as missing), the dev header, Loot Drop redaction (counts and filters too), content safety, secrets |
+| `security.md` | Backend and frontend source | Ownership (deleted entries count as missing), the dev header, Loot Drop redaction (counts and filters too), content safety, secrets, emails and metrics without content |
 | `frontend.md` | `frontend/**` | Structure, data fetching, time, editor, capture, styling, tests |
 | `docs.md` | `docs/**`, `README.md` | Which doc wins, changing every mention together, IDs, README edits only with approval, house style |
 | `claude-config.md` | `.claude/**`, `CLAUDE.md`, `.mcp.json` | Keeping CLAUDE.md short, where instructions belong, writing and testing hooks, keeping this file current |
@@ -101,7 +101,7 @@ These come with Claude Code.
 | `/context` | See which instruction files are loaded and how much context they use |
 | `/memory` | Open CLAUDE.md, `CLAUDE.local.md` and Claude's auto memory |
 | `/code-review` | A bug-focused review of your changes |
-| `/security-review` | A security review before Phase 2 and Phase 5 |
+| `/security-review` | A security review before Phase 2 and Phase 3 |
 | `/simplify` | Tidy up changed code (quality only, not bugs) |
 | `/fewer-permission-prompts` | After a week of real work, allow the safe commands Claude keeps asking about |
 | `/doctor prompt-audit` | Find contradictions across CLAUDE.md, rules and skills |
@@ -174,4 +174,4 @@ Hooks run by themselves, so there's nothing to type. To check one is working:
 | `/close-feature [id]` | Skill | Run the demo, `/sync-docs` and `spec-reviewer`, mark the feature Done, propose the commit |
 | `phase-retro.md` | Prompt | End-of-phase review: what to add to CLAUDE.md or the skills; tag `phase-n-done` |
 | Auto-format | Hook | Run Spotless (Java) and Prettier (frontend) after each edit, once the code exists |
-| `security-reviewer` | Subagent | Ownership, redaction, tokens and secrets review before Phases 2 and 5 |
+| `security-reviewer` | Subagent | Ownership, redaction, tokens and secrets review before Phases 2 and 3 |

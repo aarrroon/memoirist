@@ -11,7 +11,7 @@
 | Instants | ISO-8601 UTC with `Z`, e.g. `2026-10-25T10:20:00Z` |
 | Calendar dates | `YYYY-MM-DD`, meaning the user's local calendar day |
 | IDs | UUID strings |
-| Docs | Swagger UI at `/swagger-ui.html`; one OpenAPI tag per resource (Users, Eras, Templates, Tags, Feed, Weekly Logs, Entries, Media) |
+| Docs | Swagger UI at `/swagger-ui.html`; one OpenAPI tag per resource (Users, Eras, Templates, Tags, Feed, Weekly Logs, Entries, Media, Music) |
 
 ### Who is the current user?
 - **Never** send a user ID in a body, query string or path.
@@ -42,6 +42,7 @@
 | `payload-too-large` | 413 | File over 25 MB, content over 200 KB |
 | `unsupported-media-type` | 415 | File type not in the allowed list |
 | `storage-unavailable` | 503 | Object storage failed |
+| `music-search-unavailable` | 503 | Spotify search isn't set up, or Spotify refused the request (D-35) |
 | `internal-error` | 500 | Anything unexpected (no stack traces in the body) |
 
 ### Pagination
@@ -72,6 +73,9 @@ Every paged endpoint takes `?page=0&size=10` (`size` max 50, unless the endpoint
   "contentJson": { "type": "doc", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "Just arrived at the campsite." } ] } ] },
   "contentText": "Just arrived at the campsite.",
   "tags": [ { "id": "12341234-1234-1234-1234-123412341234", "name": "Trips", "source": "USER" } ],
+  "soundtrack": "spotify:track:1a2B3c4D5e6F7g8H9i0J1k",
+  "replyToEntryId": null,
+  "replyIds": [],
   "createdAt": "2026-10-20T03:30:00Z",
   "updatedAt": "2026-10-20T03:30:00Z",
   "unlockDate": null,
@@ -79,9 +83,11 @@ Every paged endpoint takes `?page=0&size=10` (`size` max 50, unless the endpoint
   "media": [ { "...": "Media" } ]
 }
 ```
-`title` is optional (D-24). `tags[].source` is `USER`, or from Phase 3 `AI` for an accepted suggestion (D-26).
+- `title` is optional (D-24). `tags[].source` is `USER`, or from Phase 4 `AI` for an accepted suggestion (D-26).
+- `soundtrack` is a Spotify URI or `null` (D-35).
+- `replyToEntryId` names the opened Loot Drop this entry answers. `replyIds` lists the replies to an opened Loot Drop (D-33).
 
-**Sealed entry** (`unlockDate` is in the future): the same shape, with the private fields removed.
+**Sealed entry** (`unlockDate` is in the future): the same shape, with the private fields removed, including `soundtrack`, `replyToEntryId` and `replyIds`.
 ```json
 {
   "id": "77776666-5555-4444-3333-222211110000",
@@ -92,6 +98,9 @@ Every paged endpoint takes `?page=0&size=10` (`size` max 50, unless the endpoint
   "contentJson": null,
   "contentText": null,
   "tags": [],
+  "soundtrack": null,
+  "replyToEntryId": null,
+  "replyIds": [],
   "createdAt": "2026-10-21T09:00:00Z",
   "updatedAt": "2026-10-21T09:05:00Z",
   "unlockDate": "2027-10-21T09:00:00Z",
@@ -149,6 +158,7 @@ Used by the feed and by week detail. `eras` lists every Era whose dates overlap 
   "startDate": "2026-10-19",
   "endDate": "2026-10-25",
   "isClosed": false,
+  "soundtrack": null,
   "eras": [ { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "title": "Monash Double Degree Era" } ],
   "entries": [ { "...": "Entry" } ]
 }
@@ -161,19 +171,19 @@ Used by the feed and by week detail. `eras` lists every Era whose dates overlap 
 ### Users (tag: Users)
 | Method and path | Body | Success |
 |---|---|---|
-| `GET /users/me` | — | `200` `{ "id", "email", "displayName", "timezone" }` |
-| `PATCH /users/me` | `{ "displayName"?: string(1–100), "timezone"?: IANA zone }` | `200` user. Unknown zone: `400` |
+| `GET /users/me` | — | `200` `{ "id", "email", "displayName", "timezone", "birthday" }` |
+| `PATCH /users/me` | `{ "displayName"?: string(1–100), "timezone"?: IANA zone, "birthday"?: date or null }` | `200` user. Unknown zone, or a birthday after today: `400`. The birthday powers the *next birthday* unlock suggestion (D-33) |
 
 ### Eras (tag: Eras)
 | Method and path | Body | Success |
 |---|---|---|
-| `POST /eras` | `{ "id"?, "title": string(1–150), "description"?: string, "startDate": date, "endDate"?: date ≥ startDate }` | `201` era. It holds every week its dates overlap, existing weeks included (D-22) |
+| `POST /eras` | `{ "id"?, "title": string(1–150), "description"?: string, "startDate": date, "endDate"?: date ≥ startDate, "soundtrack"?: Spotify URI or null, "coverMediaId"?: uuid or null }` | `201` era. It holds every week its dates overlap, existing weeks included (D-22). A cover must be an image from one of the user's own entries, otherwise `400`; another user's media is `404` (D-36) |
 | `GET /eras` | — | `200` array of eras, `startDate` descending |
 | `GET /eras/{eraId}` | — | `200` era plus `"weeklyLogs": [{ "id", "title", "startDate", "endDate", "isClosed", "entryCount" }]`, newest first: the weeks its dates overlap. `entryCount` counts only the week's entries inside the Era's dates (D-22) |
 | `PUT /eras/{eraId}` | Same as POST without `id` (full replace) | `200` era. New dates apply at once: it holds the weeks they overlap (D-22) |
 | `DELETE /eras/{eraId}` | — | `204`. Only the Era goes; its weeks, their entries and their other Eras stay |
 
-Era shape: `{ "id", "title", "description", "startDate", "endDate", "createdAt", "updatedAt" }`.
+Era shape: `{ "id", "title", "description", "startDate", "endDate", "soundtrack", "cover", "createdAt", "updatedAt" }`. `cover` is a presigned `Media`, or `null` when there's none or its entry is sealed or in Recently deleted (D-36). `soundtrack` is a Spotify URI or `null` (D-35).
 
 ### Templates (tag: Templates)
 | Method and path | Body | Success |
@@ -209,19 +219,20 @@ Weeks are created automatically when an entry is created (D-08). There is no cre
 | Method and path | Body | Success |
 |---|---|---|
 | `GET /weekly-logs/{logId}` | — | `200` `WeeklyLog` |
-| `PUT /weekly-logs/{logId}` | `{ "title": string(0–200) or null }` (full replace) | `200` `WeeklyLog`. A week's Eras follow from their dates and can't be set here (D-22) |
-| `POST /weekly-logs/{logId}/close` | — | `200` `WeeklyLog` with `isClosed: true` (idempotent). Phase 3: writes the week's summary through `WeeklyLogClosedEvent` (D-28) |
+| `PUT /weekly-logs/{logId}` | `{ "title": string(0–200) or null, "soundtrack": Spotify URI or null }` (full replace) | `200` `WeeklyLog`. A week's Eras follow from their dates and can't be set here (D-22) |
+| `POST /weekly-logs/{logId}/close` | — | `200` `WeeklyLog` with `isClosed: true` (idempotent). Phase 4: writes the week's summary through `WeeklyLogClosedEvent` (D-28) |
 | `POST /weekly-logs/{logId}/reopen` | — | `200` `WeeklyLog` with `isClosed: false` (idempotent) |
 
 ### Entries (tag: Entries)
 | Method and path | Body | Success |
 |---|---|---|
-| `POST /entries` | `{ "id"?, "entryDate"?: date (default today in the user's zone; not after today; not before 1900-01-01), "templateId"?: uuid, "title"?: string(1–150) or null, "contentJson"?: TipTap doc or null, "tagIds"?: [uuid] (at most 20, the user's own) }` | `201` `Entry`, filed into the right week (created if needed). Replay of an existing own `id`: `200`. An entry may be created empty because media are uploaded afterwards (D-23) |
+| `POST /entries` | `{ "id"?, "entryDate"?: date (default today in the user's zone; not after today; not before 1900-01-01), "templateId"?: uuid, "title"?: string(1–150) or null, "contentJson"?: TipTap doc or null, "tagIds"?: [uuid] (at most 20, the user's own), "soundtrack"?: Spotify URI or null, "replyToEntryId"?: uuid or null }` | `201` `Entry`, filed into the right week (created if needed). Replay of an existing own `id`: `200`. An entry may be created empty because media are uploaded afterwards (D-23). `replyToEntryId` must be one of the user's own Loot Drops that has opened, otherwise `400`; another user's is `404` (D-33) |
 | `GET /entries?page=0&size=50&tagId={uuid}` | — | `200` `PageResponse<EntrySummary>` of every entry, `entryDate` then `createdAt`, newest first. `tagId` is optional and filters by tag; sealed entries are left out while filtering (D-10). `size` max 100 here. Backs the all-entries timeline (D-25) |
 | `GET /entries/opened` | — | `200` `EntrySummary[]`: Loot Drops whose unlock time has passed and that haven't been marked seen, most recently opened first, at most 20 (D-10). Backs the *Opened* strip |
 | `GET /entries/deleted?page=0&size=10` | — | `200` `PageResponse<EntrySummary>` of the entries in Recently deleted, most recently deleted first, each with `deletedAt` (D-30). Sealed ones are redacted (D-10). Backs the *Recently deleted* screen |
+| `GET /entries/on-this-day` | — | `200` `EntrySummary[]`: entries from the same day and month in earlier years, newest year first, at most 20 (D-32). Sealed and deleted entries never appear. In a year that isn't a leap year, 29 February entries appear on 28 February. Backs the *On this day* strip |
 | `GET /entries/{entryId}` | — | `200` `Entry` (redacted if sealed) |
-| `PUT /entries/{entryId}` | `{ "entryDate": date, "templateId": uuid or null, "title": string or null, "contentJson": doc or null, "tagIds": [uuid] }` (full replace; a date change moves the entry to the matching week) | `200` `Entry`. Sealed: `409 entry-sealed`. A tag ID that isn't the user's: `404` |
+| `PUT /entries/{entryId}` | `{ "entryDate": date, "templateId": uuid or null, "title": string or null, "contentJson": doc or null, "tagIds": [uuid], "soundtrack": Spotify URI or null, "replyToEntryId": uuid or null }` (full replace; a date change moves the entry to the matching week) | `200` `Entry`. Sealed: `409 entry-sealed`. A tag ID that isn't the user's: `404` |
 | `DELETE /entries/{entryId}` | — | `204`. Moves the entry to Recently deleted for 30 days; its media files stay until it is erased. Allowed even when sealed. An entry with no title, caption or media is erased at once (D-30) |
 | `POST /entries/{entryId}/restore` | — | `200` `Entry`, back in its week with its media, tags and seal as they were (D-30). Not in Recently deleted: `404` |
 | `POST /entries/{entryId}/erase` | — | `204`. Erases an entry in Recently deleted, with its media files, at once. Not in Recently deleted: `404` |
@@ -248,8 +259,15 @@ Every media endpoint returns `409 entry-sealed` when the entry is sealed, and `4
 
 **Upload rules (D-17):**
 - Allowed types: `image/jpeg`, `image/png`, `image/webp`, `audio/webm`, `audio/mp4`, `audio/mpeg`.
-- At most 25 MB per file (`413` above that) and 10 items per entry (`400` above that).
+- At most 25 MB per file (`413` above that) and 20 items per entry (`400` above that).
 - Wrong type: `415`.
+
+### Music (tag: Music)
+D-35. Soundtracks are stored as Spotify URIs: `spotify:track:`, `spotify:album:` or `spotify:playlist:` followed by a 22-character id of letters and digits; anything else is `400`. Search terms go in the request body, never in the URL, and are never logged.
+
+| Method and path | Body | Success |
+|---|---|---|
+| `POST /music/search` | `{ "query": string(1–200) }` | `200` `{ "items": [{ "uri", "kind", "title", "subtitle", "imageUrl" }] }`: at most 10 Spotify results. `kind` is `TRACK`, `ALBUM` or `PLAYLIST`, and `subtitle` is the artist or owner. Search isn't set up, or Spotify refuses: `503 music-search-unavailable`, and the client offers paste-a-link instead |
 
 ---
 
@@ -266,9 +284,58 @@ Finalise after open questions Q2–Q5 and Q19–Q21.
 | Week PDF export | Rendered in the browser or on the server, depending on the library chosen in Q4. If the server renders it: `GET /weekly-logs/{logId}/pdf`. Sealed entries are redacted |
 | `POST /users/me/export` | Builds a download of everything the user owns (Q3). Sealed entries appear only as locked placeholders |
 | `DELETE /users/me` | Deletes the account and its stored files, after a confirmation that says how many sealed entries will be lost unseen (Q3) |
-| `PATCH /users/me` | Gains `"emailOnUnlock": boolean` (default `true`): an email when a Loot Drop opens (task 5.7) |
+| `PATCH /users/me` | Gains `"emailOnUnlock": boolean` (default `true`): an email when a Loot Drop opens (task 5.7). Also gains `"yearlyLetterOn": "MM-DD"` or `null`: the yearly letter's day, the birthday's day by default; `null` turns it off (D-32, task 5.10) |
+| Installable app | No endpoint: a web app manifest and service worker served with the frontend (D-31, task 5.8) |
+| App lock | Endpoints depend on how Q2 settles the lock (D-37, task 5.9); a lock that lives only on the device needs none |
+| Product metrics | No endpoint: the server writes `product_events` and they're read with SQL queries (D-38, task 5.11) |
 
-## Phase 3 endpoints (draft; tag: AI Biographer)
+## Phase 3 endpoints (draft; tag: Groups)
+Finalise after open questions Q8, Q11 and Q26 (D-19). The rules:
+- Personal endpoints are unchanged. Another member's entry is still `404` at `GET /entries/{entryId}`; members read contributions only through the endpoints below.
+- A group the caller isn't a member of is `404`. A member without the role for an action gets `403`.
+- Members are addressed by `memberId` (the `group_members` row), never by a user ID.
+- Contributions are built with `EntryMapper`, so sealed ones are redacted as in D-10. Media URLs are presigned only after the membership check.
+- An entry in Recently deleted is left out of group views. Restoring it brings the contribution back; erasing it removes the contribution (D-30).
+- The shared story and each member's opt-in to it come with the AI, in Phase 4 (D-31).
+
+New problem types:
+
+| `type` suffix | Status | When |
+|---|---|---|
+| `forbidden` | 403 | A group member lacks the role for the action, for example a non-owner editing the group |
+| `group-sealed` | 409 | Moving a group's unlock date earlier |
+| `conflict` | 409 | Also used when the only owner tries to leave a group |
+
+### Shapes
+- `Group`: `{ "id", "title", "description", "startDate", "endDate", "unlockDate", "isLocked", "myRole", "memberCount", "contributionCount", "createdAt", "updatedAt" }`. `isLocked` is true while `unlockDate` is in the future.
+- `GroupMember`: `{ "id", "displayName", "role", "contributionCount" }`, where `role` is `OWNER` or `MEMBER`.
+- `GroupEntry`: `{ "entry": Entry, "author": { "memberId", "displayName" }, "contributedAt" }`. A sealed contribution shows its author, date and unlock date, but no content or media.
+- `Era` (the Phase 1 shape) gains `"groupId"`: set on an Era created from a trip, otherwise `null`.
+
+### Groups and members
+| Method and path | Body | Success |
+|---|---|---|
+| `POST /groups` | `{ "title": string(1–150) (optional with entryId), "description"?: string, "startDate"?: date, "endDate"?: date ≥ startDate, "unlockDate"?: instant after now, "entryId"?: uuid, "confirmUnlockDate"?: instant }` | `201` `Group`. The caller becomes its `OWNER`. With `entryId` (*share with friends*, D-19), the title and dates default to that entry's, and the entry becomes the first contribution under the rules of `POST /groups/{groupId}/entries` |
+| `GET /groups` | — | `200` array of the caller's groups, newest first |
+| `GET /groups/{groupId}` | — | `200` `Group` plus `"members": [GroupMember]` |
+| `PUT /groups/{groupId}` | Same as POST (full replace) | `200` `Group`. Owner only. Moving `unlockDate` earlier: `409 group-sealed` |
+| `DELETE /groups/{groupId}` | — | `204`. Owner only. Contributions are unlinked; no entry is deleted |
+| `POST /groups/{groupId}/invites` | `{ "expiresAt": instant }` | `201` `{ "id", "url", "expiresAt" }`. Owner only. The raw token appears only in this response |
+| `DELETE /groups/{groupId}/invites/{inviteId}` | — | `204`. Owner only. Revokes the link |
+| `POST /group-invites/{token}/accept` | — | `200` `Group`; the caller becomes a `MEMBER` (already a member: unchanged). Unknown, expired or revoked token: `404` |
+| `DELETE /groups/{groupId}/members/me` | — | `204`. Leaves the group: the caller's contributions are unlinked, and their trip Era stays but is unlinked. The only owner can't leave: `409 conflict` |
+| `DELETE /groups/{groupId}/members/{memberId}` | — | `204`. Owner only, and not for themself (they use `members/me`) |
+
+### Contributions
+| Method and path | Body | Success |
+|---|---|---|
+| `POST /groups/{groupId}/entries` | `{ "entryId": uuid, "confirmUnlockDate"?: instant }` | `201` `GroupEntry` (already added: `200`). The entry must be the caller's own, otherwise `404`. If the group is locked, `confirmUnlockDate` must equal the group's `unlockDate` (otherwise `400`) and the entry is sealed until at least that time; an entry already sealed for longer keeps its date |
+| `GET /groups/{groupId}/entries?page=0&size=10` | — | `200` `PageResponse<GroupEntry>`, ordered by `entryDate` then `createdAt`, ascending |
+| `DELETE /groups/{groupId}/entries/{entryId}` | — | `204`. Withdraws the caller's own contribution; the entry itself is untouched. Allowed even when sealed |
+
+**Trips as Eras** has no endpoint of its own. When a member joins a group that has a `startDate`, the service creates an Era in their timeline from the group's title and dates. Like any Era, it holds the weeks those dates overlap and shows only the entries inside them (D-22). An entry contributed from outside the dates stays in the group but not in the trip Era.
+
+## Phase 4 endpoints (draft; tag: AI Biographer)
 Sealed entries are never analysed (`409 entry-sealed`) and never included in summaries.
 
 | Method and path | Notes |
@@ -276,7 +343,7 @@ Sealed entries are never analysed (`409 entry-sealed`) and never included in sum
 | `GET /weekly-logs/{logId}/ai-summary` | The summary written when the week was closed (D-28), or `404` if there isn't one yet (see Q23) |
 | `GET /characters` | Cast of Characters plus the friendship map's graph data. Hidden people are left out. A person's record, profile and merging are below |
 
-## Phase 3 endpoints: search (draft; tag: Search)
+## Phase 4 endpoints: search (draft; tag: Search)
 D-29. Search terms go in the request body, never in the URL, and are never logged.
 
 | Method and path | Body | Success |
@@ -284,8 +351,8 @@ D-29. Search terms go in the request body, never in the URL, and are never logge
 | `POST /search/words` | `{ "query": string(1–200), "tagId"?: uuid, "page"?: int, "size"?: int (max 50) }` | `200` `PageResponse<EntrySummary>`: the caller's entries whose title or caption match, best match first. Sealed entries never match. Needs no AI |
 | `POST /search/feeling` | `{ "query": string(1–500) }` | `200` up to 10 `{ "weeklyLogId", "startDate", "endDate", "title", "summaryExcerpt", "score" }`: closed weeks whose summaries are closest in meaning. Needs AI consent, otherwise `403 consent-required` |
 
-## Phase 3 endpoints: paper diaries (draft; tag: Transcriptions)
-Tasks 6.6–6.8 (D-20). Finalise after open question Q12. A photographed diary page is an ordinary photo, marked as a page, and works from Phase 1. This section adds the optional step of reading the handwriting.
+## Phase 4 endpoints: paper diaries (draft; tag: Transcriptions)
+Tasks 7.6–7.8 (D-20). Finalise after open question Q12. A photographed diary page is an ordinary photo, marked as a page, and works from Phase 1. This section adds the optional step of reading the handwriting.
 
 Rules:
 - Reading a page is always an explicit request. A sealed entry can't be read: every endpoint below returns `409 entry-sealed` for it.
@@ -331,8 +398,8 @@ New problem type:
 | `GET /entries/{entryId}/transcriptions` | — | `200` `Transcription[]` for the pages that have one, in `displayOrder`. The client polls this every couple of seconds while any item is `PENDING` |
 | `DELETE /transcriptions/{transcriptionId}` | — | `204`. Discards the transcript; the photo and the entry are untouched |
 
-## Phase 3 endpoints: AI settings, Help me think, tags, closing Eras, Wrap up and friend profiles (draft)
-Tasks 6.2 and 6.9–6.16 (D-21, D-28). Finalise after open questions Q14, Q17 and Q23.
+## Phase 4 endpoints: AI settings, Help me think, tags, closing Eras, Wrap up and friend profiles (draft)
+Tasks 7.2 and 7.9–7.16 (D-21, D-28). Finalise after open questions Q14, Q17, Q23 and Q28.
 
 Rules for every AI endpoint, including reading pages (D-20):
 - The user must have given AI consent, otherwise `403 consent-required`. A feature the user has switched off, or that isn't available to them, returns `403 feature-unavailable`.
@@ -341,6 +408,7 @@ Rules for every AI endpoint, including reading pages (D-20):
 - Nothing the AI suggests changes data until the user taps. The client sends only the option the user chose; the server holds what each option does.
 - Another user's entry, suggestion, tag, Era or character is `404`.
 - Calls are limited per user per day: `429 rate-limited`. The limits are configuration.
+- Hard topics follow D-39: a gentle tone, and no patterns or cards about self-harm, abuse or grief.
 
 New problem types:
 
@@ -351,7 +419,7 @@ New problem types:
 | `not-enough-content` | 409 | There is too little to work with yet, for example a person mentioned too rarely for a profile |
 
 ### Settings and consent (tag: Users)
-`UserSettings` has one block per AI feature, because the README promises every feature its own switch, plus the Wrap up reminder (D-28). `available` is set by the server (from configuration today, from a plan later) and is ignored if sent. `aiConsent` is read-only here and is `null` until the user accepts. `people` covers friend profiles and the friendship map; `pageReading` stays unavailable until Q12 picks a provider.
+`UserSettings` has one block per AI feature, because the README promises every feature its own switch, plus the Wrap up reminder (D-28) and the weekly email (D-32). `available` is set by the server (from configuration today, from a plan later) and is ignored if sent. `aiConsent` is read-only here and is `null` until the user accepts. `people` covers friend profiles and the friendship map; `pageReading` stays unavailable until Q12 picks a provider.
 ```json
 {
   "helpMeThink": { "available": true, "enabled": true, "pauseSeconds": 10 },
@@ -362,6 +430,7 @@ New problem types:
   "writingCoach": { "available": false, "enabled": false },
   "proactiveInsights": { "available": true, "enabled": false, "maxPerWeek": 3 },
   "wrapUpReminder": { "enabled": true },
+  "weeklyEmail": { "enabled": true },
   "aiConsent": { "acceptedAt": "2026-10-27T01:00:00Z", "version": 1 }
 }
 ```
@@ -407,10 +476,10 @@ A `Suggestion` is one question or card. Its `kind` says which, and `QUESTION` an
 | `POST /suggestions/{suggestionId}/dismiss` | — | `200` `Suggestion` (`DISMISSED`) |
 
 ### Tags
-Tags and their endpoints are Phase 1 (D-26). Phase 3 adds only `TAG` suggestions: answering *Add tag* links the tag with `source: "AI"`.
+Tags and their endpoints are Phase 1 (D-26). Phase 4 adds only `TAG` suggestions: answering *Add tag* links the tag with `source: "AI"`.
 
 ### Closing an Era and its summary (tag: Eras)
-D-28. The `Era` shape gains `"isClosed"`. `EraSummary`: `{ "eraId", "narrative", "themes": [string], "weekCount", "isStale", "generatedAt" }`. A stale summary can still be read until it is rebuilt in the background.
+D-28. The ritual's last word and letter are ordinary entries the client makes before closing, with `POST /entries` and, for the letter, `POST /entries/{entryId}/seal`; closing needs nothing extra. The `Era` shape gains `"isClosed"`. `EraSummary`: `{ "eraId", "narrative", "themes": [string], "weekCount", "isStale", "generatedAt" }`. A stale summary can still be read until it is rebuilt in the background.
 
 | Method and path | Body | Success |
 |---|---|---|
@@ -454,61 +523,23 @@ D-28. Backs the *Wrap up* card and the gentle reminder at the top of the feed.
 | `POST /characters/{characterId}/merge` | `{ "intoCharacterId": uuid }` | `200` the surviving record. Mentions move across and the old name becomes an alias |
 | `GET /characters/{characterId}/entries?page=0&size=10` | — | `200` `PageResponse<Entry>` of entries that mention them, newest first, redacted |
 
-## Phase 5 endpoints (draft; tag: Groups)
-Finalise after open questions Q8–Q11 (D-19). The rules:
-- Personal endpoints are unchanged. Another member's entry is still `404` at `GET /entries/{entryId}`; members read contributions only through the endpoints below.
-- A group the caller isn't a member of is `404`. A member without the role for an action gets `403`.
-- Members are addressed by `memberId` (the `group_members` row), never by a user ID.
-- Contributions are built with `EntryMapper`, so sealed ones are redacted as in D-10. Media URLs are presigned only after the membership check.
-- An entry in Recently deleted is left out of group views. Restoring it brings the contribution back; erasing it removes the contribution (D-30).
+## Phase 4 endpoints: shared story (draft; tag: Groups)
+Task 7.17 (D-19, D-31). It needs Phase 3's groups and the AI layer, so it follows the group rules and the AI rules above. Finalise after open questions Q6 and Q9.
 
-New problem types:
+New problem type:
 
 | `type` suffix | Status | When |
 |---|---|---|
-| `forbidden` | 403 | A group member lacks the role for the action, for example a non-owner editing the group |
-| `group-sealed` | 409 | Moving a group's unlock date earlier |
 | `not-enough-contributions` | 409 | Asking for a shared story when fewer than two members who opted in have contributions |
-| `conflict` | 409 | Also used when the only owner tries to leave a group |
 
-### Shapes
-- `Group`: `{ "id", "title", "description", "startDate", "endDate", "unlockDate", "isLocked", "myRole", "memberCount", "contributionCount", "createdAt", "updatedAt" }`. `isLocked` is true while `unlockDate` is in the future.
-- `GroupMember`: `{ "id", "displayName", "role", "contributionCount" }`, where `role` is `OWNER` or `MEMBER`.
-- `GroupEntry`: `{ "entry": Entry, "author": { "memberId", "displayName" }, "contributedAt" }`. A sealed contribution shows its author, date and unlock date, but no content or media.
-- `Era` (the Phase 1 shape) gains `"groupId"`: set on an Era created from a trip, otherwise `null`.
-
-### Groups and members
 | Method and path | Body | Success |
 |---|---|---|
-| `POST /groups` | `{ "title": string(1–150) (optional with entryId), "description"?: string, "startDate"?: date, "endDate"?: date ≥ startDate, "unlockDate"?: instant after now, "entryId"?: uuid, "confirmUnlockDate"?: instant }` | `201` `Group`. The caller becomes its `OWNER`. With `entryId` (*share with friends*, D-19), the title and dates default to that entry's, and the entry becomes the first contribution under the rules of `POST /groups/{groupId}/entries` |
-| `GET /groups` | — | `200` array of the caller's groups, newest first |
-| `GET /groups/{groupId}` | — | `200` `Group` plus `"members": [GroupMember]` |
-| `PUT /groups/{groupId}` | Same as POST (full replace) | `200` `Group`. Owner only. Moving `unlockDate` earlier: `409 group-sealed` |
-| `DELETE /groups/{groupId}` | — | `204`. Owner only. Contributions are unlinked; no entry is deleted |
-| `POST /groups/{groupId}/invites` | `{ "expiresAt": instant }` | `201` `{ "id", "url", "expiresAt" }`. Owner only. The raw token appears only in this response |
-| `DELETE /groups/{groupId}/invites/{inviteId}` | — | `204`. Owner only. Revokes the link |
-| `POST /group-invites/{token}/accept` | — | `200` `Group`; the caller becomes a `MEMBER` (already a member: unchanged). Unknown, expired or revoked token: `404` |
 | `PUT /groups/{groupId}/members/me` | `{ "aiConsent": boolean }` | `200` `GroupMember`. Opting out deletes the stored shared story |
-| `DELETE /groups/{groupId}/members/me` | — | `204`. Leaves the group: the caller's contributions are unlinked, and their trip Era stays but is unlinked. The only owner can't leave: `409 conflict` |
-| `DELETE /groups/{groupId}/members/{memberId}` | — | `204`. Owner only, and not for themself (they use `members/me`) |
-
-### Contributions
-| Method and path | Body | Success |
-|---|---|---|
-| `POST /groups/{groupId}/entries` | `{ "entryId": uuid, "confirmUnlockDate"?: instant }` | `201` `GroupEntry` (already added: `200`). The entry must be the caller's own, otherwise `404`. If the group is locked, `confirmUnlockDate` must equal the group's `unlockDate` (otherwise `400`) and the entry is sealed until at least that time; an entry already sealed for longer keeps its date |
-| `GET /groups/{groupId}/entries?page=0&size=10` | — | `200` `PageResponse<GroupEntry>`, ordered by `entryDate` then `createdAt`, ascending |
-| `DELETE /groups/{groupId}/entries/{entryId}` | — | `204`. Withdraws the caller's own contribution; the entry itself is untouched. Allowed even when sealed |
-
-**Trips as Eras** has no endpoint of its own. When a member joins a group that has a `startDate`, the service creates an Era in their timeline from the group's title and dates. Like any Era, it holds the weeks those dates overlap and shows only the entries inside them (D-22). An entry contributed from outside the dates stays in the group but not in the trip Era.
-
-### Shared story (8b)
-| Method and path | Body | Success |
-|---|---|---|
 | `POST /groups/{groupId}/story` | — | `202`. Builds or rebuilds the shared story in the background from contributions by members who opted in. Sealed entries are never included. Fewer than two such members: `409 not-enough-contributions` |
 | `GET /groups/{groupId}/story` | — | `200` `{ "narrativeSummary", "contributorNames": [string], "generatedAt" }`, or `404` if there is none. It is deleted when anyone withdraws, opts out or leaves |
 
 ## Phase 6 endpoints (draft; tag: Suggestions)
-Tasks 9.1–9.5 (D-21). Finalise after open questions Q15 and Q16. Insight cards are `Suggestion`s with new kinds. They use only the caller's own entries (never other members' contributions) and never sealed ones, and every card that draws on past material lists its `sources`. The rules and problem types of the Phase 3 AI section apply.
+Tasks 9.1–9.5 (D-21). Finalise after open questions Q15 and Q16. Insight cards are `Suggestion`s with new kinds. They use only the caller's own entries (never other members' contributions) and never sealed ones, and every card that draws on past material lists its `sources`. The rules and problem types of the Phase 4 AI section apply. Predictions, A gift of memories and Year in review (tasks 9.6–9.8) are drafted when Sprint 9 is planned.
 
 Insight cards add `title` and `body` (plain text). A `HIGHLIGHT_REEL` also has `reel`: `{ "entries": [Entry] }`, filled in when the card is read, so redaction always applies and an entry sealed after the reel was made simply drops out.
 

@@ -1,12 +1,12 @@
 # memoirist
 
 A private journaling PWA: an Instagram-style feed of your own entries that files itself into weeks and life "Eras", with an AI biographer later. `README.md` says what users get and when (its Timeline).
-- **Phase 1, the core journal (now):** entries with text, photos, voice notes and diary-page photos; optional titles, tags and templates; weeks filed automatically, and weeks joining Eras by date (D-22); Loot Drops sealed until a future date (D-10); a feed, a week summary and an all-entries timeline; deleted entries wait 30 days in Recently deleted (D-30). Local only, with a seeded dev user.
-- **Phase 2, online:** accounts, expiring share links, PDF and data export, unlock emails.
-- **Phase 3, the AI biographer:** Help me think, tag suggestions, summaries of the weeks and Eras the user closes (D-28), friend profiles and a friendship map, search by word or by feeling (D-29), reading handwriting on a tap (D-20). One AI layer, never a chat (D-21).
-- **Phase 4, on your phone:** installable PWA, offline capture, scan mode, dictation.
-- **Phase 5, memories with friends:** private groups built from members' own entries (D-19).
-- **Phase 6, looking back:** opt-in insight cards and an optional writing coach (D-21).
+- **Phase 1, the core journal (now):** entries with text, photos, voice notes and diary-page photos; optional titles, tags, templates (with a starter gallery) and Spotify soundtracks (D-06, D-35); photo dump (D-34); weeks filed automatically, and weeks joining Eras by date, with Era covers (D-22, D-36); Loot Drops sealed until a future date, with quick unlock dates, replies and a first letter (D-10, D-33); a feed with *On this day* (D-32), a week summary and an all-entries timeline; deleted entries wait 30 days in Recently deleted (D-30). Local only, with a seeded dev user.
+- **Phase 2, online:** accounts, the installable app and an app lock, expiring share links, PDF and data export, unlock emails, the yearly letter, product metrics (D-31, D-32, D-37, D-38).
+- **Phase 3, memories with friends:** private groups built from members' own entries, sealed trips and trip Eras (D-19).
+- **Phase 4, the AI biographer:** Help me think, tag suggestions, summaries of the weeks and Eras the user closes (D-28), friend profiles and a friendship map, search by word or by feeling (D-29), reading handwriting on a tap (D-20), the shared trip story and the weekly email. One AI layer, never a chat (D-21), gentle with hard topics (D-39).
+- **Phase 5, on your phone:** offline capture, scan mode, dictation, inline photos, a printable zine, push notifications.
+- **Phase 6, looking back:** opt-in insight cards, highlight reels, predictions, year in review, a gift of memories, and an optional writing coach (D-21).
 
 ## Which doc wins (D-27)
 - `README.md` wins on **what** users get and **which phase** it ships in.

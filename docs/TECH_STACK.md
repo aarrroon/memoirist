@@ -6,12 +6,12 @@
 
 | Phase | Backend | Frontend | Infrastructure |
 |---|---|---|---|
-| 1. The core journal (local MVP) | Java 21, Spring Boot 4.x, Spring Web/Data JPA/Validation, Flyway, springdoc-openapi, AWS SDK v2 (S3), Actuator | React 19, Vite, TypeScript, Tailwind v4, Motion, TipTap, TanStack Query, Zustand, React Router, Embla, openapi-fetch, shadcn/ui (Radix), Sonner, dnd-kit, Vaul, react-day-picker, browser-image-compression, yet-another-react-lightbox, react-error-boundary | Docker Compose: Postgres 17 (pgvector image) and SeaweedFS |
-| 2. Online, with accounts | Spring Security (JWT), share links, unlock emails | Auth screens, share view | Vercel, Render, Neon (Postgres 17), Cloudflare R2, GitHub Actions |
-| 3. The AI biographer | Spring AI, pgvector (HNSW), Postgres full-text search, Spring events + `@Async`; one shared AI layer (D-21); a `TranscriptionProvider` for reading handwriting (6c) | Help me think, tag suggestions, Wrap up card, Era summaries, Cast of Characters with friend profiles, friendship map, search, read-a-page review | AI providers (decided at Phase 3) |
-| 4. On your phone | Endpoints for sync if needed | `vite-plugin-pwa`, Dexie, dictation, inline media node, zine export, scan mode, unlock notifications (web push) | — |
-| 5. Memories with friends | A `group` package: membership check, invites, contributions. Reuses `EntryMapper`, the seal rules and Spring AI | Group screens, group feed, shared story | — |
-| 6. Looking back with you | A `Retriever` over entry embeddings, scheduled and event-driven insight jobs, the writing coach | Insights inbox, highlight reels, coach card, AI switches | — |
+| 1. The core journal (local MVP) | Java 21, Spring Boot 4.x, Spring Web/Data JPA/Validation, Flyway, springdoc-openapi, AWS SDK v2 (S3), Actuator; Spotify's Web API for soundtrack search (D-35) | React 19, Vite, TypeScript, Tailwind v4, Motion, TipTap, TanStack Query, Zustand, React Router, Embla, openapi-fetch, shadcn/ui (Radix), Sonner, dnd-kit, Vaul, react-day-picker, browser-image-compression, yet-another-react-lightbox, react-error-boundary; `exifr` for photo dates once approved (D-34) | Docker Compose: Postgres 17 (pgvector image) and SeaweedFS |
+| 2. Online, with accounts | Spring Security (JWT), share links, unlock and yearly-letter emails, the app lock, product events | Auth screens, share view, `vite-plugin-pwa` (installable app), the lock screen | Vercel, Render, Neon (Postgres 17), Cloudflare R2, GitHub Actions |
+| 3. Memories with friends | A `group` package: membership check, invites, contributions. Reuses `EntryMapper` and the seal rules | Group screens, group feed | — |
+| 4. The AI biographer | Spring AI, pgvector (HNSW), Postgres full-text search, Spring events + `@Async`; one shared AI layer (D-21); a `TranscriptionProvider` for reading handwriting (7c); the shared trip story and the weekly email | Help me think, tag suggestions, Wrap up card, Era summaries and the closing ritual, Cast of Characters with friend profiles, friendship map, search, read-a-page review, shared story | AI providers (decided at Phase 4) |
+| 5. On your phone | Endpoints for sync if needed | Dexie, dictation, inline media node, zine export, scan mode, unlock notifications (web push) | — |
+| 6. Looking back with you | A `Retriever` over entry embeddings, scheduled and event-driven insight jobs, the writing coach | Insights inbox, highlight reels, predictions, year in review, a gift of memories, coach card, AI switches | — |
 
 ## 1. Local development
 
@@ -44,11 +44,12 @@ com.memoirist
 ├── MemoiristApplication.java   # sets JVM default timezone to UTC before SpringApplication.run
 ├── common/        # errors (ProblemDetail), PageResponse, Clock bean, base entity, config
 ├── user/          # User, CurrentUserProvider, DevHeaderCurrentUserProvider (local/test), /users/me
-├── era/
+├── era/           # Era, covers (D-36)
 ├── template/
 ├── tag/           # Tag, entry tags (D-26)
+├── music/         # Spotify search for soundtracks: SpotifyProperties, MusicSearchService (D-35)
 ├── week/          # WeeklyLog, WeekCalendar (date → first day of its week in user tz), a week's Eras from their dates (D-22), feed endpoint
-├── entry/         # Entry, EntryMapper (the ONLY Entry→DTO path), content validation + text extraction, seal rules, opened Loot Drops, Recently deleted and its sweep (D-30)
+├── entry/         # Entry, EntryMapper (the ONLY Entry→DTO path), content validation + text extraction, seal rules, opened Loot Drops, Recently deleted and its sweep (D-30), On this day and Loot Drop replies (D-32, D-33)
 ├── media/
 ├── storage/       # StorageService, StorageProperties, local bucket bootstrap
 └── dev/           # local-profile-only sample content (task 3.11)
@@ -88,10 +89,12 @@ Each feature folder contains:
 - **Content:** `EntryContentValidator` checks the TipTap JSON against an allow-list and the 200 KB cap. `ContentTextExtractor` walks the JSON and produces `content_text` and `preview_line` (the first non-empty line that isn't a heading, or the first heading if there's nothing else, D-24).
   - Allowed nodes: `doc`, `paragraph`, `text`, `heading` (levels 1–3), `bulletList`, `orderedList`, `listItem`, `blockquote`, `hardBreak`, `horizontalRule`.
   - Allowed marks: `bold`, `italic`, `strike`, `code`, `link` (protocols `http`, `https`, `mailto`).
-- **Redaction:** `EntryMapper` is the only place an `Entry` becomes a DTO, both the full `Entry` (`toResponse(entry, now)`) and the list row `EntrySummary` (`toSummary(entry, now)`). If `unlockDate` is after `now`, it nulls `title`, `contentJson`, `contentText`, `templateId`, `previewLine`, `firstMediaKind` and the media counts, empties `media` and `tags`, and sets `isLocked = true`. Feed, week detail, create, update, seal, share links (Phase 2) and group views (Phase 5) all go through it. AI input doesn't: it comes only from `AiContentSource`, which skips sealed entries (D-21).
+- **Redaction:** `EntryMapper` is the only place an `Entry` becomes a DTO, both the full `Entry` (`toResponse(entry, now)`) and the list row `EntrySummary` (`toSummary(entry, now)`). If `unlockDate` is after `now`, it nulls `title`, `contentJson`, `contentText`, `templateId`, `previewLine`, `firstMediaKind`, `soundtrack`, `replyToEntryId` and the media counts, empties `media`, `tags` and `replyIds`, and sets `isLocked = true`. Feed, week detail, create, update, seal, share links (Phase 2) and group views (Phase 3) all go through it. AI input doesn't: it comes only from `AiContentSource`, which skips sealed entries (D-21).
 - **Counts and filters:** queries that count or filter by content (tag filters, tag counts, search, people stats) leave sealed entries out in the query itself (D-10).
 - **Seal guard:** `EntryService` rejects edits to title, content, date, template, tags and media on sealed entries with `409`. The unlock date may only move later.
-- **Opened Loot Drops (D-10):** sealing clears `unlock_seen_at`, and `GET /entries/opened` finds unlocked, unseen entries through a partial index. `unlock_notified` is a separate flag for the background unlock job (unlock emails from Phase 2, refreshing AI results from Phase 3), which has its own partial index.
+- **Opened Loot Drops (D-10):** sealing clears `unlock_seen_at`, and `GET /entries/opened` finds unlocked, unseen entries through a partial index. `unlock_notified` is a separate flag for the background unlock job (unlock emails from Phase 2, refreshing AI results from Phase 4), which has its own partial index.
+- **On this day (D-32):** `GET /entries/on-this-day` matches the month and day of `entry_date` in earlier years, in the user's timezone, leaving out sealed and deleted entries in the query. In a year that isn't a leap year, 29 February matches 28 February.
+- **Replies (D-33):** `reply_to_entry_id` may point only at the user's own Loot Drop that has opened (checked in `EntryService`). `replyIds` comes from one query on the partial index.
 - **Recently deleted (D-30):** `DELETE` sets `deleted_at`. Entry queries leave deleted rows out by default (for example with Hibernate's `@SQLRestriction` on `Entry`), so deleted entries drop out of every list, count, filter, share link, group view, unlock email and AI input. Only the Recently deleted list, restore, erase and the sweep read them, through their own queries. A daily sweep erases entries deleted more than 30 days ago, and their files go as described under Storage.
 
 ### Weeks and the feed
@@ -117,24 +120,31 @@ Each feature folder contains:
   3. Insert the row. If the insert fails, delete the object (best effort).
 - **Deletion:** before erasing an entry (deleting one only moves it to Recently deleted, D-30), deleting a media row or deleting an account, the service collects the affected object keys. It deletes the objects in an after-commit listener (`@TransactionalEventListener(phase = AFTER_COMMIT)`) so a rolled-back transaction never loses files. Later, a periodic sweep can catch stragglers.
 
+### Music (D-35)
+- `SpotifyProperties` holds `client-id` and `client-secret`, from `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` in `.env`. Without them, search is off and `POST /music/search` returns `503 music-search-unavailable`.
+- `MusicSearchService` gets an app-only token with Spotify's client credentials flow, keeps it until it expires, and calls Spotify's search (at most 10 results) with Spring's `RestClient`, so no new library is needed. A `429` from Spotify becomes `503 music-search-unavailable`.
+- Soundtracks are stored as Spotify URIs and checked against `spotify:(track|album|playlist):[A-Za-z0-9]{22}`.
+- Tests stub Spotify and never call it.
+
 ## 3. Frontend (`/frontend`)
 
 ```
 src/
 ├── api/          # schema.d.ts (generated — never hand-edit), client.ts (openapi-fetch), queryKeys.ts
 ├── features/
-│   ├── feed/     # FeedPage, WeekSection, sticky era headers, OpenedStrip (D-10)
+│   ├── feed/     # FeedPage, WeekSection, sticky era headers with covers (D-36), OpenedStrip (D-10), OnThisDayStrip (D-32)
 │   ├── week/     # WeekSummaryPage with one bar per entry (D-25)
 │   ├── timeline/ # TimelinePage: every entry, one row each, tag filter (D-25)
-│   ├── entry/    # EntryCard, MediaCarousel, CaptureModal, SealDialog, SealedCard, VoiceRecorder, displayTitle()
-│   ├── eras/
-│   ├── templates/
+│   ├── entry/    # EntryCard, MediaCarousel, CaptureModal, PhotoDump (D-34), SealDialog with suggested dates, SealedCard, reply to past you (D-33), VoiceRecorder, displayTitle()
+│   ├── music/    # SoundtrackPicker (paste or search) and SoundtrackPlayer, which loads Spotify only when tapped (D-35)
+│   ├── eras/     # Era pages and the cover picker (D-36)
+│   ├── templates/ # TemplatesPage and the starter gallery (D-06)
 │   ├── tags/     # TagPicker, TagsPage (D-26)
-│   └── settings/
+│   └── settings/ # display name, timezone, birthday (D-33)
 ├── components/   # shared UI primitives
 │   └── ui/       # shadcn/ui components (copied in, owned by us, restyled to DESIGN.md)
 ├── lib/time.ts   # all date/time formatting + "today" in the user's timezone
-├── lib/images.ts # compress photos before upload (browser-image-compression)
+├── lib/images.ts # read a photo's own date (exifr, D-34), then compress it before upload (browser-image-compression)
 ├── stores/       # Zustand: UI-only state (open modals); the capture draft is also persisted to localStorage (D-23)
 └── main.tsx, router.tsx
 ```
@@ -154,8 +164,9 @@ src/
 - **Media:**
   - An Embla carousel shows images and an audio player in `displayOrder`. Tapping a photo opens yet-another-react-lightbox (full screen, pinch-zoom).
   - In capture, the staging strip is reordered with dnd-kit (pointer, touch and keyboard).
-  - Before upload, `lib/images.ts` compresses photos to roughly 2–3 MB with browser-image-compression. Photos marked as diary pages (`purpose = PAGE_SCAN`, D-20) use a gentler setting so handwriting stays readable. Audio is uploaded as recorded.
+  - Before upload, `lib/images.ts` reads each photo's own date, because compression drops it; capture offers it as the memory date, and a photo dump groups photos by it (D-34). It then compresses photos to roughly 2–3 MB with browser-image-compression. Photos marked as diary pages (`purpose = PAGE_SCAN`, D-20) use a gentler setting so handwriting stays readable. Audio is uploaded as recorded.
   - Voice notes use `MediaRecorder` with the first supported type of `audio/webm;codecs=opus` or `audio/mp4`.
+  - Soundtracks show a placeholder until tapped; only then does the page load Spotify's embedded player (D-35). A content security policy, if one is added, must allow Spotify's embed frame.
 - **Capture flow:**
   1. `POST /entries` with a client UUID.
   2. Upload media.
@@ -177,7 +188,7 @@ src/
 **Indexes:**
 - B-tree indexes on foreign keys and on chronological access paths.
 - A partial index for pending unlocks.
-- Phase 3 adds HNSW (`vector_cosine_ops`) on summary embeddings and GIN on `entries.ai_metadata` if queries need it.
+- Phase 4 adds HNSW (`vector_cosine_ops`) on summary embeddings and GIN on `entries.ai_metadata` if queries need it.
 
 ## 5. Phase 2 deployment notes
 - **Frontend (Vercel):** use a rewrite of `/api/*` to the Render backend so the browser sees one origin (no CORS, simpler cookies).
@@ -185,21 +196,33 @@ src/
 - **Database (Neon):** Postgres 17. Flyway runs on startup.
 - **Media (R2):** a private bucket; credentials come from Render environment variables.
 - **CI (GitHub Actions):** backend tests (Testcontainers on `ubuntu-latest`), plus frontend lint, typecheck, unit tests and build.
+- **Installable app (D-31, task 5.8):** `vite-plugin-pwa` builds the web app manifest and a service worker that caches the app shell. Offline writing waits for Phase 5.
+- **Emails (D-32):** unlock, yearly-letter and (from Phase 4) weekly emails carry dates, counts and a link only, never entry or summary text. Scheduled sends follow Q5's job approach and are safe to repeat.
+- **Product events (D-38, task 5.11):** written by the services in the same transaction as the action they count. No third-party analytics.
 
 ## 6. Notes for Phases 3 to 6
-- **Phase 3:**
+- **Phase 3 (D-19):**
+  - A new `group` package follows the same controller, service and repository split. No new libraries are expected: invite tokens reuse the share-link pattern.
+  - **Access rule:** personal endpoints stay owner-only. Every `/groups/**` endpoint starts with one membership check (`404` for a non-member, `403` for a member without the role). Nothing else decides who may see a contribution.
+  - **Contributions are links** (`group_entries`), so an author's edits show up in the group and withdrawing is deleting the link. An entry in Recently deleted is left out of group views (D-30).
+  - **Starting from an entry (D-19):** `POST /groups` with an `entryId` creates the group and its first contribution in one transaction.
+  - **Trip Eras** are defined by the trip dates like any other Era, and show only the entries inside them (D-22).
+  - **Output:** a contribution becomes a DTO only through `EntryMapper`, and media is presigned only after the membership check. A sealed contribution is therefore redacted without any group-specific code.
+  - **Group Loot Drop:** contributing to a group with a future `unlock_date` seals the entry through the existing seal path, so there is still one definition of "sealed".
+  - **Leaving and deleting:** deleting a membership row deletes that member's `group_entries` rows through the composite foreign key. A service step also unlinks the member's trip Era (and, from Phase 4, deletes the group's stored story).
+- **Phase 4:**
   - Spring AI (the Boot 4 line). The provider and the `vector(N)` dimension are decided first (D-18).
   - Closing a week publishes `WeeklyLogClosedEvent`, the only trigger for a weekly summary (D-28). An `@Async` listener builds the summary and embedding. Sealed entries are excluded.
-  - **Closing an Era (D-28):** `POST /eras/{id}/close` closes the Era's open weeks (each publishes `WeeklyLogClosedEvent`) and marks the Era closed. The Era summary job runs once those week summaries are done, and builds from them. `GET /wrap-up` backs the Wrap up card and the gentle reminder.
+  - **Closing an Era (D-28):** the client first saves the ritual's last word and optional letter as ordinary entries (the letter sealed, by default for 5 years). Then `POST /eras/{id}/close` closes the Era's open weeks (each publishes `WeeklyLogClosedEvent`) and marks the Era closed. The Era summary job runs once those week summaries are done, and builds from them. `GET /wrap-up` backs the Wrap up card and the gentle reminder.
   - **Search (D-29):** word search uses a GIN full-text index over title and `content_text`, filtered in the query to the caller's unsealed entries. Search by feeling compares an embedding of the query with the `ai_summaries` embeddings of closed weeks. Search terms travel in request bodies and are never logged.
-  - **Paper diaries (D-20, tasks 6.6–6.8):**
+  - **Paper diaries (D-20, tasks 7.6–7.8):**
     - **Provider port:** `TranscriptionProvider` takes image bytes and a content type and returns text, a language, an optional detected date and an optional confidence. The adapter is chosen by configuration, like `StorageProperties`. `local` and `test` use a fake adapter, so tests never touch the network. A real adapter can wrap Spring AI's multimodal support, a dedicated handwriting service or an on-device engine. Swapping one changes no table or endpoint.
     - **Flow:** `POST /entries/{id}/transcriptions` inserts `PENDING` rows and publishes an event after commit. An `@Async` listener re-checks that the entry isn't sealed, loads the image through `StorageService`, downscales it, strips location metadata, calls the provider, and saves `READY` or `FAILED` in its own transaction. A sweep marks rows stuck in `PENDING` as `FAILED` (`timeout`). The client polls `GET /entries/{id}/transcriptions` while any row is pending.
     - **Content:** a transcript never writes itself into an entry. The client builds the caption from the text and saves it with the normal `PUT /entries/{id}`, so the content allow-list (D-05) is the only way in.
     - **Limits:** a transcript is capped at 50 KB per page, and there is a per-user daily page limit (configurable; see Q12). Logs carry IDs and status only, never page text or images.
     - **Ownership:** `media_transcriptions` is owned through `media`, as `media` is through `entries`. Group endpoints (D-19) never return it.
     - **Left open on purpose:** other kinds of captured material (printed pages, tickets, whiteboards) are new `purpose` values that reuse the same pipeline. A bulk notebook import (Q13) can be a separate batch table that points at ordinary entries. On-device recognition is just another adapter.
-  - **AI layer (D-21, tasks 6.2 and 6.9–6.15):**
+  - **AI layer (D-21, tasks 7.2 and 7.9–7.16):**
     - **Ports:** chat, embedding and transcription are separate interfaces, each with a fake adapter for `local` and `test`. Whatever an adapter makes is stored with its provider and model.
     - **`AiContentSource`:** the only code that loads entry text, tags and AI facts for AI. It skips sealed entries, applies group consent (D-19) and returns plain text with IDs. A test should fail if AI code reads entries any other way (ArchUnit is one option; adding it needs approval).
     - **Gate:** every AI endpoint calls `FeatureGate` in order: consent, the user's switch, then availability. It reads configuration today and can read a plan later.
@@ -207,26 +230,19 @@ src/
     - **Narratives:** weekly summaries, Era summaries and friend profiles are built by `@Async` jobs. An Era summary reads the Era's weekly summaries, not raw entries (Q28 covers weeks it only partly overlaps). Each has an `is_stale` flag, a provider and a model.
     - **Invalidation:** `EntryService` publishes an event when an entry is edited, sealed, unlocked, deleted or restored (D-30). Listeners delete the cards that cite it (found through a GIN index on `sources`), mark the week's summary, the summaries of the Eras whose dates contain it and the profiles of people mentioned in it as stale, and rebuild them in the background. Stale narratives are excluded as input to other AI work. The unlock job (`unlock_notified`) publishes the same event.
     - **Cost and abuse:** per-feature daily limits (`429`), cheap checks before any model call, and logs that carry IDs, kinds and token counts but never text.
+    - **Hard topics (D-39):** prompts ask for a gentle tone and forbid patterns or cards about self-harm, abuse or grief. Each rule has a test with the fake provider.
     - **Left open on purpose:** a new kind of card is a new `kind` string, a generator and a renderer. A new kind of narrative is a table with real foreign keys and the same three columns (`is_stale`, provider, model). Another provider is another adapter.
-- **Phase 4:**
-  - `vite-plugin-pwa`.
-  - Dexie stores pending creates keyed by client UUID, and a sync queue replays them.
+  - **Shared story (D-19, task 7.17):** an `@Async` job like the weekly summary. Its input excludes sealed entries and members without `ai_consent`. Withdrawing, opting out or leaving deletes the stored story.
+  - **Weekly email (D-32, task 7.18):** a job at 09:00 on Monday in each user's timezone, for users with entries in the week just finished. It links to the week's story or to Wrap up, carries no entry content, and respects its switch.
+- **Phase 5:**
+  - Dexie stores pending creates keyed by client UUID, and a sync queue replays them. The installable shell came in Phase 2 (task 5.8).
   - A TipTap inline image node stores `mediaId` and resolves the URL at render time.
-  - **Unlock notifications (D-10, task 7.7):** opt-in web push from the installed PWA when a Loot Drop opens.
-  - **Scan mode (D-20, task 7.6):** a camera screen for diary pages in `features/scan/` (edge detection, crop, straighten, brighten) with a file-picker fallback. Pages upload with `purpose = PAGE_SCAN` and ride the offline queue. The image-processing approach is chosen when the task starts, and a new dependency needs approval first.
-- **Phase 5 (D-19):**
-  - A new `group` package follows the same controller, service and repository split. No new libraries are expected: invite tokens reuse the share-link pattern, and the shared story reuses Spring AI.
-  - **Access rule:** personal endpoints stay owner-only. Every `/groups/**` endpoint starts with one membership check (`404` for a non-member, `403` for a member without the role). Nothing else decides who may see a contribution.
-  - **Contributions are links** (`group_entries`), so an author's edits show up in the group and withdrawing is deleting the link. An entry in Recently deleted is left out of group views (D-30).
-  - **Starting from an entry (D-19):** `POST /groups` with an `entryId` creates the group and its first contribution in one transaction.
-  - **Trip Eras** are defined by the trip dates like any other Era, and show only the entries inside them (D-22).
-  - **Output:** a contribution becomes a DTO only through `EntryMapper`, and media is presigned only after the membership check. A sealed contribution is therefore redacted without any group-specific code.
-  - **Group Loot Drop:** contributing to a group with a future `unlock_date` seals the entry through the existing seal path, so there is still one definition of "sealed".
-  - **Leaving and deleting:** deleting a membership row deletes that member's `group_entries` rows through the composite foreign key. A service step also unlinks the member's trip Era and deletes the group's stored story.
-  - **Shared story:** an `@Async` job like the weekly summary. Its input excludes sealed entries and members without `ai_consent`.
+  - **Unlock notifications (D-10, task 8.6):** opt-in web push from the installed PWA when a Loot Drop opens.
+  - **Scan mode (D-20, task 8.5):** a camera screen for diary pages in `features/scan/` (edge detection, crop, straighten, brighten) with a file-picker fallback. Pages upload with `purpose = PAGE_SCAN` and ride the offline queue. The image-processing approach is chosen when the task starts, and a new dependency needs approval first.
 - **Phase 6 (D-21):**
   - **Retrieval:** a `Retriever` searches the caller's own entry chunks and summaries by vector similarity. It never returns sealed or stale material, and it returns the sources it used. A card must cite at least one source or it is dropped. Filtering one user's rows out of an HNSW index can return too few results when many users share a table, so task 9.1 checks the pinned pgvector version's iterative index scans (or partitioning by user) with a multi-user test.
   - **Triggers:** a weekly job in each user's timezone, an Era being closed, and a saved entry that closely matches earlier moments. All of them respect the user's weekly cap and each card's `dedupe_key`.
   - **Highlight reels** store entry IDs only and are built through `EntryMapper` when read, so an entry sealed later drops out.
   - **Writing coach:** a draft is sent only while its switch is on. A cheap pre-check decides whether to call the model at all, and most calls return nothing.
   - **Plans:** `FeatureGate` is the only place that knows about plans (Q15).
+  - **Predictions, A gift of memories and Year in review (tasks 9.6–9.8)** build on Loot Drops, highlight reels and share links, and are designed when Sprint 9 is planned.

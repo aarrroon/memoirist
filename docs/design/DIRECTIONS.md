@@ -9,7 +9,7 @@
 1. **Scrapbook / analogue:** paper textures, polaroid frames, a handwritten accent font, warm cream and ink. This fits the paper-diary scanning feature (D-20).
 2. **Quiet editorial:** lots of white space, serif headings, muted colours, like a printed memoir. Calm and timeless.
 3. **Night sky / time capsule:** dark-first, deep blues, soft glows, starfield vault cards for Loot Drops. Leans into the "capsule" idea.
-4. **Warm Instagram-modern:** familiar social-app layout, rounded cards, a sunset gradient accent. The lowest learning curve for friends in Phase 5 groups.
+4. **Warm Instagram-modern:** familiar social-app layout, rounded cards, a sunset gradient accent. The lowest learning curve for friends in Phase 3 groups.
 
 ## How choosing will work
 

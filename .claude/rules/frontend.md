@@ -10,7 +10,7 @@ paths:
   - `schema.d.ts` is **generated** by `npm run gen:api`. Never hand-edit it, and never hand-write API types.
   - `client.ts` is the `openapi-fetch` client.
   - `queryKeys.ts` is the query-key factory.
-- `src/features/<feature>/` holds pages and feature components: `feed`, `week`, `timeline`, `entry`, `eras`, `templates`, `tags`, `settings`.
+- `src/features/<feature>/` holds pages and feature components: `feed`, `week`, `timeline`, `entry`, `music`, `eras`, `templates`, `tags`, `settings`.
 - `src/components/` holds shared UI primitives; `src/lib/` holds pure helpers (`time.ts`); `src/stores/` holds Zustand stores.
 
 ## Data
@@ -35,7 +35,9 @@ paths:
 - **Order:** `POST /entries` with `id: crypto.randomUUID()` → upload each file → `PUT …/media/order` → optional seal (after a confirmation dialog that repeats the date).
 - **Capture behaviour (D-23):** save stays disabled for an empty entry; one draft is kept in local storage until save or discard; failed uploads stay with *retry* or *remove*; a backdated save shows a toast linking to its week.
 - **Diary pages:** the user can mark a photo as a diary page; upload it with `purpose = PAGE_SCAN` (D-20).
-- **File input:** `accept="image/jpeg,image/png,image/webp,audio/webm,audio/mp4,audio/mpeg"`. Check size and count client-side as well (25 MB, 10 files).
+- **File input:** `accept="image/jpeg,image/png,image/webp,audio/webm,audio/mp4,audio/mpeg"`. Check size and count client-side as well (25 MB, 20 files).
+- **Photo dates:** read a photo's own date (EXIF) before compressing it, because compression drops it. Offer it as the memory date, and group a photo dump by it (D-34).
+- **Soundtracks:** show a placeholder until it's tapped, then load Spotify's embed. Search goes through `POST /music/search`, never straight to Spotify (D-35).
 - **Voice notes:** `MediaRecorder` with the first supported of `audio/webm;codecs=opus` and `audio/mp4`.
 
 ## Styling and accessibility
@@ -45,5 +47,5 @@ paths:
 
 ## Testing
 - Vitest + React Testing Library + MSW for components and hooks. Plain Vitest for `lib/`.
-- Playwright for the smoke flows from task 4.13 onwards, named after the flow IDs in `docs/USER_FLOWS.md`.
+- Playwright for the smoke flows from task 4.17 onwards, named after the flow IDs in `docs/USER_FLOWS.md`.
 - Run `npm test && npm run lint && npm run typecheck` before saying a task is done.

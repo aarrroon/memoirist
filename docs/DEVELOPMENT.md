@@ -80,7 +80,7 @@ npm run lint            # ESLint
 npm run typecheck       # TypeScript
 npm run build           # production build
 npm run gen:api         # regenerate API types (backend must be running) — task 4.2
-npx playwright test     # end-to-end smoke tests — task 4.13
+npx playwright test     # end-to-end smoke tests — task 4.17
 ```
 
 ## 5. Working on the code

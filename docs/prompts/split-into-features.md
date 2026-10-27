@@ -30,7 +30,7 @@ Before proposing features, check that the phases (and the sprints inside them) c
    - shared code: redaction (`EntryMapper`), seal rules, ownership checks, consent and `FeatureGate`, `AiContentSource`
    - accounts: anything involving more than one person (sharing, groups) comes after real auth (Phase 2)
    - decisions: every open question (Q-x) is due before the first task that depends on it
-3. **Check the stated flexibility.** The docs say Phases 4 and 5 can swap, Phase 5b needs Phase 3, and Phase 6 needs Phase 3. Confirm each claim, or say what breaks.
+3. **Check the stated flexibility.** The docs say Phases 4 and 5 can swap, the shared story (task 7.17) needs Phase 3's groups, and Phase 6 needs Phase 4 but not Phases 3 or 5 (D-31). Confirm each claim, or say what breaks.
 4. **Check foundations come early.** Look for anything a later phase would force us to *change* in an earlier phase (a breaking API change, or moving data between tables). D-22 and D-26 are examples where this was caught early. Flag any more.
 5. **Report**, before the feature table:
    - a Mermaid `flowchart` of phase-level dependencies (and sprint-level where it matters)

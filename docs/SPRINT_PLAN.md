@@ -12,11 +12,13 @@
 | Phase | Sprints | Theme (README name first) |
 |---|---|---|
 | 1 | 1–4 | The core journal: infrastructure, backend API, React UI (local MVP) |
-| 2 | 5 | Online, with accounts: cloud deployment, auth, sharing |
-| 3 | 6 (expect to split into 6a, 6b and 6c) | The AI biographer, and reading paper diaries |
-| 4 | 7 | On your phone: PWA, offline, polish |
-| 5 | 8 (expect 8a and 8b) | Memories with friends: groups and shared stories |
+| 2 | 5 | Online, with accounts: cloud deployment, auth, sharing, installing the app |
+| 3 | 6 | Memories with friends: groups, sealed trips and trip Eras |
+| 4 | 7 (expect to split into 7a, 7b and 7c) | The AI biographer, reading paper diaries, and the shared trip story |
+| 5 | 8 | On your phone: offline, scan mode, polish |
 | 6 | 9 | Looking back with you: insights and coaching |
+
+The phases follow D-31: groups come before the AI biographer, and the phone extras come after it.
 
 ---
 
@@ -184,7 +186,7 @@
 
 - [ ] **3.11 Local sample content**
   - **Read:** D-11, TECH_STACK §2 (Profiles).
-  - **Do:** a seeder that runs only in the `local` profile, behind a property (for example `memoirist.sample-content=true`). It creates overlapping Eras, tags, a template and a few weeks of entries: one started from the template, a backdated diary page, a photo-only entry, a sealed Loot Drop and an entry in Recently deleted. A few generated placeholder images are uploaded through `StorageService`. Running it twice changes nothing.
+  - **Do:** a seeder that runs only in the `local` profile, behind a property (for example `memoirist.sample-content=true`). It creates overlapping Eras, tags, a template and a few weeks of entries: one started from the template, a backdated diary page, a photo-only entry, a sealed Loot Drop, an entry with a soundtrack and an entry in Recently deleted, and one Era has a cover. A few generated placeholder images are uploaded through `StorageService`. Running it twice changes nothing.
   - **Done when:** on an empty local database with the property on, `GET /feed` returns the sample content, and a test proves the seeder bean doesn't exist in the `test` profile.
 
 - [ ] **3.12 Recently deleted** (D-30, `/new-endpoint`)
@@ -197,7 +199,49 @@
     - an empty entry is erased at once and never listed
     - restore and erase return `404` for an entry that isn't in Recently deleted, or is another user's
 
-- [ ] **3.13 API review**
+- [ ] **3.13 On this day** (D-32, `/new-endpoint`)
+  - **Read:** D-10, D-30, D-32, API_CONTRACT §Entries.
+  - **Do:** `GET /entries/on-this-day`: the user's entries from the same day and month in earlier years, newest year first, as `EntrySummary` rows.
+  - **Done when:** tests with a fixed `Clock` prove:
+    - entries from earlier years on the same day are listed, and this year's aren't
+    - sealed and deleted entries never appear
+    - entries from 29 February appear on 28 February in a year that isn't a leap year
+    - "the same day" follows the user's timezone
+    - another user's entries never appear
+
+- [ ] **3.14 Loot Drop replies and the birthday** (D-33, `/new-endpoint`)
+  - **Read:** D-10, D-33, API_CONTRACT §Users and §Entries.
+  - **Do:** `birthday` on `GET` and `PATCH /users/me`; `replyToEntryId` on `POST` and `PUT /entries`; `replyToEntryId` and `replyIds` on `Entry`.
+  - **Done when:** tests prove:
+    - a reply can point only at the user's own Loot Drop that has opened; a sealed one or an entry that was never sealed is `400`, and another user's is `404`
+    - `replyIds` lists an opened Loot Drop's replies
+    - deleting either entry leaves the other
+    - a birthday in the future is `400`
+    - a sealed reply is redacted like any entry
+
+- [ ] **3.15 Soundtracks and Spotify search** (D-35, `/new-endpoint`)
+  - **Read:** D-29, D-35, API_CONTRACT §Entries, §Weekly logs, §Eras and §Music.
+  - **Do:**
+    - `soundtrack` (a checked Spotify URI) on entries, weeks and Eras.
+    - A `SpotifyProperties` record and a `MusicSearchService` that gets an app-only token with the client credentials flow, reuses it until it expires, and calls Spotify's search.
+    - `POST /music/search`.
+  - **Done when:** tests against a stubbed Spotify (never the real one) prove:
+    - a malformed URI is `400`
+    - a sealed entry's soundtrack is hidden
+    - search returns at most 10 results
+    - missing settings, or a `429` from Spotify, return `503 music-search-unavailable`
+    - the token is fetched once and reused
+    - search terms appear in no URL or log line
+
+- [ ] **3.16 Era covers** (D-36)
+  - **Read:** D-10, D-30, D-36, API_CONTRACT §Eras.
+  - **Do:** `coverMediaId` on `POST` and `PUT /eras`, and a presigned `cover` on the Era shape.
+  - **Done when:** tests prove:
+    - a cover must be an image from one of the user's own entries; anything else is `400`, and another user's is `404`
+    - the cover is hidden while its entry is sealed or in Recently deleted
+    - removing the photo clears the cover
+
+- [ ] **3.17 API review**
   - **Do:** run `/sync-docs`; check that every endpoint has its tag and documented error responses in Swagger.
   - **Done when:** no drift remains between `/v3/api-docs` and API_CONTRACT.md.
 
@@ -256,12 +300,12 @@
   - **Done when:** sealing an entry turns it into a vault card; the countdown is correct in the user's zone; once the unlock time passes, the entry shows in the Opened strip until it is opened or dismissed.
 
 - [ ] **4.9 Eras, templates and settings pages**
-  - **Do:** CRUD for eras and templates, with an Era page that lists its weeks and counts only the entries inside its dates (D-22); settings for display name and timezone.
-  - **Done when:** changing the timezone changes the displayed times; changing an Era's dates regroups the feed; component tests pass.
+  - **Do:** CRUD for eras and templates, with an Era page that lists its weeks and counts only the entries inside its dates (D-22); a gallery of starter templates that adds an editable copy with one tap (D-06); settings for display name, timezone and birthday (D-33).
+  - **Done when:** changing the timezone changes the displayed times; changing an Era's dates regroups the feed; adding a starter template creates an editable copy; component tests pass.
 
 - [ ] **4.10 Week summary view**
   - **Read:** D-25, USER_FLOWS F-15.
-  - **Do:** tapping a week in the feed opens `/weeks/:weekId`: title, dates, Eras, counts, a few thumbnails, tags, then one bar per entry (display title, day, media icons, lock if sealed). Tapping a bar opens the entry. Leave a slot at the top for the Phase 3 AI summary.
+  - **Do:** tapping a week in the feed opens `/weeks/:weekId`: title, dates, Eras, counts, a few thumbnails, tags, then one bar per entry (display title, day, media icons, lock if sealed). Tapping a bar opens the entry. Leave a slot at the top for the Phase 4 AI summary.
   - **Done when:** component tests cover a mixed week, a week with a sealed entry (its bar shows only the lock and unlock date), and the display-title fallbacks (title → first non-heading line → *Photo* / *Diary page* / *Voice note*).
 
 - [ ] **4.11 All-entries timeline and tags UI**
@@ -274,7 +318,41 @@
   - **Do:** a delete confirmation that says the entry can be restored for 30 days, and a `/recently-deleted` screen over `GET /entries/deleted` with *restore* and *erase now*, reached from settings and the timeline.
   - **Done when:** component tests cover a normal and a sealed entry in the list; restoring puts the entry back in its week in the feed; *erase now* asks for confirmation; and an entry deleted from the feed shows up in the list.
 
-- [ ] **4.13 End-to-end smoke test and CI: frontend**
+- [ ] **4.13 Photo dump and photo dates** (D-34)
+  - **Read:** D-12, D-13, D-17, D-34, USER_FLOWS F-19.
+  - **Do:**
+    - A *photo dump* action. It reads each photo's own date before shrinking it (ask before adding `exifr`, D-13) and groups the photos by day in the user's timezone.
+    - It creates one backdated entry per day, reusing the capture upload flow; a day with more than 20 photos becomes several entries.
+    - Undated photos go into one entry dated today, marked so the date can be fixed.
+    - In capture, a single photo's own date is offered as the memory date.
+  - **Done when:** component tests cover:
+    - photos from three days becoming three entries
+    - a 25-photo day becoming two entries
+    - undated photos
+    - a failed upload retried without duplicates (client ids, D-12)
+    - the date suggestion for one photo, accepted and dismissed
+
+- [ ] **4.14 On this day strip and Era covers** (D-32, D-36)
+  - **Do:** an *On this day* strip at the top of the feed, beside the Opened strip, over `GET /entries/on-this-day`; Era covers as title pages in the feed's sticky headers and on Era pages; and a cover picker in the Era form.
+  - **Done when:** component tests cover the strip with and without memories, a cover on its Era's header, and no cover while its entry is sealed.
+
+- [ ] **4.15 Soundtrack picker and player** (D-35)
+  - **Do:** a soundtrack field on entries, weeks and Eras: paste a Spotify link (turned into a URI), or search through `POST /music/search` when it's available. Spotify's player shows as a placeholder until tapped, and only then loads.
+  - **Done when:** component tests cover pasting a link, picking a search result, search being unavailable (paste only), and no request to Spotify before the player is tapped.
+
+- [ ] **4.16 Loot Drop extras and the first letter** (D-33)
+  - **Read:** USER_FLOWS F-01, F-06 and F-07.
+  - **Do:**
+    - Suggested unlock dates in the seal dialog: in a month, in a year, and on the next birthday once a birthday is set.
+    - *Reply to past you* on an opened Loot Drop, with links both ways.
+    - A skippable first letter, sealed for a month, at the end of the first-run screen.
+  - **Done when:** component tests cover:
+    - each suggested date opening at 09:00 in the user's timezone
+    - the birthday choice hidden when no birthday is set
+    - a reply showing what it answers
+    - skipping the first letter
+
+- [ ] **4.17 End-to-end smoke test and CI: frontend**
   - **Do:**
     - A Playwright smoke test: create an entry with a photo, then seal another.
     - A CI frontend job (lint, typecheck, test, build).
@@ -295,75 +373,77 @@
 - [ ] **5.5 Account export and deletion** (per Q3), including stored files.
 - [ ] **5.6 Production deploy.** Neon, R2 (private bucket), Render (Docker, health check `/actuator/health`), Vercel (with an `/api` rewrite), environment secrets. **Done when:** the deployed app passes the Playwright smoke test.
 - [ ] **5.7 Unlock emails** (D-10). An email when a Loot Drop opens, on by default with a setting to turn it off. It needs the email service from Q2 and the job approach from Q5. **Done when:** a test with a fixed `Clock` sends one email per unlocked entry, never before it unlocks and never twice.
+- [ ] **5.8 Installable app** (D-31; ask before adding `vite-plugin-pwa`, D-13). A web app manifest, icons and a service worker that caches the app shell, so memoirist installs to the home screen and opens full-screen. Offline writing stays in Phase 5. **Done when:** Chrome's install check passes on the deployed app, and it installs and opens full-screen on an Android phone and through Safari's *Add to Home Screen* on an iPhone.
+- [ ] **5.9 App lock** (D-37; the mechanism comes from Q2). An optional lock in Settings: it locks after a few minutes in the background and unlocks with the device's fingerprint, face or passcode (WebAuthn) or a PIN. **Done when:** with the lock on, coming back after the timeout shows only the lock screen until it's unlocked; nothing from the journal shows behind it; and turning it off removes it.
+- [ ] **5.10 Yearly letter** (D-32). A yearly date in Settings (the birthday by default), an email and an in-app card at 09:00 on that day, and a letter sealed until the same date next year. **Done when:** a test with a fixed `Clock` sends one email per user per year, on the right day in their timezone and never twice; the card shows only on that day; and the letter opens at 09:00 on the next yearly date.
+- [ ] **5.11 Product metrics** (D-38, `/new-migration`). The `product_events` table, events for signing up, creating an entry, sealing a Loot Drop and closing a week (accepting an invite joins in Phase 3), and the five queries in a documented SQL file. **Done when:** tests prove each action records exactly one event with no content, and deleting an account deletes its events.
 
-## Phase 3: The AI biographer
+## Phase 3: Memories with friends
 
-### Sprint 6 (split into 6a, 6b and 6c when planning)
-**Decide first:** Q6 (provider, embedding dimension, consent wording). 6c (paper diaries) also needs Q12 (handwriting recognition approach and consent). Help me think needs Q14 (pause length), Q17 (what withdrawing consent deletes) is settled before 6.9, Q23 (summary staleness and status) before 6.3, and Q28 (Era summaries for weeks an Era only partly covers) before 6.13.
-**Suggested split (D-21):** 6a = AI foundation and Help me think (6.1, 6.9, 6.10, 6.2, 6.11, 6.12). 6b = summaries, people and search (6.3, 6.4, 6.5, 6.13, 6.14, 6.15, 6.16). 6c = paper diaries (6.6, 6.7, 6.8). Inside 6a, build 6.9 and 6.10 before 6.2. Paper diaries need 6.9 too, because reading a page needs the AI consent.
+### Sprint 6
+**Start after:** Phase 2 (real accounts). Groups need no AI; the shared story comes with the AI in Phase 4 (task 7.17, D-31).
+**Decide first:** Q8, Q11 and Q26. Record each in DECISIONS.md, then review the Phase 3 drafts in DATABASE_SCHEMA.md and API_CONTRACT.md.
 
-- [ ] **6.1 AI migration** (pgvector, `ai_metadata`, `ai_summaries`, characters, edges) with the chosen `vector(N)`.
-- [ ] **6.2 Help me think: two-option questions** (`/new-migration`, `/new-endpoint`). The `ai_suggestions` table, `POST /suggestions` and `POST /suggestions/{id}/answer` for a saved entry or an unsaved draft, with whitelisted effects. **Done when:** a sealed entry returns `409`; a draft is read without being stored and its cards expire; answering applies the effect once and repeating the same answer is harmless; another user's suggestion is `404`; every question has exactly two options (anything else the model returns is dropped); and the response arrives in under 5 s on typical entries.
-- [ ] **6.3 Weekly summary and embedding** via `WeeklyLogClosedEvent` and `@Async`. Closing a week is the only trigger (D-28). **Done when:** tests prove sealed entries are excluded from the summary input, and a week that is still open never gets a summary.
-- [ ] **6.4 Cast of Characters and friendship map.**
-- [ ] **6.5 Search by word and by feeling** (D-29, `/new-migration`, `/new-endpoint`). The full-text index, `POST /search/words` and `POST /search/feeling`. **Done when:** tests prove sealed entries never match; another user's entries never appear; search by feeling returns only closed weeks; and search terms appear in no URL or log line.
+- [ ] **6.1 Groups, members and the access rule** (`/new-migration`, `/new-endpoint`). Apply the groups migration, add the group endpoints with one membership check that every group endpoint uses, and extend `.claude/rules/security.md` with the membership rule (D-19). **Done when:** tests prove a non-member gets `404` on every group endpoint, a member gets `403` on owner-only actions, the only owner can't leave, and leaving unlinks the member's contributions without deleting their entries.
+- [ ] **6.2 Invite links.** Hashed tokens, expiry, revoke and accept. **Done when:** the raw token appears only in the create response, expired, revoked and unknown tokens return `404`, and accepting twice is harmless.
+- [ ] **6.3 Contributions, the group feed and starting from an entry** (D-19). **Done when:** tests prove a member reads another member's contribution only through `/groups/**` while `GET /entries/{id}` still returns `404`; a withdrawn contribution disappears from the group while the entry survives; a contribution whose entry is in Recently deleted is left out (D-30); a non-member never gets a presigned media URL; and starting a group from an entry makes that entry its first contribution.
+- [ ] **6.4 Group Loot Drops.** **Done when:** tests prove contributing to a locked group needs the matching `confirmUnlockDate` and seals the entry until at least the group's date; nobody, including the author and the group owner, can read a sealed contribution early; the group's date can't move earlier (`409 group-sealed`); and members can see who has contributed but not what.
+- [ ] **6.5 Trips as Eras.** **Done when:** joining a dated group creates an Era with the trip's dates in the member's own timeline; it shows only their entries inside those dates (D-22); leaving keeps the Era but unlinks it; and deleting the Era doesn't change membership.
+- [ ] **6.6 Groups UI.** Group list and create, a *share with friends* action that starts a group from an entry, invite sheet, group feed with author names, an "Add to group" action on entries (with the unlock-date confirmation for locked groups), a group vault card with a countdown, and the trip Era in the feed. **Done when:** a Playwright flow with two accounts creates a group, invites, has both people contribute, and shows both entries in the group feed.
 
-**6c: reading paper diaries (D-20).** Photos of pages already work from Phase 1; this adds the optional "Read this page" step. It doesn't depend on the vector extension.
+## Phase 4: The AI biographer
 
-- [ ] **6.6 Page scans and the transcription provider** (`/new-migration`). Apply the page-transcription migration (`media_transcriptions`; `media.purpose` is already in V1, D-20), add the `TranscriptionProvider` interface with a fake adapter for `local` and `test`, and the one real adapter chosen in Q12. **Done when:** a Testcontainers test applies the migration; the fake adapter takes a transcription from `PENDING` to `READY`; and a provider error ends as `FAILED` with a short reason and no page content in the logs.
-- [ ] **6.7 Transcription endpoints** (`/new-endpoint`). **Done when:** tests prove a sealed entry returns `409` and the provider is never called for it (use a spy); another user's entry or media returns `404`; asking again for a pending page returns the existing one; going over the daily limit returns `429`; and deleting the media or the entry removes its transcription.
-- [ ] **6.8 Read-a-page UI.** A "Read this page" action on page photos, a progress state, a side-by-side review of the photo and its text, "Use text" (fills the caption and saves with `PUT /entries/{id}`), and a chip to accept the date found on the page. **Done when:** a Playwright flow with the fake provider uploads a page photo, reads it, uses the text and accepts the date, and the feed shows the entry in the right week.
+### Sprint 7 (split into 7a, 7b and 7c when planning)
+**Decide first:** Q6 (provider, embedding dimension, consent wording). 7c (paper diaries) also needs Q12 (handwriting recognition approach and consent). Help me think needs Q14 (pause length), Q17 (what withdrawing consent deletes) is settled before 7.9, Q23 (summary staleness and status) before 7.3, Q28 (Era summaries for weeks an Era only partly covers) before 7.13, and Q9 (consent for the shared story) before 7.17. Every AI task follows D-39 on hard topics.
+**Suggested split (D-21):** 7a = AI foundation and Help me think (7.1, 7.9, 7.10, 7.2, 7.11, 7.12). 7b = summaries, people, search, the shared story and the weekly email (7.3, 7.4, 7.5, 7.13, 7.14, 7.15, 7.16, 7.17, 7.18). 7c = paper diaries (7.6, 7.7, 7.8). Inside 7a, build 7.9 and 7.10 before 7.2. Paper diaries need 7.9 too, because reading a page needs the AI consent.
 
-**AI foundation, tags and Help me think (D-21).** Build 6.9 and 6.10 before 6.2.
+- [ ] **7.1 AI migration** (pgvector, `ai_metadata`, `ai_summaries`, characters, edges) with the chosen `vector(N)`.
+- [ ] **7.2 Help me think: two-option questions** (`/new-migration`, `/new-endpoint`). The `ai_suggestions` table, `POST /suggestions` and `POST /suggestions/{id}/answer` for a saved entry or an unsaved draft, with whitelisted effects. **Done when:** a sealed entry returns `409`; a draft is read without being stored and its cards expire; answering applies the effect once and repeating the same answer is harmless; another user's suggestion is `404`; every question has exactly two options (anything else the model returns is dropped); and the response arrives in under 5 s on typical entries.
+- [ ] **7.3 Weekly summary and embedding** via `WeeklyLogClosedEvent` and `@Async`. Closing a week is the only trigger (D-28). **Done when:** tests prove sealed entries are excluded from the summary input, and a week that is still open never gets a summary.
+- [ ] **7.4 Cast of Characters and friendship map.**
+- [ ] **7.5 Search by word and by feeling** (D-29, `/new-migration`, `/new-endpoint`). The full-text index, `POST /search/words` and `POST /search/feeling`. **Done when:** tests prove sealed entries never match; another user's entries never appear; search by feeling returns only closed weeks; and search terms appear in no URL or log line.
 
-- [ ] **6.9 AI consent, settings and the feature gate** (`/new-migration`, `/new-endpoint`). `user_settings` (a switch for every AI feature, and one for the Wrap up reminder), `GET` and `PUT /users/me/settings`, `POST` and `DELETE /users/me/ai-consent`, `DELETE /users/me/ai-data`, and a `FeatureGate` that reads configuration. **Done when:** tests prove every AI endpoint returns `403 consent-required` until consent is given and again after it is withdrawn; turning on a feature that isn't available returns `403 feature-unavailable`; unknown settings keys return `400`; the client can't set `available`; and deleting AI data removes everything derived while leaving entries untouched.
-- [ ] **6.10 `AiContentSource` and invalidation.** The single reader of entry text, tags and AI facts for AI, plus the listener that reacts when an entry is edited, sealed, unlocked, deleted or restored (D-30). **Done when:** tests prove sealed entries never come out of the source (and do once unlocked); editing, sealing or deleting an entry deletes the cards that cite it and marks the summaries and profiles built from it stale; and a stale summary is never used as input to another.
-- [ ] **6.11 Tag suggestions.** Manual tags already exist (task 3.8, D-26); this adds the `TAG` kind of suggestion, drawn from the user's existing tags first. **Done when:** an AI tag suggestion adds the tag (with `source = AI`) only after the user taps; a suggestion never creates a tag the user didn't accept; and sealed entries get none.
-- [ ] **6.12 Help me think UI.** The pause prompt and button in the editor, a two-button question card, tag chips, and the settings switch. **Done when:** a Playwright flow with the fake provider types, pauses, sees the button, taps it, answers a question and accepts a tag; nothing is sent before the tap; and turning the pause prompt off removes it.
+**7c: reading paper diaries (D-20).** Photos of pages already work from Phase 1; this adds the optional "Read this page" step. It doesn't depend on the vector extension.
 
-**Era summaries and friend profiles (D-21).** Need 6.3 and 6.4.
+- [ ] **7.6 Page scans and the transcription provider** (`/new-migration`). Apply the page-transcription migration (`media_transcriptions`; `media.purpose` is already in V1, D-20), add the `TranscriptionProvider` interface with a fake adapter for `local` and `test`, and the one real adapter chosen in Q12. **Done when:** a Testcontainers test applies the migration; the fake adapter takes a transcription from `PENDING` to `READY`; and a provider error ends as `FAILED` with a short reason and no page content in the logs.
+- [ ] **7.7 Transcription endpoints** (`/new-endpoint`). **Done when:** tests prove a sealed entry returns `409` and the provider is never called for it (use a spy); another user's entry or media returns `404`; asking again for a pending page returns the existing one; going over the daily limit returns `429`; and deleting the media or the entry removes its transcription.
+- [ ] **7.8 Read-a-page UI.** A "Read this page" action on page photos, a progress state, a side-by-side review of the photo and its text, "Use text" (fills the caption and saves with `PUT /entries/{id}`), and a chip to accept the date found on the page. **Done when:** a Playwright flow with the fake provider uploads a page photo, reads it, uses the text and accepts the date, and the feed shows the entry in the right week.
 
-- [ ] **6.13 Closing an Era and its summary** (D-28, `/new-migration`, `/new-endpoint`). `eras.is_closed`, `POST /eras/{id}/close` and `/reopen`, and the Era summary built from its weekly summaries. **Done when:** tests prove closing an Era closes its open weeks and writes their summaries before the Era summary; closing sets a missing end date; an Era with nothing to summarise still closes but gets no summary; a stale weekly summary makes the Era summary stale and it is rebuilt; closing or reopening twice is harmless; and deleting the Era deletes its summary.
-- [ ] **6.14 Friend profiles** (`/new-migration`, `/new-endpoint`). Stats (mentions, first and last mention, Eras) plus an AI-written profile, made automatically once someone is mentioned in several entries, with rename, notes, hide and merge. **Done when:** tests prove stats come from the database and not the AI; a rebuild never overwrites the user's notes; merging two people moves their mentions and keeps the old name as an alias; hidden people stay out of the map; and another user's character is `404`.
-- [ ] **6.15 Era and Cast UI.** An Era page with its summary and a *Close Era* action that says how many weeks are still open; a Cast page with profile cards, editing and merging; and the friendship map. **Done when:** component tests cover the empty, stale and failed states (see Q23), and a Playwright flow shows a summary and a profile built with the fake provider.
-- [ ] **6.16 Wrap up card and reminder** (D-28). The card at the top of the feed for the latest finished week that's still open and for Eras that have ended, a read endpoint for it (`GET /wrap-up`), and the gentle reminder with its switch. **Done when:** component tests cover a card for last week, a card after a month away, an ended Era, no card when everything is closed, and the reminder showing at most once a week and never when it's switched off.
+**AI foundation, tags and Help me think (D-21).** Build 7.9 and 7.10 before 7.2.
 
-## Phase 4: On your phone
+- [ ] **7.9 AI consent, settings and the feature gate** (`/new-migration`, `/new-endpoint`). `user_settings` (a switch for every AI feature, one for the Wrap up reminder and one for the weekly email), `GET` and `PUT /users/me/settings`, `POST` and `DELETE /users/me/ai-consent`, `DELETE /users/me/ai-data`, and a `FeatureGate` that reads configuration. **Done when:** tests prove every AI endpoint returns `403 consent-required` until consent is given and again after it is withdrawn; turning on a feature that isn't available returns `403 feature-unavailable`; unknown settings keys return `400`; the client can't set `available`; and deleting AI data removes everything derived while leaving entries untouched.
+- [ ] **7.10 `AiContentSource` and invalidation.** The single reader of entry text, tags and AI facts for AI, plus the listener that reacts when an entry is edited, sealed, unlocked, deleted or restored (D-30). **Done when:** tests prove sealed entries never come out of the source (and do once unlocked); editing, sealing or deleting an entry deletes the cards that cite it and marks the summaries and profiles built from it stale; and a stale summary is never used as input to another.
+- [ ] **7.11 Tag suggestions.** Manual tags already exist (task 3.8, D-26); this adds the `TAG` kind of suggestion, drawn from the user's existing tags first. **Done when:** an AI tag suggestion adds the tag (with `source = AI`) only after the user taps; a suggestion never creates a tag the user didn't accept; and sealed entries get none.
+- [ ] **7.12 Help me think UI.** The pause prompt and button in the editor, a two-button question card, tag chips, and the settings switch. **Done when:** a Playwright flow with the fake provider types, pauses, sees the button, taps it, answers a question and accepts a tag; nothing is sent before the tap; and turning the pause prompt off removes it.
 
-### Sprint 7
-**Decide first:** Q7 (dictation approach), Q13 (bulk notebook import), Q24 (voice-note transcription) and Q25 (writing time).
+**Era summaries and friend profiles (D-21).** Need 7.3 and 7.4.
 
-- [ ] **7.1 Installable PWA** (`vite-plugin-pwa`).
-- [ ] **7.2 Offline capture** with Dexie plus a sync queue (client UUIDs, idempotent creates).
-- [ ] **7.3 Voice-to-text dictation.**
-- [ ] **7.4 Inline photo node in TipTap** (stores a `mediaId`); extend the backend content allow-list to match.
-- [ ] **7.5 Zine export.**
-- [ ] **7.6 Scan mode** (D-20). A camera screen for diary pages: edge detection, crop, straighten and brighten, "add another page", and a file-picker fallback. Pages are saved as JPEG (D-17), uploaded with `purpose = PAGE_SCAN`, and ride the offline queue from 7.2, which means uploads must be safe to retry (extend D-12 with an optional client-supplied media `id` when 7.2 is planned). Ask before adding an image-processing library. **Done when:** on a phone, two photographed pages end up as one backdated entry with two page scans; the same flow works offline and syncs later; and the file-picker path works without a camera.
-- [ ] **7.7 Unlock notifications** (D-10). An opt-in push notification from the installed PWA when a Loot Drop opens. **Done when:** on a phone with the app installed and notifications allowed, an entry sealed a few minutes ahead produces one notification when it opens.
+- [ ] **7.13 Closing an Era: its ritual and its summary** (D-28, `/new-migration`, `/new-endpoint`). `eras.is_closed`, `POST /eras/{id}/close` and `/reopen`, the ritual (a *last word* entry on the Era's last day, and an optional letter sealed for 5 years), and the Era summary built from its weekly summaries. **Done when:** tests prove closing an Era closes its open weeks and writes their summaries before the Era summary; closing sets a missing end date; the last word is an ordinary entry dated the Era's last day; the letter is sealed until 09:00 five years on unless the user picks another date; an Era with nothing to summarise still closes but gets no summary; a stale weekly summary makes the Era summary stale and it is rebuilt; closing or reopening twice is harmless; and deleting the Era deletes its summary.
+- [ ] **7.14 Friend profiles** (`/new-migration`, `/new-endpoint`). Stats (mentions, first and last mention, Eras) plus an AI-written profile, made automatically once someone is mentioned in several entries, with rename, notes, hide and merge. **Done when:** tests prove stats come from the database and not the AI; a rebuild never overwrites the user's notes; merging two people moves their mentions and keeps the old name as an alias; hidden people stay out of the map; and another user's character is `404`.
+- [ ] **7.15 Era and Cast UI.** An Era page with its summary and a *Close Era* action that says how many weeks are still open, then offers the last word and the letter; a Cast page with profile cards, editing and merging; and the friendship map. **Done when:** component tests cover the empty, stale and failed states (see Q23), and a Playwright flow shows a summary and a profile built with the fake provider.
+- [ ] **7.16 Wrap up card and reminder** (D-28). The card at the top of the feed for the latest finished week that's still open and for Eras that have ended, a read endpoint for it (`GET /wrap-up`), and the gentle reminder with its switch. **Done when:** component tests cover a card for last week, a card after a month away, an ended Era, no card when everything is closed, and the reminder showing at most once a week and never when it's switched off.
 
-## Phase 5: Memories with friends
+**The shared story and the weekly email (D-31, D-32).**
 
-### Sprint 8 (split into 8a and 8b when planning)
-**Start after:** Phase 2 (real accounts). 8b also needs Phase 3. The sprint can run before or after Phase 4.
-**Decide first:** Q8, Q9, Q11 and Q26, plus the consent wording from Q6 and Q9 for 8b. Record each in DECISIONS.md, then review the Phase 5 drafts in DATABASE_SCHEMA.md and API_CONTRACT.md.
+- [ ] **7.17 Shared story** (D-19, needs Phase 3's groups). Each member's opt-in (`PUT /groups/{groupId}/members/me`), then a story built from consenting members' contributions. **Done when:** tests prove sealed entries and contributions from members who haven't opted in are excluded from the input; fewer than two contributors returns `409 not-enough-contributions`; and withdrawing, opting out or leaving deletes the stored story.
+- [ ] **7.18 Weekly email** (D-32). At 09:00 on Monday in each user's timezone, after a week with entries, an email that points to the week's story or to Wrap up, with no entry content; on by default, with its own switch (7.9). **Done when:** a test with a fixed `Clock` sends one email per user per week, none after an empty week and none when it's switched off, and the email holds no title, caption or summary text.
 
-**8a: groups and Loot Drops (no AI)**
+## Phase 5: On your phone
 
-- [ ] **8.1 Groups, members and the access rule** (`/new-migration`, `/new-endpoint`). Apply the groups migration, add the group endpoints with one membership check that every group endpoint uses, and extend `.claude/rules/security.md` with the membership rule (D-19). **Done when:** tests prove a non-member gets `404` on every group endpoint, a member gets `403` on owner-only actions, the only owner can't leave, and leaving unlinks the member's contributions without deleting their entries.
-- [ ] **8.2 Invite links.** Hashed tokens, expiry, revoke and accept. **Done when:** the raw token appears only in the create response, expired, revoked and unknown tokens return `404`, and accepting twice is harmless.
-- [ ] **8.3 Contributions, the group feed and starting from an entry** (D-19). **Done when:** tests prove a member reads another member's contribution only through `/groups/**` while `GET /entries/{id}` still returns `404`; a withdrawn contribution disappears from the group while the entry survives; a non-member never gets a presigned media URL; and starting a group from an entry makes that entry its first contribution.
-- [ ] **8.4 Group Loot Drops.** **Done when:** tests prove contributing to a locked group needs the matching `confirmUnlockDate` and seals the entry until at least the group's date; nobody, including the author and the group owner, can read a sealed contribution early; the group's date can't move earlier (`409 group-sealed`); and members can see who has contributed but not what.
-- [ ] **8.5 Trips as Eras.** **Done when:** joining a dated group creates an Era with the trip's dates in the member's own timeline; it shows only their entries inside those dates (D-22); leaving keeps the Era but unlinks it; and deleting the Era doesn't change membership.
-- [ ] **8.6 Groups UI.** Group list and create, a *share with friends* action that starts a group from an entry, invite sheet, group feed with author names, an "Add to group" action on entries (with the unlock-date confirmation for locked groups), a group vault card with a countdown, and the trip Era in the feed. **Done when:** a Playwright flow with two accounts creates a group, invites, has both people contribute, and shows both entries in the group feed.
+### Sprint 8
+**Decide first:** Q7 (dictation approach), Q13 (bulk notebook import), Q24 (voice-note transcription) and Q25 (writing time). Installing the app came earlier, in task 5.8 (D-31).
 
-**8b: AI-powered (needs Phase 3)**
-
-- [ ] **8.7 Shared story.** Per-member consent, then a story built from consenting members' contributions. **Done when:** tests prove sealed entries and contributions from members who haven't opted in are excluded from the input; fewer than two contributors returns `409 not-enough-contributions`; and withdrawing, opting out or leaving deletes the stored story.
+- [ ] **8.1 Offline capture** with Dexie plus a sync queue (client UUIDs, idempotent creates).
+- [ ] **8.2 Voice-to-text dictation.**
+- [ ] **8.3 Inline photo node in TipTap** (stores a `mediaId`); extend the backend content allow-list to match.
+- [ ] **8.4 Zine export.**
+- [ ] **8.5 Scan mode** (D-20). A camera screen for diary pages: edge detection, crop, straighten and brighten, "add another page", and a file-picker fallback. Pages are saved as JPEG (D-17), uploaded with `purpose = PAGE_SCAN`, and ride the offline queue from 8.1, which means uploads must be safe to retry (extend D-12 with an optional client-supplied media `id` when 8.1 is planned). Ask before adding an image-processing library. **Done when:** on a phone, two photographed pages end up as one backdated entry with two page scans; the same flow works offline and syncs later; and the file-picker path works without a camera.
+- [ ] **8.6 Unlock notifications** (D-10). An opt-in push notification from the installed PWA when a Loot Drop opens. **Done when:** on a phone with the app installed and notifications allowed, an entry sealed a few minutes ahead produces one notification when it opens.
 
 ## Phase 6: Looking back with you
 
 ### Sprint 9
-**Start after:** Phase 3 (the AI layer, weekly summaries and Era summaries). It is independent of Phases 4 and 5.
+**Start after:** Phase 4 (the AI layer, weekly summaries and Era summaries). It is independent of Phases 3 and 5.
 **Decide first:** Q15 (paid features), Q16 (how often insights appear, and where) and the mood part of Q25. Record each in DECISIONS.md, then review the Phase 6 drafts in DATABASE_SCHEMA.md and API_CONTRACT.md.
 
 - [ ] **9.1 Entry embeddings and retrieval** (`/new-migration`). `entry_embeddings`, and a `Retriever` that searches only the caller's own entries and summaries. Sealed entries are never embedded and are removed when sealed. **Done when:** tests prove results never include another user's data, sealed entries or stale summaries; an entry that unlocks becomes searchable; and a multi-user test shows per-user results aren't cut short by the vector index.
@@ -371,3 +451,6 @@
 - [ ] **9.3 Highlight reels** (`/new-endpoint`). On request and when an Era is closed. A reel stores entry IDs only and is built through `EntryMapper` when it is read. **Done when:** a test proves an entry sealed after the reel was made disappears from it, and a photo-only entry still appears.
 - [ ] **9.4 Writing coach.** Off by default, behind a switch and the `FeatureGate`, with a daily cap, and most requests return nothing. **Done when:** tests prove nothing is sent while the switch is off, going over the cap returns `429`, a low-scoring draft returns an empty list, and a card can be dismissed with feedback.
 - [ ] **9.5 Insights UI.** An insights inbox, reels, the coach card in the editor, and settings for each switch and the weekly cap. **Done when:** a Playwright flow with the fake provider shows an inbox card with its sources, dismisses it, and opens a reel.
+- [ ] **9.6 Predictions.** A sealed yes-or-no question to future you ("Still at this job in a year?"), built on Loot Drops (D-10). When it opens, the user answers again and sees whether they were right, with a running score. Settle how it's scored and shown in a D-entry when Sprint 9 is planned. **Done when:** a prediction stays sealed like any Loot Drop until it opens, and the score counts only predictions that have opened and been answered.
+- [ ] **9.7 A gift of memories.** A highlight reel of the user's moments with one person (9.3, the Cast of Characters), turned into a page they can share with an expiring link (5.3), for example for that person's birthday. **Done when:** sealed and deleted entries never appear on the shared page, and revoking the link takes it down.
+- [ ] **9.8 Year in review.** Each December, a page of the year's chapters, people and best photos, built on highlight reels (9.3), plus a card to share that shows no private content. **Done when:** sealed and deleted entries never appear, and the shareable card holds only counts and the year.
