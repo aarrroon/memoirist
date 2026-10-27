@@ -73,7 +73,7 @@
 
 - [ ] **2.3 V1 migration and local seed**
   - **Read:** DATABASE_SCHEMA (Phase 1 tables, V1 SQL, seed).
-  - **Do:** `db/migration/V1__core_schema.sql` and `db/seed-local/R__seed_dev_user.sql`, exactly as specified, including `media.purpose` (D-20), `entries.unlock_seen_at` (D-10) and the 1900 date check (D-09). There's no week–Era table: Eras are worked out from their dates (D-22).
+  - **Do:** `db/migration/V1__core_schema.sql` and `db/seed-local/R__seed_dev_user.sql`, exactly as specified, including `media.purpose` (D-20), `entries.unlock_seen_at` (D-10), `entries.deleted_at` (D-30) and the 1900 date check (D-09). There's no week–Era table: Eras are worked out from their dates (D-22).
   - **Done when:** a Testcontainers test applies the migrations to an empty database and finds the dev user; local boot shows V1 in `flyway_schema_history`.
 
 - [ ] **2.4 Entities and repositories**
@@ -83,8 +83,8 @@
     - All extend a base class with `@CreationTimestamp` and `@UpdateTimestamp` `Instant`s and implement `Persistable<UUID>`.
     - JSONB fields use `@JdbcTypeCode(SqlTypes.JSON)`.
     - `Entry.media` uses `@OrderBy("displayOrder ASC")` and `@BatchSize(size = 50)`.
-    - Repositories with user-scoped finders (`findByIdAndUserId`, …).
-  - **Done when:** the context loads with `validate`; a repository test proves a user-scoped finder doesn't return another user's row; saving an entity with a preset ID issues an INSERT with no SELECT first.
+    - Repositories with user-scoped finders (`findByIdAndUserId`, …). Entry finders leave out entries in Recently deleted (D-30).
+  - **Done when:** the context loads with `validate`; a repository test proves a user-scoped finder doesn't return another user's row; saving an entity with a preset ID issues an INSERT with no SELECT first; and the entry finders skip entries in Recently deleted.
 
 - [ ] **2.5 Current user resolution**
   - **Read:** D-11, `.claude/rules/security.md`.
@@ -132,7 +132,7 @@
   - **Done when:** every row of §Templates works and is tested; subheading limits are enforced.
 
 - [ ] **3.5 Entries: create, read, update, delete, seal, redaction**
-  - **Read:** D-05, D-08, D-09, D-10, D-12, API_CONTRACT §Entries.
+  - **Read:** D-05, D-08, D-09, D-10, D-12, D-30, API_CONTRACT §Entries.
   - **Do:** `WeekCalendar` (the first day of the week is a parameter, D-08), `EntryContentValidator`, `ContentTextExtractor`, `EntryMapper` (the only Entry→DTO path), and `EntryService` seal rules.
   - **Done when:** tests prove:
     - an optional title is saved, and a blank title is `400`
@@ -144,19 +144,19 @@
     - disallowed nodes and `javascript:` links return `400`
     - a sealed entry is redacted on GET, PUT, seal and feed responses, and in week detail
     - editing a sealed entry returns `409`, as does moving its seal earlier
-    - a sealed entry can be deleted
+    - deleting an entry, sealed or not, moves it to Recently deleted, after which `GET`, `PUT` and `seal` return `404` (restore, erase and the sweep are task 3.12)
     - another user's entry returns `404`
-    - replaying an existing ID returns `200`; another user's ID returns `409`
+    - replaying an existing ID returns `200`; another user's ID, or one in Recently deleted, returns `409`
 
 - [ ] **3.6 Media**
   - **Read:** API_CONTRACT §Media, D-17, D-20.
-  - **Do:** upload (type, size, count and `purpose` checks), reorder (deferrable unique), delete with gap closing, and stored-file cleanup when an entry is deleted.
-  - **Done when:** tests cover the `415`, `413`, item-limit and sealed (`409`) cases; a `PAGE_SCAN` that isn't an image (`415`) and an unknown purpose (`400`); a reorder swap; and stored objects disappearing after deleting a media item and after deleting an entry.
+  - **Do:** upload (type, size, count and `purpose` checks), reorder (deferrable unique), delete with gap closing, and stored-file cleanup when an entry is erased (D-30).
+  - **Done when:** tests cover the `415`, `413`, item-limit and sealed (`409`) cases; a `PAGE_SCAN` that isn't an image (`415`) and an unknown purpose (`400`); a reorder swap; and stored objects disappearing after deleting a media item and after erasing an entry, while deleting an entry keeps them (D-30).
 
 - [ ] **3.7 Weekly logs and feed**
   - **Read:** API_CONTRACT §Feed and §Weekly logs, TECH_STACK §2 (Weeks and the feed), D-22.
   - **Done when:**
-    - the feed returns only non-empty weeks, newest first, with their Eras and redacted entries
+    - the feed returns only non-empty weeks, newest first, with their Eras and redacted entries; entries in Recently deleted don't count, so a week whose entries are all deleted is left out (D-30)
     - the query count for a page doesn't grow with the number of entries or media (assert with Hibernate statistics)
     - PUT (the title), close and reopen work
     - a week's `eras` are every Era whose dates overlap it, latest start first, and change as soon as an Era's dates change (D-22)
@@ -184,10 +184,20 @@
 
 - [ ] **3.11 Local sample content**
   - **Read:** D-11, TECH_STACK §2 (Profiles).
-  - **Do:** a seeder that runs only in the `local` profile, behind a property (for example `memoirist.sample-content=true`). It creates overlapping Eras, tags, a template and a few weeks of entries: one started from the template, a backdated diary page, a photo-only entry and a sealed Loot Drop. A few generated placeholder images are uploaded through `StorageService`. Running it twice changes nothing.
+  - **Do:** a seeder that runs only in the `local` profile, behind a property (for example `memoirist.sample-content=true`). It creates overlapping Eras, tags, a template and a few weeks of entries: one started from the template, a backdated diary page, a photo-only entry, a sealed Loot Drop and an entry in Recently deleted. A few generated placeholder images are uploaded through `StorageService`. Running it twice changes nothing.
   - **Done when:** on an empty local database with the property on, `GET /feed` returns the sample content, and a test proves the seeder bean doesn't exist in the `test` profile.
 
-- [ ] **3.12 API review**
+- [ ] **3.12 Recently deleted** (D-30, `/new-endpoint`)
+  - **Read:** D-30, API_CONTRACT §Entries.
+  - **Do:** `GET /entries/deleted`, `POST /entries/{entryId}/restore` and `/erase`, and a daily sweep that erases entries deleted more than 30 days ago, with their stored files.
+  - **Done when:** tests with a fixed `Clock` prove:
+    - a deleted entry is left out of the feed, its week, the timeline, tag counts and filters, and the Opened strip, and comes back in all of them when restored
+    - restoring keeps its media, tags and seal, and a sealed entry stays redacted in the list
+    - erasing, and the sweep after 30 days, remove the entry and its stored files, and the sweep leaves younger ones alone
+    - an empty entry is erased at once and never listed
+    - restore and erase return `404` for an entry that isn't in Recently deleted, or is another user's
+
+- [ ] **3.13 API review**
   - **Do:** run `/sync-docs`; check that every endpoint has its tag and documented error responses in Swagger.
   - **Done when:** no drift remains between `/v3/api-docs` and API_CONTRACT.md.
 
@@ -259,7 +269,12 @@
   - **Do:** `/entries` lists every entry newest first with infinite scroll over `GET /entries`, one row each (display title, date, icons, tags), filterable by tag; a `/tags` page to rename and delete tags.
   - **Done when:** filtering by a tag shows only its unsealed entries; sealed rows show no title or tags; renaming a tag updates everywhere; component tests pass.
 
-- [ ] **4.12 End-to-end smoke test and CI: frontend**
+- [ ] **4.12 Recently deleted screen** (D-30)
+  - **Read:** USER_FLOWS F-09 and F-18.
+  - **Do:** a delete confirmation that says the entry can be restored for 30 days, and a `/recently-deleted` screen over `GET /entries/deleted` with *restore* and *erase now*, reached from settings and the timeline.
+  - **Done when:** component tests cover a normal and a sealed entry in the list; restoring puts the entry back in its week in the feed; *erase now* asks for confirmation; and an entry deleted from the feed shows up in the list.
+
+- [ ] **4.13 End-to-end smoke test and CI: frontend**
   - **Do:**
     - A Playwright smoke test: create an entry with a photo, then seal another.
     - A CI frontend job (lint, typecheck, test, build).
@@ -302,7 +317,7 @@
 **AI foundation, tags and Help me think (D-21).** Build 6.9 and 6.10 before 6.2.
 
 - [ ] **6.9 AI consent, settings and the feature gate** (`/new-migration`, `/new-endpoint`). `user_settings` (a switch for every AI feature, and one for the Wrap up reminder), `GET` and `PUT /users/me/settings`, `POST` and `DELETE /users/me/ai-consent`, `DELETE /users/me/ai-data`, and a `FeatureGate` that reads configuration. **Done when:** tests prove every AI endpoint returns `403 consent-required` until consent is given and again after it is withdrawn; turning on a feature that isn't available returns `403 feature-unavailable`; unknown settings keys return `400`; the client can't set `available`; and deleting AI data removes everything derived while leaving entries untouched.
-- [ ] **6.10 `AiContentSource` and invalidation.** The single reader of entry text, tags and AI facts for AI, plus the listener that reacts when an entry is edited, sealed, unlocked or deleted. **Done when:** tests prove sealed entries never come out of the source (and do once unlocked); editing, sealing or deleting an entry deletes the cards that cite it and marks the summaries and profiles built from it stale; and a stale summary is never used as input to another.
+- [ ] **6.10 `AiContentSource` and invalidation.** The single reader of entry text, tags and AI facts for AI, plus the listener that reacts when an entry is edited, sealed, unlocked, deleted or restored (D-30). **Done when:** tests prove sealed entries never come out of the source (and do once unlocked); editing, sealing or deleting an entry deletes the cards that cite it and marks the summaries and profiles built from it stale; and a stale summary is never used as input to another.
 - [ ] **6.11 Tag suggestions.** Manual tags already exist (task 3.8, D-26); this adds the `TAG` kind of suggestion, drawn from the user's existing tags first. **Done when:** an AI tag suggestion adds the tag (with `source = AI`) only after the user taps; a suggestion never creates a tag the user didn't accept; and sealed entries get none.
 - [ ] **6.12 Help me think UI.** The pause prompt and button in the editor, a two-button question card, tag chips, and the settings switch. **Done when:** a Playwright flow with the fake provider types, pauses, sees the button, taps it, answers a question and accepts a tag; nothing is sent before the tap; and turning the pause prompt off removes it.
 

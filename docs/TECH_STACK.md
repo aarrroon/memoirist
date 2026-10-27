@@ -48,7 +48,7 @@ com.memoirist
 ├── template/
 ├── tag/           # Tag, entry tags (D-26)
 ├── week/          # WeeklyLog, WeekCalendar (date → first day of its week in user tz), a week's Eras from their dates (D-22), feed endpoint
-├── entry/         # Entry, EntryMapper (the ONLY Entry→DTO path), content validation + text extraction, seal rules, opened Loot Drops
+├── entry/         # Entry, EntryMapper (the ONLY Entry→DTO path), content validation + text extraction, seal rules, opened Loot Drops, Recently deleted and its sweep (D-30)
 ├── media/
 ├── storage/       # StorageService, StorageProperties, local bucket bootstrap
 └── dev/           # local-profile-only sample content (task 3.11)
@@ -92,6 +92,7 @@ Each feature folder contains:
 - **Counts and filters:** queries that count or filter by content (tag filters, tag counts, search, people stats) leave sealed entries out in the query itself (D-10).
 - **Seal guard:** `EntryService` rejects edits to title, content, date, template, tags and media on sealed entries with `409`. The unlock date may only move later.
 - **Opened Loot Drops (D-10):** sealing clears `unlock_seen_at`, and `GET /entries/opened` finds unlocked, unseen entries through a partial index. `unlock_notified` is a separate flag for the background unlock job (unlock emails from Phase 2, refreshing AI results from Phase 3), which has its own partial index.
+- **Recently deleted (D-30):** `DELETE` sets `deleted_at`. Entry queries leave deleted rows out by default (for example with Hibernate's `@SQLRestriction` on `Entry`), so deleted entries drop out of every list, count, filter, share link, group view, unlock email and AI input. Only the Recently deleted list, restore, erase and the sweep read them, through their own queries. A daily sweep erases entries deleted more than 30 days ago, and their files go as described under Storage.
 
 ### Weeks and the feed
 - **Creating an entry:**
@@ -100,7 +101,7 @@ Each feature folder contains:
   3. `INSERT … ON CONFLICT (user_id, start_date) DO NOTHING`, then select the week.
   4. Insert the entry.
 - **A week's Eras (D-22)** are worked out from dates, never stored: an Era holds a week if it starts on or before the week's Sunday and has no end date or ends on or after its Monday. An Era's page counts only the entries whose memory date is inside its dates. Creating an Era or changing its dates needs no other writes.
-- **Feed:** `GET /feed` loads a page of non-empty weeks (newest first), then their entries in one query, then their media in batched queries (`@BatchSize(50)` / `IN (…)`). Two collections are never fetch-joined at once (avoids `MultipleBagFetchException` and N+1 queries). The weeks' Eras come from one more query for the user's Eras, matched to each week by date (D-22).
+- **Feed:** `GET /feed` loads a page of non-empty weeks (newest first; entries in Recently deleted don't count, D-30), then their entries in one query, then their media in batched queries (`@BatchSize(50)` / `IN (…)`). Two collections are never fetch-joined at once (avoids `MultipleBagFetchException` and N+1 queries). The weeks' Eras come from one more query for the user's Eras, matched to each week by date (D-22).
 
 ### Storage
 - **Clients:**
@@ -114,7 +115,7 @@ Each feature folder contains:
   1. Validate type and size.
   2. Put the object.
   3. Insert the row. If the insert fails, delete the object (best effort).
-- **Deletion:** before deleting an entry, week, era cascade or media row, the service collects the affected object keys. It deletes the objects in an after-commit listener (`@TransactionalEventListener(phase = AFTER_COMMIT)`) so a rolled-back transaction never loses files. Later, a periodic sweep can catch stragglers.
+- **Deletion:** before erasing an entry (deleting one only moves it to Recently deleted, D-30), deleting a media row or deleting an account, the service collects the affected object keys. It deletes the objects in an after-commit listener (`@TransactionalEventListener(phase = AFTER_COMMIT)`) so a rolled-back transaction never loses files. Later, a periodic sweep can catch stragglers.
 
 ## 3. Frontend (`/frontend`)
 
@@ -204,7 +205,7 @@ src/
     - **Gate:** every AI endpoint calls `FeatureGate` in order: consent, the user's switch, then availability. It reads configuration today and can read a plan later.
     - **Suggestions:** `POST /suggestions` builds a prompt from the saved entry or the draft and asks the model for output that matches a JSON schema. Anything that doesn't fit is dropped: unknown fields, unknown effects, or a number of options other than two. Effects come from a short whitelist (add a tag, record a fact) and run only after the user's tap. Entry text is treated as data, never as instructions. A draft is processed in memory and never stored.
     - **Narratives:** weekly summaries, Era summaries and friend profiles are built by `@Async` jobs. An Era summary reads the Era's weekly summaries, not raw entries (Q28 covers weeks it only partly overlaps). Each has an `is_stale` flag, a provider and a model.
-    - **Invalidation:** `EntryService` publishes an event when an entry is edited, sealed, unlocked or deleted. Listeners delete the cards that cite it (found through a GIN index on `sources`), mark the week's summary, the summaries of the Eras whose dates contain it and the profiles of people mentioned in it as stale, and rebuild them in the background. Stale narratives are excluded as input to other AI work. The unlock job (`unlock_notified`) publishes the same event.
+    - **Invalidation:** `EntryService` publishes an event when an entry is edited, sealed, unlocked, deleted or restored (D-30). Listeners delete the cards that cite it (found through a GIN index on `sources`), mark the week's summary, the summaries of the Eras whose dates contain it and the profiles of people mentioned in it as stale, and rebuild them in the background. Stale narratives are excluded as input to other AI work. The unlock job (`unlock_notified`) publishes the same event.
     - **Cost and abuse:** per-feature daily limits (`429`), cheap checks before any model call, and logs that carry IDs, kinds and token counts but never text.
     - **Left open on purpose:** a new kind of card is a new `kind` string, a generator and a renderer. A new kind of narrative is a table with real foreign keys and the same three columns (`is_stale`, provider, model). Another provider is another adapter.
 - **Phase 4:**
@@ -216,7 +217,7 @@ src/
 - **Phase 5 (D-19):**
   - A new `group` package follows the same controller, service and repository split. No new libraries are expected: invite tokens reuse the share-link pattern, and the shared story reuses Spring AI.
   - **Access rule:** personal endpoints stay owner-only. Every `/groups/**` endpoint starts with one membership check (`404` for a non-member, `403` for a member without the role). Nothing else decides who may see a contribution.
-  - **Contributions are links** (`group_entries`), so an author's edits show up in the group and withdrawing is deleting the link.
+  - **Contributions are links** (`group_entries`), so an author's edits show up in the group and withdrawing is deleting the link. An entry in Recently deleted is left out of group views (D-30).
   - **Starting from an entry (D-19):** `POST /groups` with an `entryId` creates the group and its first contribution in one transaction.
   - **Trip Eras** are defined by the trip dates like any other Era, and show only the entries inside them (D-22).
   - **Output:** a contribution becomes a DTO only through `EntryMapper`, and media is presigned only after the membership check. A sealed contribution is therefore redacted without any group-specific code.

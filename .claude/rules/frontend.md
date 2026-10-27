@@ -45,5 +45,5 @@ paths:
 
 ## Testing
 - Vitest + React Testing Library + MSW for components and hooks. Plain Vitest for `lib/`.
-- Playwright for the smoke flows from task 4.12 onwards, named after the flow IDs in `docs/USER_FLOWS.md`.
+- Playwright for the smoke flows from task 4.13 onwards, named after the flow IDs in `docs/USER_FLOWS.md`.
 - Run `npm test && npm run lint && npm run typecheck` before saying a task is done.

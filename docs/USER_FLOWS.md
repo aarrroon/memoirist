@@ -5,7 +5,7 @@
 > Sources: the [README](../README.md), [PRD.md](PRD.md), [API_CONTRACT.md](API_CONTRACT.md), [DECISIONS.md](DECISIONS.md). If this file disagrees with them, they win (the README on what and when, DECISIONS.md on how, D-27). Gaps found while writing are listed at the end.
 
 ## How to read this file
-- Each flow has an ID (`F-xx`). Playwright tests in task 4.12 and later are named after them, for example `f06-seal-entry.spec.ts`.
+- Each flow has an ID (`F-xx`). Playwright tests in task 4.13 and later are named after them, for example `f06-seal-entry.spec.ts`.
 - **Happy path** is the normal route. **Edge cases** cover mistakes, failures and limits.
 - `API` shows the call behind a step, so each flow can be checked against the contract.
 - "Today" always means today in the user's timezone (D-07).
@@ -31,6 +31,7 @@
 | F-15 | Open a week's summary | 1 |
 | F-16 | Scan every entry in the timeline | 1 |
 | F-17 | Tag entries and browse by tag | 1 |
+| F-18 | Bring back a deleted entry | 1 |
 | F-20…F-25 | Later phases (outlines only) | 2–6 |
 
 ---
@@ -105,7 +106,7 @@ flowchart TD
 | A file over 25 MB | That item is marked *too large* before upload; the rest continue | `413` |
 | An unsupported file (HEIC, video, PDF…) | That item is marked *not supported* | `415` |
 | One upload fails partway (network) | The entry is saved with the items that made it. Failed items stay in the strip with *retry* or *remove* (D-23) | — |
-| Every upload fails and there's no title or text | The app deletes the empty entry and keeps the files in the strip to retry (D-23) | `DELETE /entries/{id}` |
+| Every upload fails and there's no title or text | The app deletes the empty entry, which is erased at once rather than kept in Recently deleted (D-30), and keeps the files in the strip to retry (D-23) | `DELETE /entries/{id}` |
 | Storage is down | Same as above, with a *try again later* message | `503 storage-unavailable` |
 | Microphone permission denied | A message explaining how to allow it; photos still work | — |
 | Browser can't record a supported format | Voice note button hidden or explained | — |
@@ -193,7 +194,7 @@ flowchart TD
 | Edit title, caption, date, template, tags or media | Not offered. If attempted, *This memory is sealed until …* | `409 entry-sealed` |
 | Extend the unlock date | Allowed: pick a later date, confirm as in F-06 | `POST …/seal` later date |
 | Bring the date earlier | Not offered | `409 entry-sealed` |
-| Delete it | Allowed after a confirmation that says the content will be lost unseen | `DELETE /entries/{id}` |
+| Delete it | Allowed. It moves to *Recently deleted*, still sealed; if it isn't restored within 30 days it is erased unseen (D-30, F-18) | `DELETE /entries/{id}` |
 
 **Edge cases**
 | Situation | What the user sees |
@@ -233,8 +234,8 @@ flowchart TD
 3. Save sends `PUT /entries/{id}` for title, text, date, template and tags, and the media calls from F-03 for media changes. Removing a photo is `DELETE /media/{id}`. Removing the last photo from an entry with no title or text offers to delete the entry instead (D-23).
 
 **Happy path: delete**
-1. The user chooses *delete*. A confirmation says this can't be undone and removes its photos and recordings too.
-2. `DELETE /entries/{id}`; the card disappears, and so does its week if it was the last entry.
+1. The user chooses *delete*. A short confirmation says it moves to *Recently deleted*, where it can be restored for 30 days (F-18).
+2. `DELETE /entries/{id}`; the card disappears, and so does its week if it was the last entry (D-30).
 
 **Edge cases**
 | Situation | What the user sees | API |
@@ -344,7 +345,7 @@ flowchart TD
 | Situation | What the user sees |
 |---|---|
 | A sealed entry in the week | Its bar shows only a lock, the day and the unlock date |
-| Every entry in the week deleted | The week disappears; the user is returned to the feed |
+| Every entry in the week deleted | The week disappears until one is restored (F-18); the user is returned to the feed |
 
 ---
 
@@ -383,6 +384,25 @@ flowchart TD
 | More than 20 tags on one entry | The picker stops at 20 | `400` |
 | Entry is sealed | Tags hidden and can't be changed | `409 entry-sealed` |
 | Tag counts on the *Tags* screen | Never count sealed entries (D-10) | `GET /tags` |
+
+---
+
+## F-18 Bring back a deleted entry
+**Who / when:** the user deleted an entry and wants it back, or wants it gone for good, within 30 days (D-30).
+**Starts from:** a *Recently deleted* screen, reached from *Settings* or the timeline.
+
+**Happy path**
+1. *Recently deleted* lists deleted entries, most recently deleted first: display title, memory date and the day it will be erased (`GET /entries/deleted`).
+2. The user chooses *restore*. The entry goes back to its week with its media, tags and seal as they were, and the week reappears if it had gone (`POST /entries/{id}/restore`).
+3. Or they choose *erase now* and confirm. The entry and its media are erased at once (`POST /entries/{id}/erase`).
+
+**Edge cases**
+| Situation | What the user sees | API |
+|---|---|---|
+| A sealed entry | Only its memory date and unlock date. Restoring keeps the seal | `GET /entries/deleted` |
+| 30 days pass | A daily sweep erases it, and it leaves the list | — |
+| An old link or bookmark to a deleted entry | *This memory was deleted* (F-14) | `404` |
+| An empty entry (no title, caption or media) | Never listed: it is erased as soon as it's deleted | `DELETE /entries/{id}` |
 
 ---
 

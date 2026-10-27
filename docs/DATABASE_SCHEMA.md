@@ -95,6 +95,7 @@ One Instagram-style post. `user_id` is duplicated from the week so ownership che
 | unlock_date | TIMESTAMPTZ | NULL. Sealed while `unlock_date > now()` (D-10) |
 | unlock_notified | BOOLEAN | NOT NULL DEFAULT FALSE. Set by the background unlock job (unlock emails in Phase 2, refreshing AI results in Phase 3) |
 | unlock_seen_at | TIMESTAMPTZ | NULL. When the user saw the opened Loot Drop in the *Opened* strip; cleared whenever the entry is sealed (D-10) |
+| deleted_at | TIMESTAMPTZ | NULL. Set when the entry is deleted: it waits in Recently deleted, hidden everywhere else, until it is restored or erased. A daily sweep erases it 30 days later (D-30) |
 | created_at, updated_at | TIMESTAMPTZ | |
 
 ### `media`
@@ -200,6 +201,7 @@ CREATE TABLE entries (
     unlock_date      TIMESTAMPTZ,
     unlock_notified  BOOLEAN NOT NULL DEFAULT FALSE,
     unlock_seen_at   TIMESTAMPTZ,  -- the user saw it in the Opened strip; cleared on every seal (D-10)
+    deleted_at       TIMESTAMPTZ,  -- in Recently deleted since then; erased 30 days later (D-30)
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_entries_title CHECK (title IS NULL OR length(btrim(title)) > 0),
@@ -254,6 +256,9 @@ CREATE INDEX idx_entries_pending_unlock ON entries (unlock_date)
 -- Opened Loot Drops the user hasn't seen yet (D-10).
 CREATE INDEX idx_entries_opened_unseen ON entries (user_id, unlock_date)
     WHERE unlock_date IS NOT NULL AND unlock_seen_at IS NULL;
+-- Recently deleted: its list and the daily sweep (D-30).
+CREATE INDEX idx_entries_deleted ON entries (user_id, deleted_at)
+    WHERE deleted_at IS NOT NULL;
 -- The primary key of entry_tags already indexes (entry_id, tag_id).
 CREATE INDEX idx_entry_tags_tag ON entry_tags (tag_id);
 ```

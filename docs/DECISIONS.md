@@ -19,7 +19,7 @@ Settled choices for memoirist, and the questions still open.
 | D-09 | Entries have a memory date: backdated, never future, not before 1900 | 2026-10-25 | 2026-10-27 |
 | D-10 | Loot Drops use a strict seal, and opening one is surfaced | 2026-10-25 | 2026-10-27 |
 | D-11 | Ownership checks and local-only dev user | 2026-10-25 | |
-| D-12 | Clients may generate entity UUIDs | 2026-10-25 | |
+| D-12 | Clients may generate entity UUIDs | 2026-10-25 | 2026-10-27 |
 | D-13 | Frontend library set | 2026-10-25 | 2026-10-27 |
 | D-14 | Testing and CI approach | 2026-10-25 | |
 | D-15 | Backend code style | 2026-10-25 | |
@@ -37,6 +37,7 @@ Settled choices for memoirist, and the questions still open.
 | D-27 | The README wins on what and when; this file wins on how | 2026-10-27 | |
 | D-28 | Closing a week or an Era writes its summary | 2026-10-27 | |
 | D-29 | Search by word and by feeling | 2026-10-27 | |
+| D-30 | Deleted entries wait 30 days in Recently deleted | 2026-10-27 | |
 
 ---
 
@@ -86,7 +87,7 @@ Locally the image is `pgvector/pgvector:pg17`; production is Neon on Postgres 17
 - A week runs Monday to Sunday in the user's timezone.
 - Creating an entry finds or creates the week containing its memory date. The database enforces uniqueness on `(user_id, start_date)`; the service inserts with `ON CONFLICT DO NOTHING` and then selects the row.
 - There is no "create week" step. Users can give a week a title, and close or reopen it; from Phase 3, closing a week writes its summary (D-28). A week belongs to every Era whose dates overlap it (D-22).
-- Weeks with no entries are hidden from the feed.
+- Weeks with no entries are hidden from the feed, and so are weeks whose only entries are in Recently deleted (D-30).
 - `WeekCalendar` takes the first day of the week as a parameter. It is Monday for everyone for now; whether users can start their week on Sunday is open question Q27.
 
 ## D-09 Entries have a memory date
@@ -98,7 +99,7 @@ An entry is **sealed** while `unlock_date > now`. While sealed:
 - it never counts: tag filters, tag counts, search results and every other count or filter leave it out, so nothing hints at what it's about. Unfiltered lists (the feed, a week, the all-entries timeline) still show it as a locked row
 - its title, content, memory date, template, tags and media can't change (`409 entry-sealed`)
 - it can't be analysed by AI and is left out of AI summaries
-- the unlock date can only move later; the entry can always be deleted
+- the unlock date can only move later; the entry can always be deleted, and it stays sealed in Recently deleted (D-30)
 
 Seal last: create the entry, upload media, then call `POST /entries/{id}/seal`. The UI asks the user to confirm the unlock date before sealing. Share links follow the same rules.
 
@@ -112,7 +113,7 @@ Seal last: create the entry, upload media, then call `POST /entries/{id}/seal`. 
 - Phase 2 adds a JWT-based provider with no controller changes.
 
 ## D-12 Client-generated UUIDs
-Create requests for eras, templates and entries may include an `id` (UUID v4). If the `id` already exists for the same user, the server returns the existing resource with `200` (a safe retry). If it exists for someone else, the server returns `409`. Without an `id`, the server generates one.
+Create requests for eras, templates and entries may include an `id` (UUID v4). If the `id` already exists for the same user, the server returns the existing resource with `200` (a safe retry). If it exists for someone else, the server returns `409`. An `id` that belongs to one of the user's entries in Recently deleted also returns `409`; the user restores that entry instead (D-30). Without an `id`, the server generates one.
 **Why:** Phase 4 offline capture can create entries before reaching the server, with no ID remapping.
 **Consequence:** JPA entities with assigned IDs implement `Persistable<UUID>` so `save()` inserts directly instead of selecting first.
 
@@ -191,6 +192,7 @@ Phase 5 adds private groups so friends can build shared memories, for example a 
 - **Redaction is unchanged.** Every contribution becomes a DTO through `EntryMapper`, so a sealed one is redacted exactly as in D-10. Media is presigned only after the membership check.
 - A **group Loot Drop** is a group with an `unlock_date`. Contributing to it seals the entry until at least that date, using the existing seal rules: the contributor confirms the date first, and the group's date, like an entry's, can only move later.
 - **Leaving, removal and account deletion** unlink the member's contributions. Their entries, and any Era they created from the trip, stay with them.
+- **Deleted entries:** an entry in Recently deleted (D-30) is left out of its groups. Restoring it brings the contribution back; erasing it removes the contribution.
 - **AI:** group content reaches an AI provider only from members who opted in, and never while sealed.
 - **Not a social network:** no followers, likes, public groups or discovery. Groups are small and invite-only.
 - **Not planned:** linking a person in the Cast of Characters to a real group member. It only added a label, and it tied private notes about someone to their real account.
@@ -231,7 +233,7 @@ The AI features share one layer instead of each building their own: Help me thin
 - **Suggestions.** Questions, tag suggestions, writing insights and insight cards are rows in `ai_suggestions`, told apart by `kind` (a string checked in the service, so a new kind needs no migration). A question or tag suggestion always has exactly two options. The server stores what each option would do; the client sends only the option the user chose, and the server then applies a whitelisted effect (add a tag, record a fact). Nothing the AI says changes data on its own.
 - **Drafts.** Help me think and the writing coach can work on text that isn't saved yet. The draft is processed in memory and never stored; only the resulting cards are, and they expire. A card made from a draft is answered once the entry is saved, by naming its id.
 - **One reader.** Every AI feature gets entry text, tags and AI facts from a single `AiContentSource`, which leaves out sealed entries, applies group consent (D-19) and returns plain text with ids. No other code loads entries for AI. This puts the sealed rule (D-10, D-18, D-20) in one place.
-- **Sources and invalidation.** Every AI output records its provider, model and the sources it was built from. Editing, sealing, unlocking or deleting an entry deletes the cards that cite it and marks the summaries and profiles built from it stale, so they are rebuilt without it. A stale narrative is never used as input to another. This also covers an old entry that is sealed after the AI has already read it.
+- **Sources and invalidation.** Every AI output records its provider, model and the sources it was built from. Editing, sealing, unlocking, deleting or restoring (D-30) an entry deletes the cards that cite it and marks the summaries and profiles built from it stale, so they are rebuilt without it. A stale narrative is never used as input to another. This also covers an old entry that is sealed after the AI has already read it.
 - **Consent and switches.** One AI consent (with its wording version) is stored per user, and every AI endpoint needs it (`403 consent-required`), including reading pages (D-20). Each feature also has its own switch, as the README promises. Whether a feature is available at all goes through a `FeatureGate`, which reads configuration today and can read a plan later, so a feature can become paid without changing the API (Q15).
 - **Providers stay swappable.** Chat, embedding and transcription are separate interfaces (D-18, D-20). Entry text is treated as data, never as instructions: model output is parsed against a schema, and unknown fields and effects are dropped.
 - **Phase placement:** Help me think, tag suggestions, weekly and Era summaries, friend profiles and the friendship map are Phase 3. Proactive insights and the writing coach are Phase 6 (Sprint 9), because they need built-up history, entry-level retrieval and an answer on paid features.
@@ -270,7 +272,7 @@ Chapters of life overlap: a trip happens inside a year at university, and a rela
 ## D-23 Capture and sealing behaviour
 Answers to the gaps G-01 to G-07 found while drafting [USER_FLOWS.md](USER_FLOWS.md).
 - **Unsaved text (G-01):** closing capture with unsaved changes asks *keep editing* or *discard*. One draft is also kept in the browser's local storage, so a reload or crash doesn't lose it. It is cleared on save or discard.
-- **Empty entries (G-02):** the user can't save an entry with no title, no caption and no media; the client keeps *save* disabled. The server still allows an empty entry *at create time*, because media are uploaded after the entry exists (D-10, F-03). If every upload fails and nothing else was entered, the client deletes the empty entry. Removing the last photo from an entry with no text offers to delete the entry instead.
+- **Empty entries (G-02):** the user can't save an entry with no title, no caption and no media; the client keeps *save* disabled. The server still allows an empty entry *at create time*, because media are uploaded after the entry exists (D-10, F-03). If every upload fails and nothing else was entered, the client deletes the empty entry, which is erased at once instead of waiting in Recently deleted (D-30). Removing the last photo from an entry with no text offers to delete the entry instead.
 - **Partial uploads (G-03):** the entry is saved with the media that uploaded. Failed items stay in capture with *retry* and *remove* until capture is closed.
 - **Backdated entries (G-04):** after saving an entry that lands outside the week on screen, a toast names its week with a *go there* action.
 - **Unlock time (G-05):** the user picks a day; the entry unlocks at **09:00 in their timezone** on that day. The client turns that into the `unlockDate` instant; the API is unchanged.
@@ -323,6 +325,20 @@ Answers to the gaps G-01 to G-07 found while drafting [USER_FLOWS.md](USER_FLOWS
 - Search terms go in the request body, never in the URL, and are never logged, because they are as private as entries.
 
 **Why:** the README promises page text "you can search". "Insights" is the Phase 6 name for cards, so the Phase 3 search is called search by feeling.
+
+## D-30 Deleted entries wait 30 days in Recently deleted
+- **Deleting an entry moves it to Recently deleted** (`entries.deleted_at`). It disappears from everywhere else at once: the feed, its week, the all-entries timeline, the Opened strip and unlock emails, tag counts and filters, search, share links, groups and AI input. A week whose only entries are deleted is hidden like an empty one (D-08).
+- **For 30 days** the user can restore it or erase it now (`GET /entries/deleted`, `POST /entries/{id}/restore` and `POST /entries/{id}/erase`). Restoring puts it back in its week with its media, tags and seal as they were.
+- **After 30 days** a daily sweep erases it with its media files. Erasing can't be undone.
+- **A sealed entry stays sealed** in Recently deleted: the list shows only its memory date and unlock date (D-10). Deleting a sealed entry is still always allowed.
+- **Empty entries are erased at once:** an entry with no title, caption or media, such as one whose uploads all failed (D-23), skips Recently deleted.
+- **Only whole entries:** removing a photo or voice note from an entry is an edit and takes effect at once.
+- Every other request about a deleted entry returns `404`, as if it were gone. A create that reuses its `id` returns `409 conflict` (D-12).
+- Deleting the account erases everything at once, Recently deleted included (Q3).
+
+**Why:** losing an entry by accident is the worst failure for a memory app, and other journals and photo apps let people undo it. Building it into V1 costs a column and a filter; adding it later would change what "delete" means across the API. The user chose it for Phase 1 on 2026-10-27, after the feature review (R-03).
+
+**Consequences:** V1 gains `entries.deleted_at`. Entry queries leave deleted rows out, and stored files are deleted when an entry is erased, not when it's deleted. A restore counts as an edit for AI results (D-21). Task 3.12 builds the API and task 4.12 the screen.
 
 ---
 

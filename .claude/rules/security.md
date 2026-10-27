@@ -11,6 +11,7 @@ paths:
 - Load user data only through user-scoped finders (`findByIdAndUserId`, or through the owning entry for media).
 - A resource that is missing or not owned throws `NotFoundException`, which becomes `404`. Never `403`, which would reveal that it exists.
 - When a request references another resource (the `tagIds` or `templateId` on an entry), check that the referenced one is also owned. Otherwise return `404`.
+- An entry in Recently deleted (D-30) counts as missing everywhere except its own list, restore and erase: `404`, never presigned, and never in counts, filters, share links, group views or AI input.
 
 ## Dev user header
 - `DevHeaderCurrentUserProvider` is annotated `@Profile({"local","test"})`. No other profile may resolve `X-Dev-User-Id`.
@@ -20,7 +21,7 @@ paths:
 "Sealed" means `unlockDate != null && unlockDate.isAfter(Instant.now(clock))`.
 - **Redaction:** responses go through `EntryMapper`. It nulls `title`, `contentJson`, `contentText` and `templateId`, empties `media` and `tags`, and sets `isLocked`. In `EntrySummary` it also nulls `previewLine`, `firstMediaKind` and the media counts.
 - **Counts and filters:** sealed entries never appear in tag filters, tag counts, search results or any other count or filter; leave them out in the query itself (D-10). Unfiltered lists still show them as locked rows.
-- **Writes:** reject changes to title, content, date, template, tags and media with `EntrySealedException` (`409`). The unlock date may only move later. Delete is allowed.
+- **Writes:** reject changes to title, content, date, template, tags and media with `EntrySealedException` (`409`). The unlock date may only move later. Delete is allowed; the entry stays sealed in Recently deleted (D-30).
 - **Never** presign media of a sealed entry, log its content, include it in AI input or summaries (Phase 3), or expose it through share links (Phase 2).
 
 ## Content (TipTap JSON)

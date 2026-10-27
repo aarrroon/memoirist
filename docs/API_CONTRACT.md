@@ -38,7 +38,7 @@
 | `malformed-request` | 400 | Unreadable JSON, bad UUID, bad `X-Dev-User-Id` |
 | `not-found` | 404 | Missing **or not owned** |
 | `entry-sealed` | 409 | Changing a sealed entry's content, date, template or media; or moving its unlock date earlier |
-| `conflict` | 409 | Client-supplied `id` already used by another user |
+| `conflict` | 409 | Client-supplied `id` already used by another user, or by an entry in Recently deleted (D-30) |
 | `payload-too-large` | 413 | File over 25 MB, content over 200 KB |
 | `unsupported-media-type` | 415 | File type not in the allowed list |
 | `storage-unavailable` | 503 | Object storage failed |
@@ -55,6 +55,7 @@ Every paged endpoint takes `?page=0&size=10` (`size` max 50, unless the endpoint
 - The `id` is new: `201 Created`.
 - The `id` already exists **for the same user**: `200 OK` with the existing resource (a safe retry; the body is not re-applied).
 - The `id` exists for another user: `409 conflict`.
+- The `id` belongs to one of the user's entries in Recently deleted: `409 conflict`; restore it instead (D-30).
 
 ---
 
@@ -114,13 +115,15 @@ A lightweight row for lists such as the all-entries timeline (D-25). No caption,
   "tags": [ { "id": "12341234-1234-1234-1234-123412341234", "name": "Trips", "source": "USER" } ],
   "createdAt": "2026-10-20T03:30:00Z",
   "unlockDate": null,
-  "isLocked": false
+  "isLocked": false,
+  "deletedAt": null
 }
 ```
 - `previewLine` is the first line of the caption that isn't a heading, up to 120 characters; the first heading if the caption has nothing else; `null` if there is no caption (D-24).
 - `firstMediaKind` is `PHOTO`, `PAGE_SCAN` or `VOICE_NOTE` for the first media item, or `null` when there is none. The client shows `title`, else `previewLine`, else *Photo* / *Diary page* / *Voice note* (D-24).
 - `photoCount` counts every image, diary pages included.
 - Sealed: `title`, `previewLine`, `photoCount`, `voiceNoteCount` and `firstMediaKind` are `null` and `tags` is empty.
+- `deletedAt` is set only in the Recently deleted list; the entry is erased 30 days after it (D-30).
 
 ### `Media`
 `fileUrl` is a presigned GET URL that is valid for 60 minutes. Its host is the storage public endpoint (SeaweedFS locally, R2 in production). `purpose` is `PHOTO`, or `PAGE_SCAN` for a photo of a paper diary page (D-20).
@@ -138,7 +141,7 @@ A lightweight row for lists such as the all-entries timeline (D-25). No caption,
 ```
 
 ### `WeeklyLog`
-Used by the feed and by week detail. `eras` lists every Era whose dates overlap the week, latest start first, so `eras[0]` is the one the feed groups it under (Q18). It is empty for a week in no Era, and is worked out from dates rather than stored (D-22). Entries are ordered by `entryDate`, then `createdAt`, ascending, so each week reads as that week's story.
+Used by the feed and by week detail. `eras` lists every Era whose dates overlap the week, latest start first, so `eras[0]` is the one the feed groups it under (Q18). It is empty for a week in no Era, and is worked out from dates rather than stored (D-22). Entries are ordered by `entryDate`, then `createdAt`, ascending, so each week reads as that week's story. Entries in Recently deleted are left out (D-30).
 ```json
 {
   "id": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
@@ -198,7 +201,7 @@ Tags are set on an entry with `tagIds` in `POST` and `PUT /entries`. Browse by t
 ### Feed (tag: Feed)
 | Method and path | Success |
 |---|---|
-| `GET /feed?page=0&size=10` | `200` `PageResponse<WeeklyLog>`. Only weeks with at least one entry, `startDate` descending. Each week's entries are included, redacted and presigned. A week in several Eras is listed once. One request renders a page of the feed |
+| `GET /feed?page=0&size=10` | `200` `PageResponse<WeeklyLog>`. Only weeks with at least one entry that isn't in Recently deleted (D-30), `startDate` descending. Each week's entries are included, redacted and presigned. A week in several Eras is listed once. One request renders a page of the feed |
 
 ### Weekly logs (tag: Weekly Logs)
 Weeks are created automatically when an entry is created (D-08). There is no create or delete endpoint.
@@ -216,11 +219,16 @@ Weeks are created automatically when an entry is created (D-08). There is no cre
 | `POST /entries` | `{ "id"?, "entryDate"?: date (default today in the user's zone; not after today; not before 1900-01-01), "templateId"?: uuid, "title"?: string(1–150) or null, "contentJson"?: TipTap doc or null, "tagIds"?: [uuid] (at most 20, the user's own) }` | `201` `Entry`, filed into the right week (created if needed). Replay of an existing own `id`: `200`. An entry may be created empty because media are uploaded afterwards (D-23) |
 | `GET /entries?page=0&size=50&tagId={uuid}` | — | `200` `PageResponse<EntrySummary>` of every entry, `entryDate` then `createdAt`, newest first. `tagId` is optional and filters by tag; sealed entries are left out while filtering (D-10). `size` max 100 here. Backs the all-entries timeline (D-25) |
 | `GET /entries/opened` | — | `200` `EntrySummary[]`: Loot Drops whose unlock time has passed and that haven't been marked seen, most recently opened first, at most 20 (D-10). Backs the *Opened* strip |
+| `GET /entries/deleted?page=0&size=10` | — | `200` `PageResponse<EntrySummary>` of the entries in Recently deleted, most recently deleted first, each with `deletedAt` (D-30). Sealed ones are redacted (D-10). Backs the *Recently deleted* screen |
 | `GET /entries/{entryId}` | — | `200` `Entry` (redacted if sealed) |
 | `PUT /entries/{entryId}` | `{ "entryDate": date, "templateId": uuid or null, "title": string or null, "contentJson": doc or null, "tagIds": [uuid] }` (full replace; a date change moves the entry to the matching week) | `200` `Entry`. Sealed: `409 entry-sealed`. A tag ID that isn't the user's: `404` |
-| `DELETE /entries/{entryId}` | — | `204`. Allowed even when sealed; deletes its stored media files too |
+| `DELETE /entries/{entryId}` | — | `204`. Moves the entry to Recently deleted for 30 days; its media files stay until it is erased. Allowed even when sealed. An entry with no title, caption or media is erased at once (D-30) |
+| `POST /entries/{entryId}/restore` | — | `200` `Entry`, back in its week with its media, tags and seal as they were (D-30). Not in Recently deleted: `404` |
+| `POST /entries/{entryId}/erase` | — | `204`. Erases an entry in Recently deleted, with its media files, at once. Not in Recently deleted: `404` |
 | `POST /entries/{entryId}/seal` | `{ "unlockDate": instant }`: after now, at most 100 years ahead; if already sealed, must be later than the current `unlockDate` | `200` `Entry` (now redacted). Earlier date on a sealed entry: `409 entry-sealed`. Sealing clears the entry's seen mark, so it shows in the Opened strip again when it opens |
 | `POST /entries/{entryId}/mark-seen` | — | `204`. Records that the user has seen an opened Loot Drop; safe to repeat. Still sealed: `409 entry-sealed` |
+
+**Recently deleted (D-30):** an entry in Recently deleted is left out of every list, count and filter, the feed, its week and the Opened strip included. Every other request about it, such as `GET`, `PUT`, `seal`, `mark-seen` and the media calls, returns `404`.
 
 **Content rules (D-05):**
 - Root `type` is `"doc"`.
@@ -230,7 +238,7 @@ Weeks are created automatically when an entry is created (D-08). There is no cre
 - Anything else: `400 validation-failed`. `contentText` is always computed by the server; clients never send it.
 
 ### Media (tag: Media)
-Every media endpoint returns `409 entry-sealed` when the entry is sealed.
+Every media endpoint returns `409 entry-sealed` when the entry is sealed, and `404` when it is in Recently deleted (D-30).
 
 | Method and path | Body | Success |
 |---|---|---|
@@ -452,6 +460,7 @@ Finalise after open questions Q8–Q11 (D-19). The rules:
 - A group the caller isn't a member of is `404`. A member without the role for an action gets `403`.
 - Members are addressed by `memberId` (the `group_members` row), never by a user ID.
 - Contributions are built with `EntryMapper`, so sealed ones are redacted as in D-10. Media URLs are presigned only after the membership check.
+- An entry in Recently deleted is left out of group views. Restoring it brings the contribution back; erasing it removes the contribution (D-30).
 
 New problem types:
 

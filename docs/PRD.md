@@ -40,6 +40,7 @@ memoirist is a private Progressive Web App that acts as an automated biographer.
 | **Template** | A reusable list of prompts (for example, "Spiralling Check-in") inserted as headings when writing an entry. Prompts left empty are removed on save (D-06). |
 | **Loot Drop** | An entry sealed until a future unlock date. Nobody, including its author, can read or change it until then. |
 | **Opened strip** | A strip at the top of the feed listing Loot Drops that have just opened, until the user opens or dismisses them (D-10). |
+| **Recently deleted** | Where a deleted entry waits for 30 days, so the user can restore it or erase it for good (D-30). |
 | **Closing a week** | Marks a week as done. From Phase 3 it is what writes the week's AI summary (D-28). A closed week can still be edited and reopened. |
 | **Closing an Era** (Phase 3) | Wraps up a chapter: closes its open weeks, sets an end date if it has none, and writes the Era summary (D-28). |
 | **Wrap up card** (Phase 3) | A card at the top of the feed that offers the most recent finished week that's still open, or an Era that has ended, and closes it with one tap (D-28). |
@@ -84,6 +85,7 @@ memoirist is a private Progressive Web App that acts as an automated biographer.
 ### Phase 1: The core journal (local MVP, Sprints 1–4)
 Everything runs locally with Docker Compose: Postgres plus SeaweedFS for object storage.
 - **Entries:** create, edit and delete, with an optional title, an optional TipTap caption, a memory date (backdating allowed, back to 1900, D-09), an optional template and optional tags. Drafts survive a reload (D-23, D-24).
+- **Recently deleted:** a deleted entry waits 30 days, then is erased with its media. Until then the user can restore it or erase it now (D-30).
 - **Tags:** the user's own tags, added by hand, with a page to rename or delete them (D-26).
 - **Week summary and timeline:** tap a week for its summary with one bar per entry; or open a plain timeline of every entry, filterable by tag (D-25).
 - **Media carousel:** images and voice notes stored privately and served through short-lived presigned URLs. Upload, reorder, delete. A photo can be marked as a diary page (D-20).

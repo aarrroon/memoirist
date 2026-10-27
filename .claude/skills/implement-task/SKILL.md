@@ -12,7 +12,7 @@ Task: **$ARGUMENTS**. If that is empty, use the first unchecked `- [ ]` task in 
 - Read the task's block in `docs/SPRINT_PLAN.md`: **Read**, **Do** and **Done when**.
 - Read only the doc sections it names, plus any D-xx or Q-x entries in `docs/DECISIONS.md` that it mentions.
 - Read the README Timeline item for the task's phase, so the work matches what users are promised (D-27). For a screen or an end-to-end test, read the `docs/USER_FLOWS.md` flow it names.
-- Check that earlier tasks in the same sprint are ticked. If one isn't, tell the user and ask whether to continue.
+- Check that the tasks above it in its sprint are ticked; go by position in the file, not by number. If one isn't, tell the user and ask whether to continue.
 - If the task depends on an open question (Q-x) or flow gap (G-xx) that isn't decided, stop and ask, with the options, their trade-offs and a recommended default. Don't pick an answer silently.
 
 ## 2. Plan, then wait

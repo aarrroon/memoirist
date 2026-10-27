@@ -74,6 +74,7 @@ Memoirist is being built in phases, in this order. Each one builds on the one be
 - Photos of paper diary pages, filed on the right day
 - Weeks and Eras, filed automatically
 - Tap a week for a quick summary of what happened, or scroll a simple timeline of every entry
+- A Recently deleted list, so you can bring an entry back within 30 days
 - Loot Drops, with a heads-up when one opens, a scrollable feed and your settings
 
 ### Phase 2: Online, with accounts

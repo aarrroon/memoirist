@@ -1,7 +1,7 @@
 # memoirist
 
 A private journaling PWA: an Instagram-style feed of your own entries that files itself into weeks and life "Eras", with an AI biographer later. `README.md` says what users get and when (its Timeline).
-- **Phase 1, the core journal (now):** entries with text, photos, voice notes and diary-page photos; optional titles, tags and templates; weeks filed automatically, and weeks joining Eras by date (D-22); Loot Drops sealed until a future date (D-10); a feed, a week summary and an all-entries timeline. Local only, with a seeded dev user.
+- **Phase 1, the core journal (now):** entries with text, photos, voice notes and diary-page photos; optional titles, tags and templates; weeks filed automatically, and weeks joining Eras by date (D-22); Loot Drops sealed until a future date (D-10); a feed, a week summary and an all-entries timeline; deleted entries wait 30 days in Recently deleted (D-30). Local only, with a seeded dev user.
 - **Phase 2, online:** accounts, expiring share links, PDF and data export, unlock emails.
 - **Phase 3, the AI biographer:** Help me think, tag suggestions, summaries of the weeks and Eras the user closes (D-28), friend profiles and a friendship map, search by word or by feeling (D-29), reading handwriting on a tap (D-20). One AI layer, never a chat (D-21).
 - **Phase 4, on your phone:** installable PWA, offline capture, scan mode, dictation.

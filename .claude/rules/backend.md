@@ -29,6 +29,7 @@ paths:
 - Repositories expose user-scoped finders (`findByIdAndUserId`, `findByIdAndEntryUserId`). Services never use a bare `findById` on user data.
 - Find-or-create a week with a native `INSERT … ON CONFLICT (user_id, start_date) DO NOTHING`, then select it.
 - A week's Eras come from dates, not a table (D-22): load the user's Eras once and match each week by overlap. An Era's counts include only entries whose memory date is inside its dates.
+- Entries in Recently deleted (`deleted_at` set, D-30) are left out of every entry query by default. Only the Recently deleted list, restore, erase and the daily sweep read them.
 - Derived columns (`content_text`, `preview_line`) are computed by the server on every content write, never sent by the client (D-05, D-24).
 
 ## Time
