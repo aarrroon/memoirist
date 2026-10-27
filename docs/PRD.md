@@ -36,7 +36,7 @@ memoirist is a private Progressive Web App that acts as an automated biographer.
 | **Entry** | One post: an optional title, an optional rich-text caption, optional tags, plus 0–10 photos or voice notes. It belongs to one memory date. |
 | **Memory date** | The day an entry is *about*. Defaults to today and can be backdated, never set in the future. |
 | **Week** | Monday–Sunday in the user's timezone. Created automatically for the first entry dated in it. Users can title, close and reopen it. Stored as `weekly_logs`. |
-| **Era** | A user-named chapter of life with a start date and an optional end date (for example, "Monash Double Degree Era"). Holds many weeks, which join it automatically when their dates overlap it and can be added or removed by hand (D-22). A week can belong to several Eras, so chapters can overlap. |
+| **Era** | A user-named chapter of life with a start date and an optional end date (for example, "Monash Double Degree Era"). Defined by its dates: it holds every week they overlap and shows the entries inside them (D-22). A week can belong to several Eras, so chapters can overlap. |
 | **Template** | A reusable list of prompts (for example, "Spiralling Check-in") inserted as headings when writing an entry. Prompts left empty are removed on save (D-06). |
 | **Loot Drop** | An entry sealed until a future unlock date. Nobody, including its author, can read or change it until then. |
 | **Opened strip** | A strip at the top of the feed listing Loot Drops that have just opened, until the user opens or dismisses them (D-10). |
@@ -87,8 +87,8 @@ Everything runs locally with Docker Compose: Postgres plus SeaweedFS for object 
 - **Tags:** the user's own tags, added by hand, with a page to rename or delete them (D-26).
 - **Week summary and timeline:** tap a week for its summary with one bar per entry; or open a plain timeline of every entry, filterable by tag (D-25).
 - **Media carousel:** images and voice notes stored privately and served through short-lived presigned URLs. Upload, reorder, delete. A photo can be marked as a diary page (D-20).
-- **Automatic weeks:** title, close and reopen. Weeks join Eras automatically by date, and can be added to or removed from them by hand (D-22).
-- **Eras:** create, edit and delete chapters. An Era gathers the weeks inside its dates by itself (D-22). Chapters can overlap, so a trip can sit inside a longer chapter.
+- **Automatic weeks:** title, close and reopen. Each week belongs to the Eras whose dates overlap it (D-22).
+- **Eras:** create, edit and delete chapters. An Era gathers the weeks inside its dates by itself and shows the entries inside them; to change what it holds, change its dates (D-22). Chapters can overlap, so a trip can sit inside a longer chapter.
 - **Templates:** create, edit and delete prompt lists.
 - **Loot Drops:** strict seal with server-side redaction everywhere, including counts and filters, and an *Opened* strip when one opens (D-10).
 - **Feed:** paged, newest weeks first, grouped by Era. A week in several Eras is listed once, under the one that started most recently, with the others as chips (Q18).
@@ -131,7 +131,7 @@ Friends build shared memories from their own journals, for example after a trip 
 - **Groups:** create a private group with a title and optional trip dates, or start one from an entry with *share with friends* (D-19). Invite friends with an expiring link, and leave at any time (your contributions leave with you). The owner can remove members or delete the group.
 - **Contributions:** add any of your own entries to a group and withdraw them whenever you like. The group feed shows everyone's contributions in date order, with who wrote each.
 - **Group Loot Drops:** give a group one shared unlock date. Everything added to it is sealed until then and opens for everyone at once. Until then, members can see who has added something, but not what.
-- **Trips as Eras:** a group with trip dates appears in each member's own timeline as an Era, created automatically when they join. Weeks inside the trip dates join it by date (D-22), and a week they contribute from outside those dates is added too; every week stays in its other Eras (see Q10).
+- **Trips as Eras:** a group with trip dates appears in each member's own timeline as an Era, created automatically when they join. Like any Era, it holds the weeks inside the trip dates and shows only the entries inside them, so a weekend trip stays a weekend (D-22). Every week stays in its other Eras.
 
 **8b: needs the AI biographer**
 - **One trip, several perspectives:** the AI weaves everyone's contributions into one shared story. It uses only contributions from members who said yes, and never sealed entries.
@@ -156,6 +156,7 @@ The app starts to look back with the user. Everything here is opt-in, appears as
 - Bulk import of a whole notebook (many pages at once, with a review queue) until open question Q13 is settled. Single pages and multi-page entries are supported
 - Summaries of weeks the user hasn't closed: there is no automatic closing and no "close all weeks" action (D-28)
 - Linking people in the Cast of Characters to real group members (D-19)
+- Adding or removing single weeks from an Era by hand: an Era is its dates (D-22)
 
 ## 7. Non-functional requirements
 - **Privacy:**

@@ -29,7 +29,7 @@ Settled choices for memoirist, and the questions still open.
 | D-19 | Groups are contribution-based; entries stay personal | 2026-10-26 | 2026-10-27 |
 | D-20 | Paper diaries: pages are marked media; reading them is on tap | 2026-10-26 | 2026-10-27 |
 | D-21 | One AI layer: ask, generate and surface, never chat | 2026-10-27 | |
-| D-22 | Eras can overlap and fill themselves by date | 2026-10-27 | |
+| D-22 | Eras can overlap and are defined by their dates | 2026-10-27 | |
 | D-23 | Capture and sealing behaviour (drafts, empty entries, partial uploads, 9 am unlocks) | 2026-10-27 | |
 | D-24 | Entries have an optional title; how lists name an entry | 2026-10-27 | |
 | D-25 | Week summary view and an all-entries timeline | 2026-10-27 | |
@@ -85,8 +85,9 @@ Locally the image is `pgvector/pgvector:pg17`; production is Neon on Postgres 17
 ## D-08 Weeks are automatic
 - A week runs Monday to Sunday in the user's timezone.
 - Creating an entry finds or creates the week containing its memory date. The database enforces uniqueness on `(user_id, start_date)`; the service inserts with `ON CONFLICT DO NOTHING` and then selects the row.
-- There is no "create week" step. Users can give a week a title, and close or reopen it; from Phase 3, closing a week writes its summary (D-28). Weeks join Eras by date (D-22).
+- There is no "create week" step. Users can give a week a title, and close or reopen it; from Phase 3, closing a week writes its summary (D-28). A week belongs to every Era whose dates overlap it (D-22).
 - Weeks with no entries are hidden from the feed.
+- `WeekCalendar` takes the first day of the week as a parameter. It is Monday for everyone for now; whether users can start their week on Sunday is open question Q27.
 
 ## D-09 Entries have a memory date
 `entries.entry_date` defaults to today in the user's timezone and can be set to an earlier date (backdating). It can't be later than today, or earlier than 1900-01-01 (`400`), so a typo such as 0202 can't create a week in the year 202. `created_at` still records when the entry was actually written. Changing the date moves the entry into the matching week.
@@ -247,24 +248,24 @@ The AI features share one layer instead of each building their own: Help me thin
 - New tables are drafted in DATABASE_SCHEMA.md (`user_settings`, `ai_suggestions`, `era_summaries`, and `entry_embeddings` in Phase 6), with the endpoints in API_CONTRACT.md. `ai_summaries` carries `is_stale`, `provider` and `model`.
 - Open questions Q14, Q17 and Q23 are settled before Sprint 6, and Q15 and Q16 before Sprint 9.
 
-## D-22 Eras can overlap and fill themselves by date
-Chapters of life overlap: a trip happens inside a year at university, and a relationship runs across several jobs. So a week can belong to more than one Era, and weeks join Eras by date.
-- A week is linked to its Eras through a join table, `weekly_log_eras`. Each link records its `source`: `AUTO` (joined by date) or `USER` (added by hand).
-- **Filling by date:** a week joins every Era whose dates overlap it: the Era starts on or before the week's Sunday, and has no end date or ends on or after its Monday. This happens when a week is created, and whenever an Era is created or its dates change. An automatic link that no longer overlaps after a date change is removed.
-- **By hand:** users can still add or remove a week's Eras (`PUT /weekly-logs/{id}` with `eraIds`). An Era added by hand stays even outside its dates. Removing an Era is remembered in `weekly_log_era_exclusions`, so filing by date never adds it back; adding it back by hand clears that.
-- A week can be in at most 10 Eras. Filing by date skips a week that is already full.
-- Deleting an Era removes only its links. The weeks, and their other Eras, stay.
-- The API shows a week's Eras as a list (`eras`, each with its `source`), and `PUT /weekly-logs/{id}` takes `eraIds`.
+## D-22 Eras can overlap and are defined by their dates
+Chapters of life overlap: a trip happens inside a year at university, and a relationship runs across several jobs. So a week can belong to more than one Era, and an Era is simply its dates.
+- **An Era is its date range.** A week is in every Era whose dates overlap it: the Era starts on or before the week's Sunday, and has no end date or ends on or after its Monday. Nothing links them in the database; the service works it out from the dates. A new Era, or a change to an Era's dates, therefore applies at once to every week, old ones and backdated entries included.
+- **No changes by hand.** Users don't add single weeks to an Era or take them out. To change what an Era holds, they change its dates. Tags (D-26) cover themes that don't follow dates.
+- **Only the entries inside its dates:** an Era's page and its counts show only the entries whose memory date falls inside the Era's dates. A weekend trip shows just that weekend, although its week also belongs to the Era.
+- Deleting an Era deletes only the Era. Its weeks, their entries and their other Eras stay.
+- The API shows a week's Eras as a list (`eras`, latest start first). `PUT /weekly-logs/{id}` sets only the title.
 - The feed lists each week once. Which Era it is grouped under is open question Q18; the default is the Era that started most recently, with the others shown as chips on the week.
-- Trip Eras (D-19) are ordinary Eras linked to a group, so they fill by the trip dates. A week the user contributes from outside those dates is added too, as a link that stays.
-- Anything counted per Era counts a week once for each Era it is in: Era summaries, the friendship map and a person's mentions per Era (D-21).
+- Trip Eras (D-19) are ordinary Eras linked to a group, so they cover the trip's dates. An entry added to the trip but dated outside them stays in the group, not in the trip Era.
+- Anything counted per Era counts only the entries inside its dates, such as the friendship map and a person's mentions per Era (D-21). Era summaries are built from weekly summaries (D-28); how they treat a week the Era only partly covers is open question Q28.
 
 **Why:**
 - "Trips become chapters" (Phase 5) needs a short Era inside a long one.
 - The README promises "Weeks and Eras, filed automatically": an Era such as "Uni Days" gathers its weeks with no sorting.
-- A join table from the start is a small change while nothing is built.
+- One rule ("an Era is its dates") is easy to predict and leaves nothing to keep in step: no link table, no exceptions, no cap on Eras per week. Showing only the entries inside an Era's dates keeps a weekend trip to its weekend.
+- Changes by hand covered rare cases that an Era's dates, or a tag, already handle. The user chose dates only on 2026-10-27, after the feature review (R-01, R-02).
 
-**Consequences:** filling by date answers the old open question Q1. The V1 migration has `weekly_log_eras.source` and `weekly_log_era_exclusions`, so this was settled before Sprint 2 (task 2.3). Q18 is settled before Sprint 3.
+**Consequences:** this answers the old open questions Q1 and Q10. V1 has no week–Era table. Q18 is settled before Sprint 3, and Q28 before Sprint 6.
 
 ## D-23 Capture and sealing behaviour
 Answers to the gaps G-01 to G-07 found while drafting [USER_FLOWS.md](USER_FLOWS.md).
@@ -310,7 +311,7 @@ Answers to the gaps G-01 to G-07 found while drafting [USER_FLOWS.md](USER_FLOWS
 - **Weeks (Phase 3):** closing a week (`POST /weekly-logs/{id}/close`) writes its AI summary. There is no automatic closing and no "close all weeks" action. A week the user never closes has no summary, and that trade-off is accepted.
 - **Wrap up card:** at the top of the feed, it offers the most recent finished week (its Sunday has passed in the user's timezone) that has entries and is still open. That is usually last week; after a break, it's the last week the user wrote in. One tap closes it and shows its summary. The card also offers Eras whose end date has passed but that aren't closed.
 - **Gentle reminder:** when three or more finished weeks are still open, a small note appears under the card, at most once a week. It can be dismissed, and has its own switch.
-- **Eras:** closing an Era (`POST /eras/{id}/close`) first shows how many of its weeks are still open, then closes them too. Their summaries are written in the background within the daily AI limit, and the Era summary is written from all of them. Closing sets the Era's end date to the end of its latest week if it has none, so no new weeks join it (D-22). A week later backdated into its dates still joins and makes the Era summary stale. `POST /eras/{id}/reopen` reopens it.
+- **Eras:** closing an Era (`POST /eras/{id}/close`) first shows how many of its weeks are still open, then closes them too. Their summaries are written in the background within the daily AI limit, and the Era summary is written from all of them. Closing sets the Era's end date to the end of its latest week if it has none, so no new weeks join it (D-22). An entry backdated into its dates later still belongs to it and makes the Era summary stale. `POST /eras/{id}/reopen` reopens it.
 - Era summaries, search by feeling (D-29) and Phase 6 insights use closed weeks only.
 
 **Why:** closing a week is a small, satisfying ritual, and the AI cost follows what users choose to do. The card makes it one tap at a natural moment, without streaks or guilt. Closing an Era together with its weeks saves closing 150 weeks one by one.
@@ -339,7 +340,6 @@ Decide each one before the sprint that needs it, then record it with `/record-de
 | Q7 | Voice-to-text: Chrome's Web Speech API sends audio to Google. Acceptable, or transcribe on the server? | Sprint 7 | — |
 | Q8 | Group shape: one group per occasion (a trip), or one long-lived friend group that holds several trips? | Sprint 8 | One group per occasion |
 | Q9 | Shared story and consent: what each member agrees to before their contributions reach an AI provider, and what happens to a stored story when someone withdraws or leaves (see also Q6) | Sprint 8 (8b) | Opt-in per member per group, on top of each member's own AI consent. The stored story is deleted when anyone withdraws, opts out or leaves, and can be rebuilt |
-| Q10 | Trips shorter than a week: an Era holds whole weeks (D-22), so a weekend trip adds its entire week to the Trip Era (the week stays in its other Eras too). Accept that, or label individual entries with the trip instead? | Sprint 8 | Accept whole weeks |
 | Q11 | Invites and roles: expiring link only, or also email or username invites? Can any member invite, or only the owner? How big can a group be, and who owns it when its owner deletes their account? | Sprint 8 | The owner creates expiring links only; at most 12 members; ownership passes to the longest-standing member |
 | Q12 | Handwriting recognition: which approach (a multimodal AI model, a dedicated handwriting service or on-device), which languages, the cost per page and any daily limit, and the consent and retention wording for sending page images to a provider (see Q6). The consent record itself is covered by D-21 | Sprint 6 (6c) | No provider chosen: pages stay photos and "Read this page" is hidden |
 | Q13 | Notebook import: should Phase 4 add bulk import of a whole notebook (many pages at once, one entry per page or per day, a review queue), or only single and multi-page entries? | Sprint 7 | Single and multi-page entries only |
@@ -356,3 +356,5 @@ Decide each one before the sprint that needs it, then record it with `/record-de
 | Q24 | Voice notes: the biographer and search can't read them. Transcribe them? | Sprint 7 (with Q7) | Optional and on tap, through the same `TranscriptionProvider` as pages |
 | Q25 | Writing time and mood: patterns such as "flat on Sunday evenings" need when an entry was really written (`created_at` is wrong for backdated and offline entries) and a mood for each entry | Sprint 7 (mood: Sprint 9) | Offline entries send a client `capturedAt`; Phase 6 adds a per-entry mood as derived AI data, with the usual seal and staleness rules |
 | Q26 | Group Loot Drop dates: if the owner moves the date later, entries added earlier still unlock on the old date; an entry already sealed for longer opens later; and withdrawing doesn't unseal | Sprint 8 | Group views hide content until the later of the entry's and the group's dates; the withdraw dialog says the entry stays sealed |
+| Q27 | Week start: weeks run Monday to Sunday (D-08), and V1 checks that a week starts on a Monday. Should users be able to start their week on Sunday? Changing it for someone who already has entries means re-filing their weeks | Sprint 5 | Monday for everyone. `WeekCalendar` already takes the first day as a parameter (D-08) |
+| Q28 | Era summaries and partly covered weeks: an Era shows only the entries inside its dates (D-22), but a weekly summary covers the whole week. For a short Era, such as a weekend trip, should the Era summary read the entries inside its dates instead of whole-week summaries? | Sprint 6 | A week the Era covers only partly is read from its entries inside the Era's dates; a week it covers fully uses its weekly summary |

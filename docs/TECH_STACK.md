@@ -47,7 +47,7 @@ com.memoirist
 ├── era/
 ├── template/
 ├── tag/           # Tag, entry tags (D-26)
-├── week/          # WeeklyLog, WeeklyLogEra, WeekCalendar (date → Monday in user tz), Era filing by date (D-22), feed endpoint
+├── week/          # WeeklyLog, WeekCalendar (date → first day of its week in user tz), a week's Eras from their dates (D-22), feed endpoint
 ├── entry/         # Entry, EntryMapper (the ONLY Entry→DTO path), content validation + text extraction, seal rules, opened Loot Drops
 ├── media/
 ├── storage/       # StorageService, StorageProperties, local bucket bootstrap
@@ -74,7 +74,7 @@ Each feature folder contains:
   - `TimeZone.setDefault(UTC)` in `main`.
   - `spring.jpa.properties.hibernate.jdbc.time_zone=UTC`.
   - A `java.time.Clock` bean is injected wherever "now" or "today" matters, so seals and dates are testable.
-  - `WeekCalendar` converts a memory date into its Monday in the user's zone.
+  - `WeekCalendar` converts a memory date into the first day of its week in the user's zone. The first day is a parameter, Monday for now (D-08, Q27).
 - **Schema:** Flyway only, with `ddl-auto=validate`. JSONB columns are mapped with `@JdbcTypeCode(SqlTypes.JSON)`. Entities with client-assignable IDs implement `Persistable<UUID>`.
 - **Current user:** `CurrentUserProvider.currentUserId()`.
   - Phase 1 implementation: `DevHeaderCurrentUserProvider` (`@Profile({"local","test"})`). It reads `X-Dev-User-Id` and defaults to `00000000-0000-0000-0000-000000000001`.
@@ -97,10 +97,10 @@ Each feature folder contains:
 - **Creating an entry:**
   1. Resolve the memory date (default: today in the user's zone; reject future dates and dates before 1900-01-01).
   2. Compute its Monday.
-  3. `INSERT … ON CONFLICT (user_id, start_date) DO NOTHING`, then select the week. If the week is new, link it to every Era of the user whose dates overlap it (`source = AUTO`), stopping at 10 (D-22).
+  3. `INSERT … ON CONFLICT (user_id, start_date) DO NOTHING`, then select the week.
   4. Insert the entry.
-- **Era dates change** (create or update): recompute that Era's automatic links. Add weeks that overlap it unless they are in `weekly_log_era_exclusions` or already in 10 Eras, and remove `AUTO` links that no longer overlap. Links added by hand are never touched. Removing an Era from a week by hand writes an exclusion; adding it back deletes it.
-- **Feed:** `GET /feed` loads a page of non-empty weeks (newest first), then their entries in one query, then their media in batched queries (`@BatchSize(50)` / `IN (…)`). Two collections are never fetch-joined at once (avoids `MultipleBagFetchException` and N+1 queries). A week's Eras (a join table, D-22) come from one more batched query.
+- **A week's Eras (D-22)** are worked out from dates, never stored: an Era holds a week if it starts on or before the week's Sunday and has no end date or ends on or after its Monday. An Era's page counts only the entries whose memory date is inside its dates. Creating an Era or changing its dates needs no other writes.
+- **Feed:** `GET /feed` loads a page of non-empty weeks (newest first), then their entries in one query, then their media in batched queries (`@BatchSize(50)` / `IN (…)`). Two collections are never fetch-joined at once (avoids `MultipleBagFetchException` and N+1 queries). The weeks' Eras come from one more query for the user's Eras, matched to each week by date (D-22).
 
 ### Storage
 - **Clients:**
@@ -203,8 +203,8 @@ src/
     - **`AiContentSource`:** the only code that loads entry text, tags and AI facts for AI. It skips sealed entries, applies group consent (D-19) and returns plain text with IDs. A test should fail if AI code reads entries any other way (ArchUnit is one option; adding it needs approval).
     - **Gate:** every AI endpoint calls `FeatureGate` in order: consent, the user's switch, then availability. It reads configuration today and can read a plan later.
     - **Suggestions:** `POST /suggestions` builds a prompt from the saved entry or the draft and asks the model for output that matches a JSON schema. Anything that doesn't fit is dropped: unknown fields, unknown effects, or a number of options other than two. Effects come from a short whitelist (add a tag, record a fact) and run only after the user's tap. Entry text is treated as data, never as instructions. A draft is processed in memory and never stored.
-    - **Narratives:** weekly summaries, Era summaries and friend profiles are built by `@Async` jobs. An Era summary reads the Era's weekly summaries, not raw entries. Each has an `is_stale` flag, a provider and a model.
-    - **Invalidation:** `EntryService` publishes an event when an entry is edited, sealed, unlocked or deleted. Listeners delete the cards that cite it (found through a GIN index on `sources`), mark the week's summary, the summaries of all the week's Eras and the profiles of people mentioned in it as stale, and rebuild them in the background. Stale narratives are excluded as input to other AI work. The unlock job (`unlock_notified`) publishes the same event.
+    - **Narratives:** weekly summaries, Era summaries and friend profiles are built by `@Async` jobs. An Era summary reads the Era's weekly summaries, not raw entries (Q28 covers weeks it only partly overlaps). Each has an `is_stale` flag, a provider and a model.
+    - **Invalidation:** `EntryService` publishes an event when an entry is edited, sealed, unlocked or deleted. Listeners delete the cards that cite it (found through a GIN index on `sources`), mark the week's summary, the summaries of the Eras whose dates contain it and the profiles of people mentioned in it as stale, and rebuild them in the background. Stale narratives are excluded as input to other AI work. The unlock job (`unlock_notified`) publishes the same event.
     - **Cost and abuse:** per-feature daily limits (`429`), cheap checks before any model call, and logs that carry IDs, kinds and token counts but never text.
     - **Left open on purpose:** a new kind of card is a new `kind` string, a generator and a renderer. A new kind of narrative is a table with real foreign keys and the same three columns (`is_stale`, provider, model). Another provider is another adapter.
 - **Phase 4:**
@@ -218,7 +218,7 @@ src/
   - **Access rule:** personal endpoints stay owner-only. Every `/groups/**` endpoint starts with one membership check (`404` for a non-member, `403` for a member without the role). Nothing else decides who may see a contribution.
   - **Contributions are links** (`group_entries`), so an author's edits show up in the group and withdrawing is deleting the link.
   - **Starting from an entry (D-19):** `POST /groups` with an `entryId` creates the group and its first contribution in one transaction.
-  - **Trip Eras** fill by the trip dates like any other Era (D-22).
+  - **Trip Eras** are defined by the trip dates like any other Era, and show only the entries inside them (D-22).
   - **Output:** a contribution becomes a DTO only through `EntryMapper`, and media is presigned only after the membership check. A sealed contribution is therefore redacted without any group-specific code.
   - **Group Loot Drop:** contributing to a group with a future `unlock_date` seals the entry through the existing seal path, so there is still one definition of "sealed".
   - **Leaving and deleting:** deleting a membership row deletes that member's `group_entries` rows through the composite foreign key. A service step also unlinks the member's trip Era and deletes the group's stored story.

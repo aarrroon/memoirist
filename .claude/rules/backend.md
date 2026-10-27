@@ -28,7 +28,7 @@ paths:
   - For pages, load the IDs first, then the children with `IN (…)` queries.
 - Repositories expose user-scoped finders (`findByIdAndUserId`, `findByIdAndEntryUserId`). Services never use a bare `findById` on user data.
 - Find-or-create a week with a native `INSERT … ON CONFLICT (user_id, start_date) DO NOTHING`, then select it.
-- Week–Era links are a `WeeklyLogEra` entity with a `source` (D-22). Add `AUTO` links when a week is created and recompute an Era's `AUTO` links whenever its dates change; never touch `USER` links, and respect `weekly_log_era_exclusions`.
+- A week's Eras come from dates, not a table (D-22): load the user's Eras once and match each week by overlap. An Era's counts include only entries whose memory date is inside its dates.
 - Derived columns (`content_text`, `preview_line`) are computed by the server on every content write, never sent by the client (D-05, D-24).
 
 ## Time

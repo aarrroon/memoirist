@@ -23,7 +23,7 @@
 | F-07 | Living with a sealed entry | 1 |
 | F-08 | Browse the feed | 1 |
 | F-09 | Edit or delete an entry | 1 |
-| F-10 | Create Eras and put weeks in them | 1 |
+| F-10 | Create Eras and change their dates | 1 |
 | F-11 | Create and use a template | 1 |
 | F-12 | Name, close and reopen a week | 1 |
 | F-13 | Change display name or timezone | 1 |
@@ -245,25 +245,24 @@ flowchart TD
 
 ---
 
-## F-10 Create Eras and put weeks in them
+## F-10 Create Eras and change their dates
 **Who / when:** whenever the user wants to name a chapter of life.
 **Starts from:** an *Eras* screen, or a week's *Eras* chip in the feed.
 
 **Happy path**
 1. *Eras* lists chapters newest first. The user creates one with a title, start date, optional end date (blank = ongoing) and optional description (`POST /eras`).
-2. Every week whose dates overlap the Era joins it automatically, including weeks that already exist (D-22). The feed regroups those weeks under the right header.
-3. To adjust, the user opens a week's *Eras* picker. Eras the week joined by date are marked as automatic, and the user can tick more or untick any (`PUT /weekly-logs/{id}` with `eraIds`). Eras can overlap, so a trip can sit inside a longer chapter.
-4. Opening an Era shows its weeks (`GET /eras/{id}`).
+2. Every week whose dates overlap the Era is in it at once, including old weeks and backdated entries (D-22). The feed regroups those weeks under the right header.
+3. To change what an Era holds, the user changes its dates (`PUT /eras/{id}`). There's no way to add or remove a single week; tags cover themes that don't follow dates. Eras can overlap, so a trip can sit inside a longer chapter.
+4. Opening an Era shows its weeks, counting only the entries inside its dates (`GET /eras/{id}`).
 
 **Edge cases**
 | Situation | What the user sees | API |
 |---|---|---|
 | End date before start date | Field message | `400` |
-| Changing an Era's dates | Weeks that now overlap join; automatic links that no longer overlap leave; weeks added or removed by hand stay as they are | `PUT /eras/{id}` |
-| Unticking an automatic Era on a week | It stays off, even if the Era's dates change later | `PUT /weekly-logs/{id}` |
-| More than 10 Eras on one week | The picker stops at 10; filing by date skips a full week | `400` |
-| Delete an Era | Confirmation says entries are kept; weeks just leave that Era | `DELETE /eras/{id}` |
-| A new week falls inside an Era's dates | It joins the Era automatically (D-22) | — |
+| Changing an Era's dates | It holds the weeks the new dates overlap, straight away | `PUT /eras/{id}` |
+| An Era that starts or ends mid-week, such as a weekend trip | The week is listed, but only the days inside the Era's dates count | `GET /eras/{id}` |
+| Delete an Era | Confirmation says entries are kept; only the Era goes | `DELETE /eras/{id}` |
+| A new or backdated entry falls inside an Era's dates | It is in the Era automatically (D-22) | — |
 
 ---
 
@@ -338,7 +337,7 @@ flowchart TD
 1. The week summary opens (`GET /weekly-logs/{id}`): title, dates, Eras, how many entries, photos and voice notes, a few thumbnails, and the tags used that week.
 2. Below that, one **bar per entry**, in day order: its display title (title → first line of the caption that isn't a heading → *Photo* / *Diary page* / *Voice note*, D-24), the day, and small icons for photos or voice notes.
 3. Tapping a bar opens that entry.
-4. From the summary the user can also rename, close or reopen the week and change its Eras (F-10, F-12).
+4. From the summary the user can also rename, close or reopen the week (F-12). Its Eras follow from their dates (F-10).
 5. From Phase 3, the AI-written weekly summary appears at the top of this view (F-22).
 
 **Edge cases**

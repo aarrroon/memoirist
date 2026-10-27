@@ -73,13 +73,13 @@
 
 - [ ] **2.3 V1 migration and local seed**
   - **Read:** DATABASE_SCHEMA (Phase 1 tables, V1 SQL, seed).
-  - **Do:** `db/migration/V1__core_schema.sql` and `db/seed-local/R__seed_dev_user.sql`, exactly as specified, including Era filing by date (D-22), `media.purpose` (D-20), `entries.unlock_seen_at` (D-10) and the 1900 date check (D-09).
+  - **Do:** `db/migration/V1__core_schema.sql` and `db/seed-local/R__seed_dev_user.sql`, exactly as specified, including `media.purpose` (D-20), `entries.unlock_seen_at` (D-10) and the 1900 date check (D-09). There's no week–Era table: Eras are worked out from their dates (D-22).
   - **Done when:** a Testcontainers test applies the migrations to an empty database and finds the dev user; local boot shows V1 in `flyway_schema_history`.
 
 - [ ] **2.4 Entities and repositories**
   - **Read:** `.claude/rules/backend.md`, DATABASE_SCHEMA, D-12.
   - **Do:**
-    - Entities: `User`, `Era`, `Template`, `WeeklyLog`, `WeeklyLogEra` (the week–Era link with its `source`, D-22), `Entry`, `Media`, `Tag` (with `entry_tags` as the link).
+    - Entities: `User`, `Era`, `Template`, `WeeklyLog`, `Entry`, `Media`, `Tag` (with `entry_tags` as the link). There's no week–Era entity (D-22).
     - All extend a base class with `@CreationTimestamp` and `@UpdateTimestamp` `Instant`s and implement `Persistable<UUID>`.
     - JSONB fields use `@JdbcTypeCode(SqlTypes.JSON)`.
     - `Entry.media` uses `@OrderBy("displayOrder ASC")` and `@BatchSize(size = 50)`.
@@ -123,21 +123,20 @@
   - **Read:** D-22, API_CONTRACT §Eras.
   - **Done when:** every row of API_CONTRACT §Eras works and is tested, including:
     - another user's era returns `404`
-    - deleting an Era removes it from its weeks while their other Eras stay
-    - creating an Era pulls in the existing weeks it overlaps
-    - changing its dates adds and removes automatic links but keeps links added by hand
-    - a week the user removed from it is never added back
+    - deleting an Era leaves its weeks, their entries and their other Eras untouched
+    - a new Era holds the existing weeks its dates overlap
+    - changing its dates changes which weeks it holds
+    - `GET /eras/{id}` counts only the entries inside its dates, so an Era from Saturday to Sunday doesn't count the rest of the week
 
 - [ ] **3.4 Templates CRUD** (`/new-endpoint`)
   - **Done when:** every row of §Templates works and is tested; subheading limits are enforced.
 
 - [ ] **3.5 Entries: create, read, update, delete, seal, redaction**
-  - **Read:** D-05, D-08, D-09, D-10, D-12, D-22, API_CONTRACT §Entries.
-  - **Do:** `WeekCalendar`, `EntryContentValidator`, `ContentTextExtractor`, `EntryMapper` (the only Entry→DTO path), and `EntryService` seal rules.
+  - **Read:** D-05, D-08, D-09, D-10, D-12, API_CONTRACT §Entries.
+  - **Do:** `WeekCalendar` (the first day of the week is a parameter, D-08), `EntryContentValidator`, `ContentTextExtractor`, `EntryMapper` (the only Entry→DTO path), and `EntryService` seal rules.
   - **Done when:** tests prove:
     - an optional title is saved, and a blank title is `400`
     - the first entry of a week creates the week, and the second reuses it
-    - a new week joins every Era whose dates overlap it
     - an entry written at 23:30 on Sunday Melbourne time lands in that Melbourne week, even though it's Sunday morning in UTC
     - a daylight-saving week boundary works
     - backdating works; a future date, or one before 1900-01-01, returns `400`
@@ -159,8 +158,8 @@
   - **Done when:**
     - the feed returns only non-empty weeks, newest first, with their Eras and redacted entries
     - the query count for a page doesn't grow with the number of entries or media (assert with Hibernate statistics)
-    - PUT (with `eraIds`), close and reopen work, a week can be in several Eras, and an Era owned by another user returns `404`
-    - removing an automatic Era from a week sticks (changing that Era's dates doesn't add it back), and an Era added by hand stays outside its dates
+    - PUT (the title), close and reopen work
+    - a week's `eras` are every Era whose dates overlap it, latest start first, and change as soon as an Era's dates change (D-22)
 
 - [ ] **3.8 Tags** (`/new-endpoint`)
   - **Read:** D-10, D-26, API_CONTRACT §Tags and §Entries.
@@ -213,7 +212,7 @@
 
 - [ ] **4.3 Routing, shell and time utilities**
   - **Do:**
-    - React Router routes: `/` (feed), `/entries` (all-entries timeline), `/weeks/:weekId` (week summary), `/eras`, `/templates`, `/tags`, `/settings`.
+    - React Router routes: `/` (feed), `/entries` (all-entries timeline), `/weeks/:weekId` (week summary), `/eras`, `/templates`, `/tags`, `/settings`, `/recently-deleted`.
     - The app shell.
     - A Zustand UI store.
     - `lib/time.ts` (formatting in the user's zone, "today" in the user's zone).
@@ -247,8 +246,8 @@
   - **Done when:** sealing an entry turns it into a vault card; the countdown is correct in the user's zone; once the unlock time passes, the entry shows in the Opened strip until it is opened or dismissed.
 
 - [ ] **4.9 Eras, templates and settings pages**
-  - **Do:** CRUD for eras and templates; a week's Era picker that marks the Eras it joined by date and lets the user add or remove any (D-22); settings for display name and timezone.
-  - **Done when:** changing the timezone changes the displayed times; removing an automatic Era from a week sticks after a reload; component tests pass.
+  - **Do:** CRUD for eras and templates, with an Era page that lists its weeks and counts only the entries inside its dates (D-22); settings for display name and timezone.
+  - **Done when:** changing the timezone changes the displayed times; changing an Era's dates regroups the feed; component tests pass.
 
 - [ ] **4.10 Week summary view**
   - **Read:** D-25, USER_FLOWS F-15.
@@ -272,7 +271,7 @@
 ## Phase 2: Online, with accounts
 
 ### Sprint 5
-**Decide first:** Q2 (auth details and the email service), Q3 (account export and deletion), Q4 (PDF library), Q5 (cold starts and background jobs), Q19 (share-link privacy), Q20 (storage and backups), Q21 (devices and sessions) and Q22 (encryption wording). Record each in DECISIONS.md.
+**Decide first:** Q2 (auth details and the email service), Q3 (account export and deletion), Q4 (PDF library), Q5 (cold starts and background jobs), Q19 (share-link privacy), Q20 (storage and backups), Q21 (devices and sessions), Q22 (encryption wording) and Q27 (week start). Record each in DECISIONS.md.
 
 - [ ] **5.1 Auth migration and JWT provider.** Apply the V{n} auth migration and add a JWT `CurrentUserProvider` for `prod`. **Done when:** controllers are unchanged; tests prove an unauthenticated request returns `401` and the dev header is ignored in `prod`.
 - [ ] **5.2 Register and login screens.**
@@ -285,7 +284,7 @@
 ## Phase 3: The AI biographer
 
 ### Sprint 6 (split into 6a, 6b and 6c when planning)
-**Decide first:** Q6 (provider, embedding dimension, consent wording). 6c (paper diaries) also needs Q12 (handwriting recognition approach and consent). Help me think needs Q14 (pause length), Q17 (what withdrawing consent deletes) is settled before 6.9, and Q23 (summary staleness and status) before 6.3.
+**Decide first:** Q6 (provider, embedding dimension, consent wording). 6c (paper diaries) also needs Q12 (handwriting recognition approach and consent). Help me think needs Q14 (pause length), Q17 (what withdrawing consent deletes) is settled before 6.9, Q23 (summary staleness and status) before 6.3, and Q28 (Era summaries for weeks an Era only partly covers) before 6.13.
 **Suggested split (D-21):** 6a = AI foundation and Help me think (6.1, 6.9, 6.10, 6.2, 6.11, 6.12). 6b = summaries, people and search (6.3, 6.4, 6.5, 6.13, 6.14, 6.15, 6.16). 6c = paper diaries (6.6, 6.7, 6.8). Inside 6a, build 6.9 and 6.10 before 6.2. Paper diaries need 6.9 too, because reading a page needs the AI consent.
 
 - [ ] **6.1 AI migration** (pgvector, `ai_metadata`, `ai_summaries`, characters, edges) with the chosen `vector(N)`.
@@ -331,7 +330,7 @@
 
 ### Sprint 8 (split into 8a and 8b when planning)
 **Start after:** Phase 2 (real accounts). 8b also needs Phase 3. The sprint can run before or after Phase 4.
-**Decide first:** Q8–Q11 and Q26, plus the consent wording from Q6 and Q9 for 8b. Record each in DECISIONS.md, then review the Phase 5 drafts in DATABASE_SCHEMA.md and API_CONTRACT.md.
+**Decide first:** Q8, Q9, Q11 and Q26, plus the consent wording from Q6 and Q9 for 8b. Record each in DECISIONS.md, then review the Phase 5 drafts in DATABASE_SCHEMA.md and API_CONTRACT.md.
 
 **8a: groups and Loot Drops (no AI)**
 
@@ -339,7 +338,7 @@
 - [ ] **8.2 Invite links.** Hashed tokens, expiry, revoke and accept. **Done when:** the raw token appears only in the create response, expired, revoked and unknown tokens return `404`, and accepting twice is harmless.
 - [ ] **8.3 Contributions, the group feed and starting from an entry** (D-19). **Done when:** tests prove a member reads another member's contribution only through `/groups/**` while `GET /entries/{id}` still returns `404`; a withdrawn contribution disappears from the group while the entry survives; a non-member never gets a presigned media URL; and starting a group from an entry makes that entry its first contribution.
 - [ ] **8.4 Group Loot Drops.** **Done when:** tests prove contributing to a locked group needs the matching `confirmUnlockDate` and seals the entry until at least the group's date; nobody, including the author and the group owner, can read a sealed contribution early; the group's date can't move earlier (`409 group-sealed`); and members can see who has contributed but not what.
-- [ ] **8.5 Trips as Eras.** **Done when:** joining a dated group creates an Era in the member's own timeline; contributing adds that week to it; leaving keeps the Era but unlinks it; and deleting the Era doesn't change membership.
+- [ ] **8.5 Trips as Eras.** **Done when:** joining a dated group creates an Era with the trip's dates in the member's own timeline; it shows only their entries inside those dates (D-22); leaving keeps the Era but unlinks it; and deleting the Era doesn't change membership.
 - [ ] **8.6 Groups UI.** Group list and create, a *share with friends* action that starts a group from an entry, invite sheet, group feed with author names, an "Add to group" action on entries (with the unlock-date confirmation for locked groups), a group vault card with a countdown, and the trip Era in the feed. **Done when:** a Playwright flow with two accounts creates a group, invites, has both people contribute, and shows both entries in the group feed.
 
 **8b: AI-powered (needs Phase 3)**

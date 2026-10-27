@@ -138,7 +138,7 @@ A lightweight row for lists such as the all-entries timeline (D-25). No caption,
 ```
 
 ### `WeeklyLog`
-Used by the feed and by week detail. `eras` lists every Era the week is in, latest start first, so `eras[0]` is the one the feed groups it under (Q18). It is empty for a week in no Era. Each Era's `source` says whether the week joined it by date (`AUTO`) or by hand (`USER`) (D-22). Entries are ordered by `entryDate`, then `createdAt`, ascending, so each week reads as that week's story.
+Used by the feed and by week detail. `eras` lists every Era whose dates overlap the week, latest start first, so `eras[0]` is the one the feed groups it under (Q18). It is empty for a week in no Era, and is worked out from dates rather than stored (D-22). Entries are ordered by `entryDate`, then `createdAt`, ascending, so each week reads as that week's story.
 ```json
 {
   "id": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
@@ -146,7 +146,7 @@ Used by the feed and by week detail. `eras` lists every Era the week is in, late
   "startDate": "2026-10-19",
   "endDate": "2026-10-25",
   "isClosed": false,
-  "eras": [ { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "title": "Monash Double Degree Era", "source": "AUTO" } ],
+  "eras": [ { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "title": "Monash Double Degree Era" } ],
   "entries": [ { "...": "Entry" } ]
 }
 ```
@@ -164,11 +164,11 @@ Used by the feed and by week detail. `eras` lists every Era the week is in, late
 ### Eras (tag: Eras)
 | Method and path | Body | Success |
 |---|---|---|
-| `POST /eras` | `{ "id"?, "title": string(1–150), "description"?: string, "startDate": date, "endDate"?: date ≥ startDate }` | `201` era. Every existing week whose dates overlap the Era joins it (D-22) |
+| `POST /eras` | `{ "id"?, "title": string(1–150), "description"?: string, "startDate": date, "endDate"?: date ≥ startDate }` | `201` era. It holds every week its dates overlap, existing weeks included (D-22) |
 | `GET /eras` | — | `200` array of eras, `startDate` descending |
-| `GET /eras/{eraId}` | — | `200` era plus `"weeklyLogs": [{ "id", "title", "startDate", "endDate", "isClosed", "entryCount" }]`, newest first |
-| `PUT /eras/{eraId}` | Same as POST without `id` (full replace) | `200` era. If the dates changed, weeks that now overlap join and automatic links that no longer overlap are removed; links added or removed by hand stay |
-| `DELETE /eras/{eraId}` | — | `204`. Its weeks keep their entries and just leave that Era; they stay in any other Eras |
+| `GET /eras/{eraId}` | — | `200` era plus `"weeklyLogs": [{ "id", "title", "startDate", "endDate", "isClosed", "entryCount" }]`, newest first: the weeks its dates overlap. `entryCount` counts only the week's entries inside the Era's dates (D-22) |
+| `PUT /eras/{eraId}` | Same as POST without `id` (full replace) | `200` era. New dates apply at once: it holds the weeks they overlap (D-22) |
+| `DELETE /eras/{eraId}` | — | `204`. Only the Era goes; its weeks, their entries and their other Eras stay |
 
 Era shape: `{ "id", "title", "description", "startDate", "endDate", "createdAt", "updatedAt" }`.
 
@@ -206,7 +206,7 @@ Weeks are created automatically when an entry is created (D-08). There is no cre
 | Method and path | Body | Success |
 |---|---|---|
 | `GET /weekly-logs/{logId}` | — | `200` `WeeklyLog` |
-| `PUT /weekly-logs/{logId}` | `{ "title": string(0–200) or null, "eraIds": [uuid] }` (full replace; every Era in the list must be the user's) | `200` `WeeklyLog`. An Era removed from the list is remembered, so filing by date doesn't add it back; an Era added by hand stays even outside its dates (D-22). More than 10 Eras: `400` |
+| `PUT /weekly-logs/{logId}` | `{ "title": string(0–200) or null }` (full replace) | `200` `WeeklyLog`. A week's Eras follow from their dates and can't be set here (D-22) |
 | `POST /weekly-logs/{logId}/close` | — | `200` `WeeklyLog` with `isClosed: true` (idempotent). Phase 3: writes the week's summary through `WeeklyLogClosedEvent` (D-28) |
 | `POST /weekly-logs/{logId}/reopen` | — | `200` `WeeklyLog` with `isClosed: false` (idempotent) |
 
@@ -490,7 +490,7 @@ New problem types:
 | `GET /groups/{groupId}/entries?page=0&size=10` | — | `200` `PageResponse<GroupEntry>`, ordered by `entryDate` then `createdAt`, ascending |
 | `DELETE /groups/{groupId}/entries/{entryId}` | — | `204`. Withdraws the caller's own contribution; the entry itself is untouched. Allowed even when sealed |
 
-**Trips as Eras** has no endpoint of its own. When a member joins a group that has a `startDate`, the service creates an Era in their timeline from the group's title and dates, and weeks inside those dates join it by date (D-22). When they contribute from a week outside the dates, that week is added too. Every week stays in its other Eras (see Q10).
+**Trips as Eras** has no endpoint of its own. When a member joins a group that has a `startDate`, the service creates an Era in their timeline from the group's title and dates. Like any Era, it holds the weeks those dates overlap and shows only the entries inside them (D-22). An entry contributed from outside the dates stays in the group but not in the trip Era.
 
 ### Shared story (8b)
 | Method and path | Body | Success |
