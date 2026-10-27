@@ -3,6 +3,8 @@
 > A product review of every planned feature, written on 2026-10-27 before any code existed. It scores each feature, names what's holding the product back, and proposes changes and new ideas. **Everything here is a proposal until it's accepted.** Accept one with `/record-decision`, then set its status in [§6](#6-recommendations-and-status). **Not needed for coding tasks.**
 >
 > Competitor facts and their sources live in [COMPETITOR_NOTES.md](COMPETITOR_NOTES.md). This file links to them instead of repeating them.
+>
+> **Phase numbers below are the order at the time of writing.** On 2026-10-28, D-31 moved groups to Phase 3, the AI biographer to Phase 4 and the phone features to Phase 5. The README Timeline has the current order.
 
 ## 1. Summary
 - **The engineering spec is excellent; the product spec isn't finished.** Phase 1 is specified down to its error codes, and the privacy rules (sealing, ownership, AI consent) are more careful than in many apps that have shipped. What's missing is what decides whether people stay and pay: the visual design, onboarding, notifications, search, pricing and success metrics.
@@ -241,33 +243,33 @@ Status is **Proposed** until it's decided. Then it becomes **Accepted (D-xx)**, 
 ### Launch (Phase 2)
 | ID | Recommendation | Touches | Status |
 |---|---|---|---|
-| R-06 | Email notifications: Loot Drop unlocks, a weekly recap, invites and group activity | `unlock_notified`, Sprint 5 | Accepted in part: unlock emails (D-10, task 5.7); the rest Proposed |
-| R-07 | Move the installable-app basics (task 7.1) into Phase 2; keep offline sync in Phase 4 | Tasks 7.1, 7.2 | Proposed |
-| R-08 | An "On this day" card for memories from past years, with no AI | Phase 1 or 2 | Proposed |
-| R-09 | App lock with a passcode or Face ID | Phase 2 | Proposed |
+| R-06 | Email notifications: Loot Drop unlocks, a weekly recap, invites and group activity | `unlock_notified`, Sprint 5 | Accepted in part: unlock emails (D-10) and the weekly email (D-32); group-activity emails stay Proposed |
+| R-07 | Move the installable-app basics (task 7.1) into Phase 2; keep offline sync in Phase 4 | Tasks 7.1, 7.2 | Accepted (D-31) |
+| R-08 | An "On this day" card for memories from past years, with no AI | Phase 1 or 2 | Accepted (D-32) |
+| R-09 | App lock with a passcode or Face ID | Phase 2 | Accepted (D-37) |
 | R-10 | Passkeys or email sign-in links instead of passwords; sign-up takes the browser's timezone | Q2, D-07 | Deferred (Q2) |
 | R-11 | An always-on server at launch | Q5 | Deferred (Q5) |
 | R-12 | A readable export: HTML or Markdown with the photos, plus JSON | Q3 | Deferred (Q3) |
 | R-13 | Share previews where entries can be unticked; strip GPS from photos on public pages and in groups | Task 5.3, D-19 | Deferred (Q19) |
-| R-14 | Privacy-safe product metrics: counts only, never content | Sprint 5 | Proposed |
-| R-15 | Onboarding that ends with sealing a letter to yourself for next month | F-01 | Proposed |
+| R-14 | Privacy-safe product metrics: counts only, never content | Sprint 5 | Accepted (D-38) |
+| R-15 | Onboarding that ends with sealing a letter to yourself for next month | F-01 | Accepted (D-33) |
 
 ### Phase 1 polish
 | ID | Recommendation | Touches | Status |
 |---|---|---|---|
-| R-16 | Suggest the memory date from the photo's own date | Task 4.6 | Proposed |
-| R-17 | Starter templates, and templates that carry default tags | Tasks 3.4, 4.9 | Proposed |
-| R-18 | Raise the limit from 10 to 20 media items per entry | D-17 | Proposed |
+| R-16 | Suggest the memory date from the photo's own date | Task 4.6 | Accepted (D-34) |
+| R-17 | Starter templates, and templates that carry default tags | Tasks 3.4, 4.9 | Accepted in part: starter templates (D-06); default tags stay Proposed |
+| R-18 | Raise the limit from 10 to 20 media items per entry | D-17 | Accepted (D-17) |
 | R-19 | Offer the device's timezone for an entry's date when it differs from the profile's | F-13, task 4.6 | Proposed |
-| R-20 | Era covers (a photo and a colour) and a date scrubber in the feed | Tasks 4.4, 4.9 | Proposed |
-| R-21 | Make an unlock an event (notification, animation, *Reply to past you*) and suggest unlock dates | F-06, F-07, task 4.8 | Accepted in part: the Opened strip, unlock emails and push notifications (D-10); the rest Proposed |
+| R-20 | Era covers (a photo and a colour) and a date scrubber in the feed | Tasks 4.4, 4.9 | Accepted in part: Era cover photos (D-36); the colour and the date scrubber stay Proposed |
+| R-21 | Make an unlock an event (notification, animation, *Reply to past you*) and suggest unlock dates | F-06, F-07, task 4.8 | Accepted (D-10, D-33); the opening animation is a design choice for DESIGN.md |
 | R-22 | Write DESIGN.md before Sprint 4, mobile first, including the unlock moment | DIRECTIONS.md | Proposed |
 
 ### The AI biographer (Phase 3)
 | ID | Recommendation | Touches | Status |
 |---|---|---|---|
 | R-23 | Summarise each week automatically after it ends; "close week" becomes optional | PRD §4, task 6.3 | Rejected (D-28: closing stays manual, with a Wrap up card and a reminder) |
-| R-24 | A sensitive-content policy before any AI reads entries | Phases 3 and 6 | Proposed |
+| R-24 | A sensitive-content policy before any AI reads entries | Phases 3 and 6 | Accepted (D-39) |
 | R-25 | Build Phase 3 in this order: 6.9, 6.10, 6.3, then the rest | Sprint 6 | Proposed |
 | R-26 | Help me think answers insert a follow-up heading; a longer pause or a toolbar button | Q14, tasks 6.2, 6.12 | Proposed |
 | R-27 | Cast of Characters: facts first, written profiles opt-in per person, and a *split* action | Task 6.14 | Proposed |
@@ -282,7 +284,7 @@ Status is **Proposed** until it's decided. Then it becomes **Accepted (D-xx)**, 
 ### Move up or promote
 | ID | Recommendation | Touches | Status |
 |---|---|---|---|
-| R-31 | Build groups and group Loot Drops (8a) right after the first part of Phase 3, or before it | Sprint 8 | Proposed |
+| R-31 | Build groups and group Loot Drops (8a) right after the first part of Phase 3, or before it | Sprint 8 | Accepted (D-31): groups now come before the AI |
 | R-32 | Invited friends can join a group and add photos in one step | Tasks 8.2, 8.6 | Proposed |
 | R-33 | Make print ("Era books") a paid product instead of a Phase 4 polish item | Task 7.5, Q15 | Proposed |
 
@@ -302,30 +304,31 @@ Status is **Proposed** until it's decided. Then it becomes **Accepted (D-xx)**, 
 | R-40 | A Google Play listing, and an iOS wrapper, before any marketing spend | PRD §6 | Proposed |
 | R-41 | Short video clips (30 seconds or less) | D-17, Phase 4 | Proposed |
 | R-42 | An optional one-tap mood chip | Phase 1 or 3 | Deferred (Q25) |
-| R-43 | Import from Day One | PRD §6 | Proposed |
+| R-43 | Import from Day One | PRD §6 | Parked (PRD §6, ideas for much later) |
 
 ## 7. New feature ideas
 Status is **Idea** until someone picks one up. Sizes run from S (small) to L (large).
 
 | ID | Idea | What it is | Why it's worth it | Size, when | Status |
 |---|---|---|---|---|---|
-| R-44 | Photo dump | Pick 60 photos and they're filed into backdated entries, one per day taken, to caption later | The memory hoarder's exact problem; nobody else files a camera roll into chapters | S–M, Phase 1–2 | Idea |
+| R-44 | Photo dump | Pick 60 photos and they're filed into backdated entries, one per day taken, to caption later | The memory hoarder's exact problem; nobody else files a camera roll into chapters | S–M, Phase 1–2 | Accepted (D-34) |
 | R-45 | Email-in capture | Email or forward anything to a private address and it becomes an entry | COMPETITOR_NOTES §5 claims capture as easy as the bot apps, but nothing in the plan delivers it | M, Phase 2 | Idea |
-| R-46 | Soundtrack | Attach the song you had on repeat; each Era gets a playlist | Music is a strong memory trigger, and a link is cheap to store | S, any phase | Idea |
+| R-46 | Soundtrack | Attach the song you had on repeat; each Era gets a playlist | Music is a strong memory trigger, and a link is cheap to store | S, any phase | Accepted (D-35) |
 | R-47 | Life in chapters | A zoomed-out view of all your Eras as overlapping bars across the years | Makes Eras visual and worth a screenshot, without showing private content | M, Phase 2 | Idea |
-| R-48 | Closing an Era | Ending a chapter prompts for a cover, a last word, and an optional letter "to open in 5 years". From Phase 3 it also adds the chapter's summary | Turns a settings change into a ritual that links three features | S–M | Idea |
+| R-48 | Closing an Era | Ending a chapter prompts for a cover, a last word, and an optional letter "to open in 5 years". From Phase 3 it also adds the chapter's summary | Turns a settings change into a ritual that links three features | S–M | Accepted: covers in Phase 1 (D-36), the ritual in Phase 4 (D-28) |
 | R-49 | Era suggestions | "New names and places since March. Start a new chapter?" | Delivers "we handle the organising" for Eras | M, Phase 3 | Idea |
-| R-50 | Predictions | A sealed yes-or-no bet with yourself ("Still at this job in a year?"). On unlock you answer again, and the app keeps score | Uses the two-option card style; fun and repeatable | S | Idea |
-| R-51 | Yearly letter | A birthday reminder to seal a letter to next year's you | A reason to come back every year, with no streaks | S, needs R-06 | Idea |
-| R-52 | A gift of memories | "Mo's birthday is Friday": your moments with Mo, gathered into a page to share or print | A gift brings memoirist to someone new | M, Phase 3+ | Idea |
+| R-50 | Predictions | A sealed yes-or-no bet with yourself ("Still at this job in a year?"). On unlock you answer again, and the app keeps score | Uses the two-option card style; fun and repeatable | S | Accepted (Phase 6, task 9.6) |
+| R-51 | Yearly letter | A birthday reminder to seal a letter to next year's you | A reason to come back every year, with no streaks | S, needs R-06 | Accepted (D-32) |
+| R-52 | A gift of memories | "Mo's birthday is Friday": your moments with Mo, gathered into a page to share or print | A gift brings memoirist to someone new | M, Phase 3+ | Accepted (Phase 6, task 9.7) |
 | R-53 | AI receipts | A page listing what the AI read, when, and for which feature | Makes "private AI" visible; D-21 already records sources, so it's mostly UI | S, Phase 3 | Idea |
 | R-54 | Discreet entries | Chosen entries stay blurred in the feed until tapped | Privacy on the train or at work; cheap to build | S | Idea |
 | R-55 | Trip prompt | During a group's trip, one daily prompt to each member: "Today's highlight?" (a photo and a line) | Builds the shared story during the trip, not weeks later | M, Phase 5 | Idea |
 | R-56 | Reveal night | When a sealed trip opens, a full-screen slideshow of everyone's entries that you can cast to a TV | The opening is the moment people will talk about | M, Phase 5 | Idea |
-| R-57 | Year in review | Each December: your chapters, people, places and best photos, plus a card with no private content to post publicly | A yearly moment that spreads the app, like Spotify Wrapped | M, Phase 3 | Idea |
+| R-57 | Year in review | Each December: your chapters, people, places and best photos, plus a card with no private content to post publicly | A yearly moment that spreads the app, like Spotify Wrapped | M, Phase 3 | Accepted (Phase 6, task 9.8) |
 | R-58 | Write my memoir | Turn an Era, or a whole life, into an editable first-person book draft, then print it | It's what the name promises, and Storyworth charges $59–$199 for less | L, after Phase 3 and R-33 | Idea |
 | R-59 | Legacy | Choose someone to receive selected Eras or Loot Drops later, such as your kids at 18 | Deep emotional value that fits "memoir"; needs careful design | L, later | Idea |
 
 ## Changelog
 - 2026-10-27 Review written.
+- 2026-10-28 Statuses set from the user's answers to the seven open problems and the new features (D-31 to D-39, and updates to D-06, D-17 and D-28). Day One import parked.
 - 2026-10-27 Statuses set from the README sync (D-10, D-19, D-28, D-29 and Q2–Q26) and the user's answers: Eras by dates only (D-22), Recently deleted (D-30), word search staying in Phase 3, and week start as Q27.

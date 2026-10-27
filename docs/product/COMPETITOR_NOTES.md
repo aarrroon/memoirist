@@ -1,6 +1,8 @@
 # Competitor Notes and Positioning
 
 > Market research for product decisions. **Not needed for coding tasks.**
+>
+> Phase numbers here are the order at the time of writing. On 2026-10-28, D-31 moved groups to Phase 3, the AI biographer to Phase 4 and the phone features to Phase 5. The README Timeline has the current order.
 
 ## 1. The industry giant (the "filing cabinet")
 **Representative app:** Day One.
