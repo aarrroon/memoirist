@@ -107,7 +107,6 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Done when:** the workflow passes on GitHub. If no remote exists yet, the YAML validates and the job's commands pass locally.
 
 ### Sprint 3: Phase 1 API
-**Decide first:** Q18 (how the feed shows a week that is in several Eras, D-22). Record it in DECISIONS.md.
 
 - [ ] **3.1 Storage service**
   - **Read:** TECH_STACK §2 (Storage), D-03, D-17.
@@ -129,6 +128,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - a new Era holds the existing weeks its dates overlap
     - changing its dates changes which weeks it holds
     - `GET /eras/{id}` counts only the entries inside its dates, so an Era from Saturday to Sunday doesn't count the rest of the week
+    - a week's `eras` list puts pinned Eras first, then the latest start (D-22)
 
 - [ ] **3.4 Templates CRUD** (`/new-endpoint`)
   - **Done when:** every row of §Templates works and is tested; subheading limits are enforced.
@@ -273,7 +273,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Done when:** time utilities have unit tests covering a Melbourne daylight-saving change and a non-Melbourne zone.
 
 - [ ] **4.4 Feed**
-  - **Do:** infinite scroll over `GET /feed` (`useInfiniteQuery`), sticky era headers and week sections. A week in several Eras is grouped under `eras[0]`, with the others as chips (Q18).
+  - **Do:** infinite scroll over `GET /feed` (`useInfiniteQuery`), sticky era headers and week sections. A week in several Eras is grouped under `eras[0]`, with the others as chips; when `eras[0]` sits wholly inside another of the week's Eras, the week shows as a section nested inside that Era, one level deep (D-22).
   - **Done when:** the feed shows the local sample content (3.11); there are empty, loading and error states; component tests pass.
 
 - [ ] **4.5 Entry card**
@@ -300,8 +300,8 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Done when:** sealing an entry turns it into a vault card; the countdown is correct in the user's zone; once the unlock time passes, the entry shows in the Opened strip until it is opened or dismissed.
 
 - [ ] **4.9 Eras, templates and settings pages**
-  - **Do:** CRUD for eras and templates, with an Era page that lists its weeks and counts only the entries inside its dates (D-22); a gallery of starter templates that adds an editable copy with one tap (D-06); settings for display name, timezone and birthday (D-33).
-  - **Done when:** changing the timezone changes the displayed times; changing an Era's dates regroups the feed; adding a starter template creates an editable copy; component tests pass.
+  - **Do:** CRUD for eras and templates, with an Era page that lists its weeks and counts only the entries inside its dates (D-22); a gallery of starter templates that adds an editable copy with one tap (D-06); settings for display name, timezone and birthday (D-33); a *show first in the feed* pin on each Era (D-22).
+  - **Done when:** changing the timezone changes the displayed times; changing an Era's dates regroups the feed; pinning an Era moves its shared weeks under it; adding a starter template creates an editable copy; component tests pass.
 
 - [ ] **4.10 Week summary view**
   - **Read:** D-25, USER_FLOWS F-15.
@@ -321,7 +321,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 - [ ] **4.13 Photo dump and photo dates** (D-34)
   - **Read:** D-12, D-13, D-17, D-34, USER_FLOWS F-19.
   - **Do:**
-    - A *photo dump* action. It reads each photo's own date before shrinking it (ask before adding `exifr`, D-13) and groups the photos by day in the user's timezone.
+    - A *photo dump* action. It reads each photo's own date before shrinking it (with `exifr`, approved on 2026-10-28, D-13) and groups the photos by day in the user's timezone.
     - It creates one backdated entry per day, reusing the capture upload flow; a day with more than 20 photos becomes several entries.
     - Undated photos go into one entry dated today, marked so the date can be fixed.
     - In capture, a single photo's own date is offered as the memory date.

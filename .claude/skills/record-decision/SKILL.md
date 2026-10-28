@@ -1,7 +1,7 @@
 ---
 name: record-decision
 description: Record a settled choice in docs/DECISIONS.md — a new D-entry, or an update to the entry it changes — close the matching open question (Q-x) or flow gap (G-xx), and update every doc that assumed otherwise, including the README with the user's approval. Use when the user answers an open question, changes an earlier decision, or picks a library or approach.
-argument-hint: "[the decision, e.g. \"Q18: group a week under the Era that started most recently\"]"
+argument-hint: "[the decision, e.g. \"Q14: show the Help me think button after an 8-second pause\"]"
 allowed-tools: Read, Grep, Glob, Bash(date *), Bash(sed -n *)
 ---
 

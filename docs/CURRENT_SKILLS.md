@@ -130,7 +130,7 @@ One ready-to-copy example for each tool. Swap in your own task, feature or quest
 | | `Run /sync-docs for the Tags work only and show me the drift table before changing anything.` |
 | `/sprint-ready` | `/sprint-ready 3` |
 | `/sync-readme` | `/sync-readme` *(after you edit the README)* |
-| `/record-decision` | `/record-decision "Q18: group a week under the Era that started most recently, with the others as chips"` |
+| `/record-decision` | `/record-decision "Q14: show the Help me think button after an 8-second pause"` |
 | | `/record-decision "Use Lucide icons only; no second icon library"` |
 | `/parallel-check` | `/parallel-check P1-04 P1-06` |
 | `/review-with-me` | `/review-with-me` *(the uncommitted changes)* |

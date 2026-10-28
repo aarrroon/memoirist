@@ -157,7 +157,7 @@ React 19, Vite, TypeScript, Tailwind CSS v4, Motion (`motion` package), TipTap, 
 | TanStack Virtual | Only render on-screen cards in a long feed | When the feed gets slow (Sprint 4 or later) |
 | wavesurfer.js | Waveform display for voice notes | Voice-note polish, any time after 4.7 |
 | Storybook | Build and preview components in isolation | Optional, once `docs/design/DESIGN.md` exists |
-| exifr | Read a photo's own date before it's shrunk (photo dump, D-34) | Task 4.13 |
+| exifr | Read a photo's own date before it's shrunk (photo dump, D-34) | Task 4.13 (already approved, 2026-10-28) |
 | vite-plugin-pwa | Installable app (D-31) | Phase 2 |
 | react-force-graph or visx | Friendship map | Phase 4 |
 | Dexie | Offline capture | Phase 5 |
@@ -269,8 +269,11 @@ Chapters of life overlap: a trip happens inside a year at university, and a rela
 - **No changes by hand.** Users don't add single weeks to an Era or take them out. To change what an Era holds, they change its dates. Tags (D-26) cover themes that don't follow dates.
 - **Only the entries inside its dates:** an Era's page and its counts show only the entries whose memory date falls inside the Era's dates. A weekend trip shows just that weekend, although its week also belongs to the Era.
 - Deleting an Era deletes only the Era. Its weeks, their entries and their other Eras stay.
-- The API shows a week's Eras as a list (`eras`, latest start first). `PUT /weekly-logs/{id}` sets only the title.
-- The feed lists each week once. Which Era it is grouped under is open question Q18; the default is the Era that started most recently, with the others shown as chips on the week.
+- The API shows a week's Eras as a list (`eras`): pinned Eras first, then latest start first. `PUT /weekly-logs/{id}` sets only the title.
+- **The feed lists each week once (answers Q18):**
+  - **Chapters inside chapters.** A week goes under the first Era in its list. If that Era sits wholly inside another of the week's Eras (it starts on or after it, and ends on or before it; an Era with no end date runs on), the week is shown as a section nested inside that bigger Era, one level deep. A trip shows as a section inside "Uni Days".
+  - **Partial overlaps.** When neither Era fits inside the other (a job from March to December and a relationship from June onwards), the week goes under the Era that started most recently, with the others as chips on the week.
+  - **Pin to choose.** The user can pin an Era ("show first in the feed", `eras.pinned_in_feed`). A pinned Era comes first in a week's list, so it wins over unpinned ones; among several pinned Eras, the latest start wins.
 - Trip Eras (D-19) are ordinary Eras linked to a group, so they cover the trip's dates. An entry added to the trip but dated outside them stays in the group, not in the trip Era.
 - Anything counted per Era counts only the entries inside its dates, such as the friendship map and a person's mentions per Era (D-21). Era summaries are built from weekly summaries (D-28); how they treat a week the Era only partly covers is open question Q28.
 
@@ -280,7 +283,7 @@ Chapters of life overlap: a trip happens inside a year at university, and a rela
 - One rule ("an Era is its dates") is easy to predict and leaves nothing to keep in step: no link table, no exceptions, no cap on Eras per week. Showing only the entries inside an Era's dates keeps a weekend trip to its weekend.
 - Changes by hand covered rare cases that an Era's dates, or a tag, already handle. The user chose dates only on 2026-10-27, after the feature review (R-01, R-02).
 
-**Consequences:** this answers the old open questions Q1 and Q10. V1 has no week–Era table. Q18 is settled before Sprint 3, and Q28 before Sprint 7.
+**Consequences:** this answers the old open questions Q1, Q10 and Q18. V1 has no week–Era table; `eras` has a `pinned_in_feed` flag. Q28 is settled before Sprint 7. The user chose nested chapters with a pin on 2026-10-28.
 
 ## D-23 Capture and sealing behaviour
 Answers to the gaps G-01 to G-07 found while drafting [USER_FLOWS.md](USER_FLOWS.md).
@@ -472,7 +475,6 @@ Decide each one before the sprint that needs it, then record it with `/record-de
 | Q15 | Paid features: which are paid (the writing coach? proactive insights?), how we learn a user's plan, and whether any have a free allowance | Sprint 9 | Everything is free and sits behind switches; `FeatureGate` reads configuration |
 | Q16 | Proactive insights: how often they appear, where (inbox only, or banners and notifications), and which kinds are on by default | Sprint 9 | Opt-in, inbox only, at most 3 a week |
 | Q17 | Withdrawing AI consent: does it also delete the summaries, profiles and cards already made? | Sprint 7 | Withdrawing stops all AI use at once. Existing results stay until the user chooses "delete AI-generated content", which removes everything derived |
-| Q18 | Overlapping Eras in the feed: a week can be in several Eras (D-22) but is listed once. Which Era is it grouped under, and are the others shown as chips? | Sprint 3 | The Era that started most recently, with the others as chips on the week |
 | Q19 | Share-link privacy: shared pages are built by `EntryMapper`, which includes private tags; a week link also shows entries added to that week later; and photos can carry GPS data | Sprint 5 | Shared and group views leave out tags and template; a week link shows only the entries it had when it was made; the server strips GPS data from photos on upload, keeping the capture date |
 | Q20 | Storage and backups: R2's free 10 GB holds about 4,000 phone photos across all users, and nothing restores data after a mistake or an outage | Sprint 5 | A per-user storage quota with a clear message; Neon point-in-time restore plus a scheduled copy of the bucket, with a restore tested before launch |
 | Q21 | Devices and sessions: two devices editing one entry (D-23 says last save wins), drafts left in local storage on a shared device, and CSRF if the token is in a cookie (Q2) | Sprint 5 | Optimistic locking on entries (`409` when stale); drafts kept per user and cleared on logout; a CSRF token if cookies are used |

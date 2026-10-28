@@ -217,7 +217,7 @@ flowchart TD
 
 **Happy path**
 1. Above the weeks, an *Opened* strip shows any Loot Drops that have just opened (F-07), and an *On this day* strip shows entries from the same day in earlier years (`GET /entries/on-this-day`, D-32). Weeks are listed newest first, each with its date range, optional title and its entries in day order (API_CONTRACT §WeeklyLog).
-2. Weeks are grouped under sticky Era headers, each showing its Era's cover when it has one (D-36). A week in several Eras appears once, under the Era that started most recently, with the other Eras as chips (Q18 default). Weeks in no Era sit under a neutral heading.
+2. Weeks are grouped under sticky Era headers, each showing its Era's cover when it has one (D-36). A week in several Eras appears once (D-22). A trip inside a bigger chapter shows as a section nested inside it. When Eras only partly overlap, the week sits under the one that started most recently, with the others as chips, unless the user has pinned an Era. Weeks in no Era sit under a neutral heading.
 3. Scrolling down loads the next page (`GET /feed?page=n`) until there are no more.
 4. Each entry card shows its title (if any), carousel (swipe, arrow keys or buttons), caption and tags. Voice notes play inline. A soundtrack shows as a player that loads from Spotify only when tapped (D-35).
 5. Tapping a week's header opens its summary (F-15). A *show all entries* switch opens the timeline (F-16).
@@ -271,6 +271,7 @@ flowchart TD
 | Changing an Era's dates | It holds the weeks the new dates overlap, straight away | `PUT /eras/{id}` |
 | An Era that starts or ends mid-week, such as a weekend trip | The week is listed, but only the days inside the Era's dates count | `GET /eras/{id}` |
 | Delete an Era | Confirmation says entries are kept; only the Era goes | `DELETE /eras/{id}` |
+| Two Eras partly overlap and the user wants the older one to win in the feed | They turn on *show first in the feed* for it; the shared weeks move under it (D-22) | `PUT /eras/{id}` with `pinnedInFeed` |
 | A new or backdated entry falls inside an Era's dates | It is in the Era automatically (D-22) | — |
 | The cover's entry is sealed or in Recently deleted | The Era shows no cover until the entry is back (D-36) | — |
 

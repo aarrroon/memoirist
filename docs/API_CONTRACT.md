@@ -150,7 +150,7 @@ A lightweight row for lists such as the all-entries timeline (D-25). No caption,
 ```
 
 ### `WeeklyLog`
-Used by the feed and by week detail. `eras` lists every Era whose dates overlap the week, latest start first, so `eras[0]` is the one the feed groups it under (Q18). It is empty for a week in no Era, and is worked out from dates rather than stored (D-22). Entries are ordered by `entryDate`, then `createdAt`, ascending, so each week reads as that week's story. Entries in Recently deleted are left out (D-30).
+Used by the feed and by week detail. `eras` lists every Era whose dates overlap the week: pinned Eras first, then latest start first. The feed groups the week under `eras[0]`, nested inside a bigger Era of the week when `eras[0]` sits wholly inside it (D-22). It is empty for a week in no Era, and is worked out from dates rather than stored (D-22). Entries are ordered by `entryDate`, then `createdAt`, ascending, so each week reads as that week's story. Entries in Recently deleted are left out (D-30).
 ```json
 {
   "id": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
@@ -159,7 +159,7 @@ Used by the feed and by week detail. `eras` lists every Era whose dates overlap 
   "endDate": "2026-10-25",
   "isClosed": false,
   "soundtrack": null,
-  "eras": [ { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "title": "Monash Double Degree Era" } ],
+  "eras": [ { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "title": "Monash Double Degree Era", "startDate": "2025-02-24", "endDate": null, "pinnedInFeed": false } ],
   "entries": [ { "...": "Entry" } ]
 }
 ```
@@ -177,13 +177,13 @@ Used by the feed and by week detail. `eras` lists every Era whose dates overlap 
 ### Eras (tag: Eras)
 | Method and path | Body | Success |
 |---|---|---|
-| `POST /eras` | `{ "id"?, "title": string(1–150), "description"?: string, "startDate": date, "endDate"?: date ≥ startDate, "soundtrack"?: Spotify URI or null, "coverMediaId"?: uuid or null }` | `201` era. It holds every week its dates overlap, existing weeks included (D-22). A cover must be an image from one of the user's own entries, otherwise `400`; another user's media is `404` (D-36) |
+| `POST /eras` | `{ "id"?, "title": string(1–150), "description"?: string, "startDate": date, "endDate"?: date ≥ startDate, "soundtrack"?: Spotify URI or null, "coverMediaId"?: uuid or null, "pinnedInFeed"?: boolean (default `false`) }` | `201` era. It holds every week its dates overlap, existing weeks included (D-22). A cover must be an image from one of the user's own entries, otherwise `400`; another user's media is `404` (D-36) |
 | `GET /eras` | — | `200` array of eras, `startDate` descending |
 | `GET /eras/{eraId}` | — | `200` era plus `"weeklyLogs": [{ "id", "title", "startDate", "endDate", "isClosed", "entryCount" }]`, newest first: the weeks its dates overlap. `entryCount` counts only the week's entries inside the Era's dates (D-22) |
 | `PUT /eras/{eraId}` | Same as POST without `id` (full replace) | `200` era. New dates apply at once: it holds the weeks they overlap (D-22) |
 | `DELETE /eras/{eraId}` | — | `204`. Only the Era goes; its weeks, their entries and their other Eras stay |
 
-Era shape: `{ "id", "title", "description", "startDate", "endDate", "soundtrack", "cover", "createdAt", "updatedAt" }`. `cover` is a presigned `Media`, or `null` when there's none or its entry is sealed or in Recently deleted (D-36). `soundtrack` is a Spotify URI or `null` (D-35).
+Era shape: `{ "id", "title", "description", "startDate", "endDate", "soundtrack", "cover", "pinnedInFeed", "createdAt", "updatedAt" }`. `pinnedInFeed` makes the Era win in the feed for weeks it shares (D-22). `cover` is a presigned `Media`, or `null` when there's none or its entry is sealed or in Recently deleted (D-36). `soundtrack` is a Spotify URI or `null` (D-35).
 
 ### Templates (tag: Templates)
 | Method and path | Body | Success |

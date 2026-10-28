@@ -59,6 +59,7 @@ A user-named chapter of life. It holds every week its dates overlap and shows th
 | end_date | DATE | NULL means ongoing. CHECK `end_date IS NULL OR end_date >= start_date` |
 | soundtrack | VARCHAR(100) | NULL. A Spotify URI; the format is checked in the service (D-35) |
 | cover_media_id | UUID | NULL → media ON DELETE SET NULL. One of the user's own photos (service check); hidden while its entry is sealed or in Recently deleted (D-36) |
+| pinned_in_feed | BOOLEAN | NOT NULL DEFAULT FALSE. A pinned Era wins in the feed for weeks it shares with other Eras (D-22) |
 | created_at, updated_at | TIMESTAMPTZ | |
 
 ### `templates`
@@ -167,6 +168,7 @@ CREATE TABLE eras (
     start_date   DATE NOT NULL,
     end_date     DATE,
     soundtrack   VARCHAR(100),  -- a Spotify URI (D-35); cover_media_id is added after media below
+    pinned_in_feed BOOLEAN NOT NULL DEFAULT FALSE,  -- wins in the feed for shared weeks (D-22)
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_eras_dates CHECK (end_date IS NULL OR end_date >= start_date)
