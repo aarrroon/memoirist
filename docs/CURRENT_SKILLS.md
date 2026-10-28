@@ -19,6 +19,10 @@ Everything set up for working on memoirist with Claude Code, and when to use eac
 | Bring the docs in line after editing the README | `/sync-readme` |
 | Split the roadmap into features | [prompts/split-into-features.md](prompts/split-into-features.md) |
 | Look up current library docs | context7 |
+| Get quizzed on a change before committing | `/review-with-me` |
+| Learn a topic properly, with a small exercise | `/teach` |
+| Record what you learned | `/log-learning` |
+| Change how much Claude teaches as it works | Output style (see [LEARNING.md](LEARNING.md)) |
 
 ---
 
@@ -27,7 +31,7 @@ Type `/name` to run one. Skills marked **You only** run only when you type them;
 
 | Skill | What it does | When to use it | Changes files? | Who starts it |
 |---|---|---|---|---|
-| `/implement-task [id]` | Reads the task, its README promise and (for screens) its user flow; plans and waits for your OK; builds, tests and updates the docs; has spec-reviewer check it; then ticks it off | Every task in [SPRINT_PLAN.md](SPRINT_PLAN.md) | Yes | You or Claude |
+| `/implement-task [id]` | Reads the task, its README promise and (for screens) its user flow; offers you a piece to write yourself (one for your job, one new pattern, or "not this time"); plans and waits for your OK; builds, tests and updates the docs; has spec-reviewer check it; then ticks it off | Every task in [SPRINT_PLAN.md](SPRINT_PLAN.md) | Yes | You or Claude |
 | `/new-migration [description]` | The safe recipe for a database change: next version number, conventions, entities, schema doc, tests | Any time a table or column changes | Yes | You or Claude |
 | `/new-endpoint [resource]` | The recipe for an API endpoint: contract → DTOs → service → mapper → controller → tests | Adding or changing anything under `/api/v1` | Yes | You or Claude |
 | `/sync-docs` | Compares the code with API_CONTRACT and DATABASE_SCHEMA and fixes drift (asks you when behaviour differs) | After endpoint or schema work, and at the end of each feature | Yes (docs) | You or Claude |
@@ -35,6 +39,9 @@ Type `/name` to run one. Skills marked **You only** run only when you type them;
 | `/sprint-ready [n]` | Reports README items with no task, open questions and gaps that are due, untestable "Done when" items, missing doc sections, sealed-entry leaks and conflicts for a sprint. Verdict: Ready / Ready with warnings / Blocked | Before starting a sprint or feature | No | **You only** |
 | `/record-decision [decision]` | Records a decision in DECISIONS.md (a new entry, or an update to the one it changes), closes the matching question or gap, and updates every doc that assumed otherwise. Asks before changing the README | Whenever you answer a Q-x or change your mind about something | Yes (docs) | You or Claude |
 | `/parallel-check [P1-04 P1-06]` | Checks dependencies and file overlaps between features, reserves migration numbers, gives a merge order, and writes a kickoff note for each session | Before building two or more features at the same time | No | **You only** |
+| `/review-with-me [scope]` | Tours the change file by file in reviewing order, then asks you 3–5 review questions (edge cases, design choices, spot-the-bug, what's missing) and grades each answer. Ends with a score, one strength and one thing to practise | After a task, before committing | No | **You only** |
+| `/teach [topic]` | A 15-minute lesson: the idea, how it works underneath, where it shows up in memoirist, a 5–10 minute exercise, and feedback | When something in the code or specs confuses you | No | **You only** |
+| `/log-learning [notes]` | Adds an entry to [LEARNING_LOG.md](LEARNING_LOG.md) from the session (or your notes) and updates the skills tracker (Seen → Tried → Can do) | End of a task, review or lesson; the other learning skills offer it | Yes (the log) | You or Claude |
 | `ui-ux-pro-max` | Design intelligence: styles, palettes, fonts, UX checks (you installed it yourself) | Design work and UI reviews | Depends on the request | You or Claude |
 
 ## Subagents
@@ -105,6 +112,7 @@ These come with Claude Code.
 | `/simplify` | Tidy up changed code (quality only, not bugs) |
 | `/fewer-permission-prompts` | After a week of real work, allow the safe commands Claude keeps asking about |
 | `/doctor prompt-audit` | Find contradictions across CLAUDE.md, rules and skills |
+| `/output-style [name]` | Switch how much Claude teaches: `learning`, `explanatory`, `default`… (values explained in [LEARNING.md](LEARNING.md)) |
 
 ---
 
@@ -125,6 +133,12 @@ One ready-to-copy example for each tool. Swap in your own task, feature or quest
 | `/record-decision` | `/record-decision "Q18: group a week under the Era that started most recently, with the others as chips"` |
 | | `/record-decision "Use Lucide icons only; no second icon library"` |
 | `/parallel-check` | `/parallel-check P1-04 P1-06` |
+| `/review-with-me` | `/review-with-me` *(the uncommitted changes)* |
+| | `/review-with-me 3.4` |
+| `/teach` | `/teach JPA lazy loading and why it fails outside a transaction` |
+| | `/teach` *(no topic: suggests three for the next sprint)* |
+| `/log-learning` | `/log-learning` *(after a review or lesson)* |
+| | `/log-learning finally understood why the service, not the controller, checks ownership` |
 | `ui-ux-pro-max` | `Use ui-ux-pro-max to propose 3 clearly different design directions for a private journaling PWA: one scrapbook, one editorial, one dark "time capsule". Give a palette, font pairing and card style for each.` |
 
 ### Subagent

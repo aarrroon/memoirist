@@ -48,13 +48,13 @@ Building two features at once? First run `/parallel-check P1-04 P1-06`, then sta
    ```text
    /implement-task 3.5
    ```
-   Read the plan it shows you. Approve it or ask for changes. It builds, writes tests, runs them and quotes the results.
+   First it offers you a piece to write yourself (or "not this time"). Then read the plan it shows you. Approve it or ask for changes. It builds, leaves your piece as `TODO(human)` if you chose one, writes tests, runs them and quotes the results.
 2. Get an independent review:
    ```text
    Use the spec-reviewer subagent to review my uncommitted changes for task 3.5. Show me the findings before fixing anything.
    ```
    Tell it which findings to fix. Ask for the review again until nothing serious remains.
-3. Optional bug hunt: `/code-review`
+3. Optional bug hunt: `/code-review`. Optional, but worth it for learning: `/review-with-me`, then `/log-learning` ([LEARNING.md](LEARNING.md)).
 4. Check the docs and commit:
    ```text
    Run /sync-docs, then commit as "Sprint 3.5: <summary>".

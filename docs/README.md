@@ -7,6 +7,7 @@ Where everything lives. For what the app is, see the [project README](../README.
 |---|---|
 | [WORKFLOW.md](WORKFLOW.md) | How features go from plan to code, and how docs stay in sync |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Setup, commands, ports, troubleshooting |
+| [LEARNING.md](LEARNING.md) | How the project helps you learn: output styles, hands-on pieces, review quizzes, lessons. Your log: [LEARNING_LOG.md](LEARNING_LOG.md) |
 | [CURRENT_SKILLS.md](CURRENT_SKILLS.md) | Every Claude Code skill, subagent, hook, rule and prompt, and when to use each |
 | [DECISIONS.md](DECISIONS.md) | Every settled decision (D-xx) and open question (Q-xx). **Wins on how things work; the project README wins on what users get and when (D-27)** |
 

@@ -76,6 +76,13 @@ Details live in `.claude/rules/`, which load when you touch matching files.
 - Commit only when asked. Use one commit per task, with the message `Sprint <id>: <summary>`.
 - Spring Boot 4, Hibernate 7, Jackson 3, React 19, Tailwind v4 and TipTap 3 are newer than many examples. Check current docs (the context7 MCP) before using an API you're unsure of.
 
+## Learning (the user's goal alongside shipping)
+The user wants to grow as an engineer while building this: better solution choices, new syntax and patterns, and reviewing code they didn't type. Details: `docs/LEARNING.md`.
+- **Before every coding task**, `/implement-task` asks whether they want to write one piece themselves, offering one that transfers to their job (see About me in `docs/LEARNING_LOG.md`) and one pattern they haven't seen. Respect "not this time".
+- When choosing between approaches, name the alternatives and why one wins, in a sentence or two.
+- The first time a pattern appears (records, `@Transactional`, TanStack Query…), explain it in one sentence.
+- After a task, suggest `/review-with-me`, then `/log-learning`.
+
 ## Project tools
 The full toolkit, with when to use each, is in `docs/CURRENT_SKILLS.md`. When you add, remove or rename a skill, subagent, hook, rule or prompt, update that file in the same change.
 - `/implement-task [id]`: plan, build, test, update docs and tick one task in SPRINT_PLAN.md.
@@ -86,6 +93,9 @@ The full toolkit, with when to use each, is in `docs/CURRENT_SKILLS.md`. When yo
 - `/sprint-ready [n]`: read-only check that a sprint has no blocking questions or doc gaps. Run before starting a sprint.
 - `/parallel-check [P1-04 P1-06]`: read-only check whether features can be built in parallel; reserves migration numbers and writes each session's kickoff note.
 - `/record-decision [decision]`: record or update a D-entry, close its Q-x or G-xx, and update every doc that assumed otherwise.
+- `/review-with-me [scope]`: walk the user through a change, then quiz and grade their review.
+- `/teach [topic]`: a short lesson grounded in this codebase, with a tiny exercise.
+- `/log-learning [notes]`: add an entry to `docs/LEARNING_LOG.md` and update its skills tracker.
 - `spec-reviewer` subagent: read-only review of a change against the README, specs and rules. Use it after each task.
 - Hooks: a PreToolUse hook blocks edits to committed migrations; a Stop hook flags docs that lag behind the code, the README or the sprint plan; a SessionStart hook prints the next task and anything blocking it.
 - context7 MCP (`.mcp.json`): current library docs.
