@@ -60,3 +60,7 @@ __pycache__/
 .roo/
 .trae/
 .windsurf/
+
+# Skills installed by `npx skills` (taste-skill comes from its Claude Code plugin instead)
+.agents/
+skills-lock.json
