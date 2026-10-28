@@ -59,5 +59,6 @@ If a table, endpoint, rule or decision changed, update its doc in the same chang
   - what changed
   - what was verified, and how
   - anything left over or worth a follow-up
+- **Build journal:** when running unattended, or when the user asks for it, write `docs/build-journal/sprint-N/N.M-short-name.md` from `docs/build-journal/TEMPLATE.md` and commit it with the task. Keep notes from step 1 onwards (what you read, each decision and the alternatives, every error and fix), so the entry records what really happened, not a tidy summary. After a sprint's last task, write `docs/build-journal/sprint-N/README.md`: the sprint's goal, how its tasks fit together, a Mermaid diagram of the architecture at the end of the sprint, the test strategy, and the lessons. Update the table in `docs/build-journal/README.md`.
 - Suggest `/review-with-me` before committing, then `/log-learning` to record what they practised.
 - Propose a commit message `Sprint <id>: <summary>`. Commit only if the user asks.

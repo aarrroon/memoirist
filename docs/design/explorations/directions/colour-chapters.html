@@ -221,6 +221,67 @@ h1, h2, h3 { text-wrap: balance; }
   .loot .stack { display: grid; gap: 14px; }
   .life { display: grid; }
 }
+
+/* ---------- Review fixes (2026-10-29) ---------- */
+/* C3: the rail's year labels get their own lane. */
+.map { margin-left: 34px; }
+.map .yr { left: -4px; }
+
+/* A1: the first phone screen reaches an entry. */
+@media (max-width: 1099px) {
+  .otd { padding: 4px var(--gutter) 16px; gap: 8px; }
+  .otd h2 { font-size: 16px; }
+  .otd-list { display: flex; gap: 8px; overflow-x: auto; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter); scrollbar-width: none; }
+  .otd-list::-webkit-scrollbar { display: none; }
+  .otd-card { flex: none; width: 262px; grid-template-columns: 72px minmax(0, 1fr); }
+  .otd-card img { width: 72px; height: 72px; }
+  .otd-card .t { padding: 7px 10px; }
+  .otd-card .ago { font-size: 22px; }
+  .otd-card b { font-size: 14px; }
+  .chapter { padding-top: 20px; }
+  .ch-head { padding-bottom: 6px; gap: 4px; }
+  .ch-head h2 { font-size: 46px; }
+  .chapter .ch-cover { display: none; }
+}
+.week-line { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 3px solid var(--on); border-bottom: 2px solid rgba(0, 0, 0, .14); }
+.band--brunswick .week-line, .band--uni .week-line, .band--japan .week-line { border-bottom-color: rgba(255, 255, 255, .22); }
+.week-line > span { flex: 1; min-width: 0; }
+.week-line h3 { font-size: 30px; }
+.week-line small { display: block; font-size: 13px; font-weight: 600; margin-top: 4px; color: var(--on-2); }
+.post { grid-template-columns: minmax(0, 1fr); }
+.post > * { min-width: 0; }
+@media (min-width: 1100px) {
+  .ch-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; align-items: start; }
+  .ch-body > .week-line { grid-column: 1 / -1; }
+}
+
+/* A4: one New entry button within thumb reach; desktop keeps it in the top bar. */
+.write { position: relative; }
+.write-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 0 20px 0 16px; background: var(--ink); color: var(--paper); font-weight: 750; font-size: 16px; border: 2px solid var(--paper); }
+.write-btn:hover { opacity: .9; }
+.write-menu { position: absolute; z-index: 30; display: grid; min-width: 210px; padding: 6px; background: var(--paper); border: 2px solid var(--ink); }
+.write-menu[hidden] { display: none; }
+.write-menu button { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; font-size: 15px; font-weight: 650; color: var(--ink); text-align: left; }
+.write-menu button:hover { background: #E4E4E2; }
+.write--fab { position: fixed; z-index: 20; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+.write--fab .write-menu { right: 0; bottom: calc(100% + 8px); }
+.write--top { display: none; }
+.write--top .write-btn { min-height: 44px; border: 0; }
+.write--top .write-menu { right: 0; top: calc(100% + 8px); }
+main { padding-bottom: 96px; }
+@media (min-width: 1100px) { .write--fab { display: none; } .write--top { display: block; } main { padding-bottom: 0; } }
+
+/* C6: on a phone the date and the countdown stay together. */
+@media (max-width: 1099px) {
+  .loot { align-content: start; gap: 18px; }
+  .life { display: grid; }
+  .life li { grid-template-columns: 96px minmax(0, 1fr); }
+  .life b { font-size: 24px; }
+}
+
+/* Scrolling rows stay inside the page gutter, so a half-shown card is clipped 16-20px in, never at the screen edge. */
+@media (max-width: 1099px) { .otd-list { margin: 0; padding: 0; } }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -233,6 +294,49 @@ h1, h2, h3 { text-wrap: balance; }
   const { html, icon, date, range } = M;
   const app = document.getElementById('app');
   const BAND = { 'era-brunswick': 'brunswick', 'era-grampians': 'grampians', 'era-uni': 'uni', 'era-japan': 'japan' };
+
+  // Colour maths for C1: WCAG relative luminance and contrast, and HSL so a colour can change lightness only.
+  const rgb = (hex) => hex.replace('#', '').match(/../g).map((h) => parseInt(h, 16) / 255);
+  const luminance = (hex) => { const [r, g, b] = rgb(hex).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const contrast = (a, b) => { const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+  const toHsl = (hex) => {
+    const [r, g, b] = rgb(hex), max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+    if (max === min) return [0, 0, l];
+    const d = max - min, s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [h / 6, s, l];
+  };
+  const fromHsl = ([h, s, l]) => {
+    const f = (n) => { const k = (n + h * 12) % 12, a = s * Math.min(l, 1 - l); return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+    return `#${[f(0), f(8), f(4)].map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+  };
+
+  // TODO(human) PRACTICE: an Era's colour comes from its cover photo, so it can be anything. Return
+  // { band, on, on2 }: `on` is ink or white, whichever reads better, and `band` is the colour with its lightness moved
+  // just far enough for `on` to pass 4.5:1. `on2` is a softer text colour that still passes, or `on` itself.
+  // Hint: keep the hue and saturation, step only lightness (lighter under ink, darker under white), and stop as soon
+  // as contrast() passes. The asserts below test a pale pink and a near-white cover.
+  function bandColours(colour) {
+    // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+    const INK = '#111111', WHITE = '#FFFFFF';
+    const on = contrast(colour, INK) >= contrast(colour, WHITE) ? INK : WHITE;
+    const [h, s] = toHsl(colour);
+    let l = toHsl(colour)[2], band = colour;
+    while (contrast(band, on) < 4.5 && l > 0 && l < 1) {
+      l = Math.min(1, Math.max(0, l + (on === INK ? 0.01 : -0.01)));
+      band = fromHsl([h, s, l]);
+    }
+    const soft = on === INK ? '#3A3A3A' : '#D9D9D9';
+    return { band, on, on2: contrast(band, soft) >= 4.5 ? soft : on };
+    // └── END ANSWER ▲ ──
+  }
+  for (const c of ['#F6D5DA', '#F5F4F0', '#C9503A', '#F3C33F', '#1E5B48', '#2F4F7A']) {
+    const b = bandColours(c);
+    console.assert(contrast(b.band, b.on) >= 4.5 && contrast(b.band, b.on2) >= 4.5, 'band colours pass AA', c, b);
+  }
+  const bandStyle = document.createElement('style');
+  bandStyle.textContent = M.data.eras.map((er) => { const b = bandColours(er.colour); return `.band--${BAND[er.id]}{--band:${b.band};--on:${b.on};--on-2:${b.on2}}`; }).join('');
+  document.head.appendChild(bandStyle);
   const plural = (n, one, many = `${one}s`) => `${n.toLocaleString('en-AU')} ${n === 1 ? one : many}`;
   const daysLeft = (u) => (u.countdown.match(/\d+/) || [u.countdown])[0];
   const shortDate = (iso) => M.instant(iso, { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.');
@@ -244,8 +348,7 @@ h1, h2, h3 { text-wrap: balance; }
       ${back ? html`<a class="icon-btn" href="${back}" aria-label="Back">${icon('arrowLeft', { size: 22 })}</a><span class="tb-title">${title}</span>` : html`<a class="wordmark" href="#feed">${mark}memoirist</a>`}
       ${back ? html`<a class="wordmark nav-mark" href="#feed">${mark}memoirist</a>` : ''}
       <nav class="nav" aria-label="memoirist"><a href="#feed" ${cur(['feed', 'entry', 'loot'])}>Journal</a><a href="#era" ${cur(['era'])}>Eras</a><a href="#feed">Timeline</a><a href="#feed">Templates</a><a href="#feed">Tags</a></nav>
-      <a class="btn nav-btn" href="#entry">${icon('plus', { size: 18, stroke: 2.2 })}New entry</a>
-      <a class="icon-btn" href="#entry" aria-label="New entry">${icon('plus', { size: 24, stroke: 2 })}</a>
+      ${M.writeMenu({ label: 'New entry', cls: 'write--top' })}
     </header>`;
   }
 
@@ -259,7 +362,7 @@ h1, h2, h3 { text-wrap: balance; }
       return html`<a class="band band--${BAND[e.id]} ${e.id === currentId ? 'here' : ''}" href="#era" style="top:${top.toFixed(2)}%;height:${h.toFixed(2)}%;left:${inner ? '34px' : '0'};right:${inner ? '0' : '30px'}" title="${e.title}">${h > 6 ? e.title : ''}</a>`;
     });
     const years = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026].map((yr) => html`<span class="yr" style="top:${y(`${yr}-01-01`).toFixed(2)}%">${yr}</span>`);
-    return html`<aside class="rail" aria-label="Your chapters"><h2>Your chapters, 2019 to now</h2>
+    return html`<aside class="rail" aria-label="Your Eras"><h2>Your Eras, 2019 to now</h2>
       <div class="map"><span class="gap" style="top:${y('2023-11-24').toFixed(2)}%;height:${(y('2024-03-02') - y('2023-11-24')).toFixed(2)}%"></span>${years}${blocks}</div></aside>`;
   }
 
@@ -288,8 +391,8 @@ h1, h2, h3 { text-wrap: balance; }
   function post(e) {
     if (M.isSealed(e)) {
       const u = M.opening(e);
-      return html`<article class="post" aria-label="Sealed Loot Drop"><p class="meta">${date(e.entryDate, 'dayLong')}</p>
-        <a class="slab" href="#loot"><span class="lock">${icon('lock', { size: 18, stroke: 2.2 })}Sealed Loot Drop</span><span class="date">${shortDate(e.unlockDate)}</span>
+      return html`<article class="post" data-sealed aria-label="Sealed Loot Drop"><p class="meta">${date(e.entryDate, 'dayLong')}</p>
+        <a class="slab" href="#loot"><span class="lock">Sealed Loot Drop</span><span class="date">${shortDate(e.unlockDate)}</span>
           <span><span class="left" style="display:block">${daysLeft(u)} days to go</span><span class="when">${u.opens}</span></span></a></article>`;
     }
     const pics = M.images(e);
@@ -304,6 +407,14 @@ h1, h2, h3 { text-wrap: balance; }
     </article>`;
   }
 
+  // A week in the feed is one line; tapping it opens the week's summary (D-25). Sealed entries never count (D-10).
+  function weekLine(w) {
+    const s = M.weekStats(w);
+    const facts = [plural(s.entryCount, 'entry', 'entries'), s.photoCount && plural(s.photoCount, 'photo'), s.voiceNoteCount && plural(s.voiceNoteCount, 'voice note')].filter(Boolean).join(', ');
+    return html`<a class="week-line" href="#feed" aria-label="${M.weekLabel(w)}: open the week's summary">
+      <span><h3 class="poster">${M.weekLabel(w)}</h3><small>${range(w.startDate, w.endDate)}. ${facts}${s.tags.length ? `. ${s.tags.map((t) => t.name).join(', ')}` : ''}</small></span>${icon('chevronRight', { size: 22, stroke: 2 })}</a>`;
+  }
+
   function feed() {
     return html`${topbar('feed')}
       <div class="frame">${rail('era-brunswick')}
@@ -313,12 +424,13 @@ h1, h2, h3 { text-wrap: balance; }
             <div class="otd-list">${M.data.onThisDay.map((e) => html`<a class="otd-card band band--${BAND[e.eras[0].id]}" href="#entry"><img src="${M.src(M.images(e)[0])}" alt="${M.images(e)[0].alt}">
               <span class="t"><span class="ago poster">${M.yearsAgo(e.entryDate)}</span><span><b>${e.title}</b><span class="muted" style="display:block;font-size:13px;font-weight:600">${e.eras[0].title}</span></span></span></a>`)}</div></section>
           ${M.feedGroups().map((g) => html`<section class="chapter band band--${BAND[g.era.id]}" aria-label="${g.era.title}">
-            <header class="ch-head"><h2 class="poster"><a href="#era">${g.era.title}</a></h2><p>${range(g.era.startDate, g.era.endDate)}</p>
+            <header class="ch-head"><h2 class="poster"><a href="#era">${g.era.title}</a></h2><p>${range(g.era.startDate, g.era.endDate)}${g.weeks[0].eras.length > 1 ? `, inside ${g.weeks[0].eras[1].title}` : ''}</p>
               ${M.cover(g.era) ? html`<img class="ch-cover" src="${M.cover(g.era)}" alt="">` : ''}</header>
-            ${g.weeks.map((w) => html`<div class="ch-body">${weekSum(w)}${w.entries.map(post)}</div>`)}
+            ${g.weeks.map((w) => html`<div class="ch-body">${weekLine(w)}${w.entries.map(post)}</div>`)}
           </section>`)}
         </main>
-      </div>`;
+      </div>
+      ${M.writeMenu({ label: 'New entry', cls: 'write--fab' })}`;
   }
 
   // ---------- Entry ----------
@@ -336,7 +448,8 @@ h1, h2, h3 { text-wrap: balance; }
           <p style="font-size:14px;font-weight:600">From the Trips template. Also in ${w.eras[1].title}.</p>
           <div class="actions"><a class="btn" href="#entry">${icon('pen', { size: 18 })}Edit</a><a class="btn btn--line" href="#loot">${icon('lock', { size: 18 })}Seal as a Loot Drop</a><button class="btn btn--ghost">Delete</button></div>
         </div>
-      </article></main>`;
+      </article></main>
+      ${M.writeMenu({ label: 'New entry', cls: 'write--fab' })}`;
   }
 
   // ---------- Era ----------
@@ -359,14 +472,15 @@ h1, h2, h3 { text-wrap: balance; }
         <img class="ch-cover" src="${M.cover(e)}" alt="Victorian terrace houses with iron lace verandahs, the cover of this Era">
         <p class="meta-row" style="font-weight:650">${range(e.startDate, e.endDate)}, ${p.span} so far</p>
         <div class="era-figs"><div><b>${t.weekCount}</b><small>weeks</small></div><div><b>${t.entryCount}</b><small>entries</small></div><div><b>${t.photoCount.toLocaleString('en-AU')}</b><small>photos</small></div><div><b>${t.voiceNoteCount}</b><small>voice notes</small></div></div>
-        <section class="bars-chart" aria-labelledby="bars-h"><h2 id="bars-h" class="section-h">Every week, by how much you wrote</h2>${weekBars(e.id)}</section>
+        <section class="bars-chart" aria-labelledby="bars-h"><h2 id="bars-h" class="section-h">Every week of this Era</h2>${weekBars(e.id)}</section>
         <div class="side">
-          <h2 class="section-h">Chapters inside this one</h2>
+          <h2 class="section-h">Eras inside this one</h2>
           <div class="inside">${p.chaptersInside.map((c) => html`<a class="band band--${BAND[c.id]}" href="#era"><b>${c.title}</b><small>${range(c.startDate, c.endDate)}</small></a>`)}</div>
           <div class="extras">${sound(e.soundtrack)}</div>
           <a class="btn btn--line" href="#era" style="justify-self:start">${icon('calendar', { size: 18 })}Change dates or cover</a>
         </div>
-      </section></main>`;
+      </section></main>
+      ${M.writeMenu({ label: 'New entry', cls: 'write--fab' })}`;
   }
 
   // ---------- Loot Drop ----------
@@ -376,19 +490,20 @@ h1, h2, h3 { text-wrap: balance; }
       <main class="loot">
         <p class="date" aria-hidden="true">${shortDate(e.unlockDate)}</p>
         <div class="stack" style="display:grid;gap:14px">
-          <h1>${icon('lock', { size: 18, stroke: 2.2 })}Sealed Loot Drop</h1>
+          <h1>Sealed Loot Drop</h1>
           <p class="left">${daysLeft(u)} days to go</p>
-          <p class="when">${u.opens}. Dated ${date(e.entryDate, 'long')}, in ${w.eras[0].title}.</p>
+          <p class="when">${u.opens}</p>
           <p class="rule">Nobody can open it or change it before then, you included.</p>
           <div class="actions"><button class="btn">${icon('clock', { size: 18 })}Extend the seal</button><button class="btn btn--ghost">Delete</button></div>
         </div>
         <ol class="life" aria-label="What happens to it">
-          <li><b>Written</b><span>${date(e.entryDate, 'long')}</span></li>
+          <li><b>Written</b><span>${date(e.entryDate, 'long')}, in ${w.eras[0].title}</span></li>
           <li class="now"><b>Sealed</b><span>Today, ${date(M.today(), 'long')}</span></li>
-          <li><b>Opens</b><span>${u.opens.replace(/^Opens /, '')}</span></li>
+          <li><b>Opens</b><span>At 9:00 am, Melbourne time</span></li>
           <li><b>Then</b><span>It waits at the top of your journal until you read it, and you can write back to past you.</span></li>
         </ol>
-      </main>`;
+      </main>
+      ${M.writeMenu({ label: 'New entry', cls: 'write--fab' })}`;
   }
 
   const SCREENS = { feed, entry: entryScreen, era: eraScreen, loot: lootScreen };

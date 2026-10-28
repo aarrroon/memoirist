@@ -42,7 +42,7 @@ Gradle Kotlin DSL, base package `com.memoirist`, organised by feature:
 ```
 com.memoirist
 ├── MemoiristApplication.java   # sets JVM default timezone to UTC before SpringApplication.run
-├── common/        # errors (ProblemDetail), PageResponse, Clock bean, base entity, config
+├── common/        # errors (ProblemDetail), PageResponse, Clock bean, BaseEntity and TimestampedEntity (D-12), config
 ├── user/          # User, CurrentUserProvider, DevHeaderCurrentUserProvider (local/test), /users/me
 ├── era/           # Era, covers (D-36)
 ├── template/
@@ -52,7 +52,7 @@ com.memoirist
 ├── entry/         # Entry, EntryMapper (the ONLY Entry→DTO path), content validation + text extraction, seal rules, opened Loot Drops, Recently deleted and its sweep (D-30), On this day and Loot Drop replies (D-32, D-33)
 ├── media/
 ├── storage/       # StorageService, StorageProperties, local bucket bootstrap
-└── dev/           # local-profile-only sample content (task 3.11)
+└── dev/           # local-profile-only sample content (task 3.16)
 ```
 
 Each feature folder contains:
@@ -66,7 +66,7 @@ Each feature folder contains:
 ### Profiles
 | Profile | Used for | Notable settings |
 |---|---|---|
-| `local` | Running on your machine against Docker Compose | Imports `../.env`; Flyway locations `db/migration` + `db/seed-local`; dev-header user provider; creates the bucket at startup if missing; optional sample content (task 3.11) |
+| `local` | Running on your machine against Docker Compose | Imports `../.env`; Flyway locations `db/migration` + `db/seed-local`; dev-header user provider; creates the bucket at startup if missing; optional sample content (task 3.16) |
 | `test` | Testcontainers integration tests | Same Flyway locations as `local`; dev-header provider |
 | `prod` | Phase 2 deployment | Flyway `db/migration` only; JWT provider; R2 settings from the environment |
 
@@ -91,6 +91,7 @@ Each feature folder contains:
   - Allowed marks: `bold`, `italic`, `strike`, `code`, `link` (protocols `http`, `https`, `mailto`).
 - **Redaction:** `EntryMapper` is the only place an `Entry` becomes a DTO, both the full `Entry` (`toResponse(entry, now)`) and the list row `EntrySummary` (`toSummary(entry, now)`). If `unlockDate` is after `now`, it nulls `title`, `contentJson`, `contentText`, `templateId`, `previewLine`, `firstMediaKind`, `soundtrack`, `replyToEntryId` and the media counts, empties `media`, `tags` and `replyIds`, and sets `isLocked = true`. Feed, week detail, create, update, seal, share links (Phase 2) and group views (Phase 3) all go through it. AI input doesn't: it comes only from `AiContentSource`, which skips sealed entries (D-21).
 - **Counts and filters:** queries that count or filter by content (tag filters, tag counts, search, people stats) leave sealed entries out in the query itself (D-10).
+- **Stale edits (D-23):** `Entry` has a `@Version` field. `EntryService` compares the `version` in a `PUT` with the loaded one and throws `EntryStaleException` if they differ; Hibernate's own check catches a race between that load and the commit. Both become `409 entry-stale`.
 - **Seal guard:** `EntryService` rejects edits to title, content, date, template, tags and media on sealed entries with `409`. The unlock date may only move later.
 - **Opened Loot Drops (D-10):** sealing clears `unlock_seen_at`, and `GET /entries/opened` finds unlocked, unseen entries through a partial index. `unlock_notified` is a separate flag for the background unlock job (unlock emails from Phase 2, refreshing AI results from Phase 4), which has its own partial index.
 - **On this day (D-32):** `GET /entries/on-this-day` matches the month and day of `entry_date` in earlier years, in the user's timezone, leaving out sealed and deleted entries in the query. In a year that isn't a leap year, 29 February matches 28 February.

@@ -249,7 +249,7 @@ flowchart TD
 | Situation | What the user sees | API |
 |---|---|---|
 | Entry is sealed | Only *extend seal* and *delete* are offered (F-07) | `409` otherwise |
-| Edited on another device meanwhile | Last save wins (D-23) | — |
+| Edited on another device meanwhile | *This entry changed somewhere else.* The typed text stays in the editor, with *load latest* (D-23) | `409 entry-stale` |
 | Entry no longer exists | *This memory was deleted*; the feed refreshes | `404` |
 
 ---
@@ -430,7 +430,7 @@ flowchart TD
 | Situation | What the user sees | API |
 |---|---|---|
 | More than 20 photos on one day | That day becomes two or more entries of up to 20 (D-17) | — |
-| A photo has no date | It goes into one entry dated today, marked *date unknown* so the user can fix it (F-05) | — |
+| A photo has no date | It goes into one entry dated today, with a *date unknown, fix it* badge until the user changes the date (F-05, D-34) | `POST /entries` with `dateUnknown: true`; a `PUT` with a new `entryDate` clears it |
 | An upload fails | That photo waits in a retry list; retrying reuses the entry's `id`, so nothing is duplicated (D-12) | `POST /entries` replay → `200` |
 | HEIC, video or another unsupported file | That file is marked *not supported*; the rest carry on (D-17) | `415` |
 | A day falls inside an Era | Its entry is in that Era automatically (D-22) | — |
@@ -456,7 +456,7 @@ These are kept short on purpose. Expand each one when its sprint is next, after 
 ## Gaps found while drafting
 All eight gaps (G-01 to G-08) were settled on 2026-10-27: G-01 to G-07 in D-23, and G-08 in D-25 (with D-24 entry titles and D-26 manual tags following from it).
 
-G-09 to G-13, found while syncing the docs with the README, were settled the same day: sealed entries in tag filters and counts (G-09, D-10), surfacing opened Loot Drops (G-10, D-10), previews of template entries (G-11, D-06 and D-24), sample content for building the UI (G-12, task 3.11), and the earliest memory date (G-13, D-09).
+G-09 to G-13, found while syncing the docs with the README, were settled the same day: sealed entries in tag filters and counts (G-09, D-10), surfacing opened Loot Drops (G-10, D-10), previews of template entries (G-11, D-06 and D-24), sample content for building the UI (G-12, task 3.16), and the earliest memory date (G-13, D-09).
 
 New gaps go here with the next number until they are recorded with `/record-decision`.
 

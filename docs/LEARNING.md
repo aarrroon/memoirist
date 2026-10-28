@@ -11,6 +11,7 @@
 | `/review-with-me` | Walks you through the change, then asks you review questions and grades your answers | After a task, before committing |
 | `/teach [topic]` | A short lesson on something from this codebase, with a tiny exercise | Whenever something confuses you |
 | `/log-learning` | Adds an entry to your learning log from the session (or from your own notes) | End of a task, a review or a lesson |
+| **[Build journal](build-journal/README.md)** | A step-by-step record of how each task was built: decisions and alternatives, tests, what went wrong, concepts, check-yourself questions. One overview per sprint | Written during overnight runs (or when you ask); study it afterwards |
 
 ## 1. Output styles: what the values mean
 

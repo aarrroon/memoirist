@@ -18,7 +18,7 @@
   --line: #E3E3E3;
   --ink: #141414;
   --ink-2: #6A6762;       /* 5.4:1 on white */
-  --gold: #F2701D;        /* rings, the sealed panel */
+  --gold: #E5640F;        /* rings and the sealed panel: 3.4:1 on white, enough for meaningful graphics */
   --gold-ink: #A6430C;    /* orange text on white, 5.4:1 */
   --gold-wash: #FDEEE3;
   --font: 'Figtree', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -289,6 +289,65 @@ h1, h2, h3 { text-wrap: balance; }
   .loot-steps b { display: block; font-size: 15px; }
   .loot-steps small { display: block; font-size: 13px; color: var(--ink-2); }
 }
+
+/* ---------- Review fixes (2026-10-29) ---------- */
+/* G1: rings show what is new to see, never days. G4: discs sit centred in their rings. */
+.ring > .ring-label { width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--ink); }
+.ring-art { border-radius: 50%; }
+.ring-art::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2.5px solid var(--line); }
+.ring--fresh .ring-art::after { border: 3px solid var(--gold); }
+.ring-art .face, .ring-art .count { inset: 6px; width: auto; height: auto; }
+.ring-art .face { width: calc(100% - 12px); height: calc(100% - 12px); }
+@media (min-width: 1100px) { .ring--fresh { display: none; } }
+
+/* A1: the week is one line that opens its summary. */
+.week-line { display: flex; align-items: center; gap: 12px; margin: 10px var(--gutter) 0; padding: 12px 0; border-bottom: 1px solid var(--line); color: var(--ink); }
+.week-line > span { flex: 1; min-width: 0; }
+.week-line h2 { font-size: 17px; font-weight: 750; line-height: 1.25; }
+.week-line small { display: block; font-size: 13px; color: var(--ink-2); }
+.week-line .icon { color: var(--ink-2); }
+.era-bar { margin-top: 6px; }
+@media (min-width: 1100px) { .week-line { margin: 14px 0 0; } }
+
+/* G2, A4: a fixed bottom bar on every phone screen, Write in the middle. */
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+#app { padding-bottom: 76px; }
+@media (min-width: 1100px) { #app { padding-bottom: 0; } }
+.write { position: relative; display: grid; }
+.write-menu { position: absolute; z-index: 30; display: grid; min-width: 210px; padding: 6px; background: var(--bg); border-radius: 14px; box-shadow: 0 12px 32px rgba(0, 0, 0, .18), 0 0 0 1px var(--line); }
+.write-menu[hidden] { display: none; }
+.write-menu button { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; font-size: 15px; font-weight: 600; text-align: left; }
+.write-menu button:hover { background: var(--surface); }
+.write--tab { place-items: center; }
+.write--tab .write-btn { display: grid; justify-items: center; gap: 3px; min-height: 56px; min-width: 64px; font-size: 11px; font-weight: 700; color: var(--ink); }
+.write--tab .write-btn .icon { width: 46px; height: 30px; padding: 4px 12px; border-radius: 10px; background: var(--ink); color: var(--bg); }
+.write--tab .write-menu { bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); }
+.write--side { margin: 14px 12px 0; }
+.write--side .write-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; width: 100%; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 650; font-size: 15px; }
+.write--side .write-btn:hover { opacity: .86; }
+.write--side .write-menu { left: 0; right: 0; top: calc(100% + 8px); }
+
+/* A6: the sealed Loot Drop waits for a sunrise rather than behind a padlock. */
+.sealed-panel .sun, .loot-panel .sun { display: block; margin-bottom: 14px; }
+
+/* G6: an Era without a cover gets its initial, everywhere. */
+.rail-list .ph { display: grid; place-items: center; background: var(--gold-wash); color: var(--gold-ink); font-weight: 800; font-size: 18px; }
+
+/* G3: the entry keeps each photo's own shape; only grids crop. */
+.entry .media img { aspect-ratio: auto; }
+@media (min-width: 1100px) { .entry .media { height: auto; align-self: start; } .entry .media img { height: auto; max-height: none; } }
+
+/* A grid's auto column grows to fit any child that won't shrink, which widened the phone page to 841px and pushed the
+   fixed bottom bar off-screen. One fractional column that may shrink keeps every post inside the screen. */
+.post, .entry-panel, .post-body { grid-template-columns: minmax(0, 1fr); }
+.post > *, .post-body > * { min-width: 0; }
+
+/* G7: a stronger scrim under the white labels on photo tiles. */
+.tile .label { padding-top: 44px; background: linear-gradient(transparent, rgba(0, 0, 0, .72)); } /* taste-skill-ignore: a neutral scrim under text on a photo */
+
+/* Scrolling rows stay inside the page gutter, so a half-shown card is clipped 16-20px in, never at the screen edge. */
+@media (max-width: 1099px) { .rings { margin: 0 var(--gutter); padding-left: 0; padding-right: 0; } }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -313,36 +372,24 @@ h1, h2, h3 { text-wrap: balance; }
     const pt = (deg) => [c + r * Math.sin((deg * Math.PI) / 180), c - r * Math.cos((deg * Math.PI) / 180)];
     const paths = days.map((on, i) => {
       const [x1, y1] = pt(i * arc + gap / 2), [x2, y2] = pt((i + 1) * arc - gap / 2);
-      return `<path d="M${x1.toFixed(2)} ${y1.toFixed(2)}A${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" stroke="${on ? '#F2701D' : '#E3E3E3'}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+      return `<path d="M${x1.toFixed(2)} ${y1.toFixed(2)}A${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" stroke="${on ? '#E5640F' : '#E3E3E3'}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
     }).join('');
     return M.raw(`<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">${paths}</svg>`);
   }
-  const mark = ringSvg([1, 1, 1, 0, 1, 1, 1], 24);
+  const sunrise = (w = 76) => M.raw(`<svg width="${w}" height="${Math.round(w * 0.62)}" viewBox="0 0 76 47" aria-hidden="true"><path d="M16 38a22 22 0 0 1 44 0z" fill="#141414"/><path d="M4 39.5h68" stroke="#141414" stroke-width="3.2" stroke-linecap="round"/><g stroke="#141414" stroke-width="3.2" stroke-linecap="round"><path d="M38 3v8M15.5 10.5l5 5M60.5 10.5l-5 5M4 25h7M65 25h7"/></g></svg>`);
+  const mark = ringSvg([1, 1, 1, 1, 1, 1, 1], 24);
 
-  // Older weeks in the mock carry no days, so their rings use a stand-in pattern with one arc per entry, up to seven.
-  function standInDays(id, n) {
-    const rnd = M.seeded(id), days = Array(7).fill(false);
-    const order = [0, 1, 2, 3, 4, 5, 6].sort(() => rnd() - 0.5);
-    order.slice(0, Math.min(n, 7)).forEach((d) => { days[d] = true; });
-    return days;
+  function ring({ face, label, count, href = '#feed', fresh = false }) {
+    return html`<a class="ring ${fresh ? 'ring--fresh' : ''}" href="${href}">
+      <span class="ring-art">${face ? html`<img class="face" src="${face}" alt="">` : html`<span class="count">${count}</span>`}</span>
+      <span class="ring-label">${label}</span></a>`;
   }
 
-  function ring({ days, face, label, count, href = '#feed', otd = false, current = false }) {
-    return html`<a class="ring ${otd ? 'ring--otd' : ''}" href="${href}" ${current ? M.raw('aria-current="true"') : ''}>
-      <span class="ring-art">${otd ? '' : ringSvg(days)}${face ? html`<img class="face" src="${face}" alt="">` : html`<span class="count">${count}</span>`}</span>
-      <span>${label}</span></a>`;
-  }
-
+  // The stories row: On this day memories (gold, new to see) and your Eras (grey). Days are never tracked (D-32).
   function ringsRow() {
-    const page = M.eraPage('era-brunswick');
-    const otd = M.data.onThisDay[0];
-    const weekRings = M.data.weeks.map((w) => {
-      const s = M.weekStats(w);
-      return ring({ days: s.days, face: s.thumbs[0] ? M.src(s.thumbs[0]) : null, count: s.entryCount, label: M.weekLabel(w), current: M.isCurrentWeek(w) });
-    });
-    const older = page.rows.filter((r) => !M.data.weeks.some((w) => w.id === r.id))
-      .map((r) => ring({ days: standInDays(r.id, r.entryCount), count: r.entryCount, label: r.title }));
-    return html`<nav class="rings" aria-label="Your weeks">${ring({ otd: true, face: M.src(M.images(otd)[0]), label: 'On this day' })}${weekRings}${older}</nav>`;
+    const memories = M.data.onThisDay.map((e) => ring({ fresh: true, face: M.src(M.images(e)[0]), label: M.yearsAgo(e.entryDate), href: '#entry' }));
+    const eras = M.data.eras.map((er) => ring({ face: er.cover ? M.cover(er) : null, count: er.title.charAt(0), label: er.title, href: '#era' }));
+    return html`<nav class="rings" aria-label="On this day and your Eras">${memories}${eras}</nav>`;
   }
 
   const NAV = [
@@ -356,8 +403,7 @@ h1, h2, h3 { text-wrap: balance; }
     side.innerHTML = String(html`
       <a class="wordmark" href="#feed">${mark}memoirist</a>
       <div class="side-nav">${NAV.map((n) => html`<a href="${n.href}" ${n.screens.includes(screen) ? M.raw('aria-current="page"') : ''}>${icon(n.icon, { size: 24 })}${n.label}</a>`)}</div>
-      <a class="pill" href="#entry">${icon('plus', { size: 20, stroke: 2 })}New entry</a>
-      <a class="pill pill--soft" href="#feed">${icon('photos', { size: 20 })}Photo dump</a>
+      ${M.writeMenu({ label: 'Write', cls: 'write--side' })}
       <div class="side-foot side-nav">
         <a href="#feed">${icon('trash', { size: 24 })}Recently deleted</a>
         <a href="#feed">${icon('sliders', { size: 24 })}Settings</a>
@@ -365,16 +411,15 @@ h1, h2, h3 { text-wrap: balance; }
   }
   function topbar({ back, title } = {}) {
     if (back) return html`<header class="topbar"><a class="icon-btn" href="${back.href}" aria-label="Back to ${back.label}">${icon('arrowLeft', { size: 22 })}</a><span class="tb-title">${title}</span></header>`;
-    return html`<header class="topbar"><a class="wordmark" href="#feed">${mark}memoirist</a>
-      <a class="icon-btn" href="#feed" aria-label="Photo dump">${icon('photos', { size: 22 })}</a>
-      <a class="icon-btn" href="#entry" aria-label="New entry">${icon('plus', { size: 24, stroke: 2 })}</a></header>`;
+    return html`<header class="topbar"><a class="wordmark" href="#feed">${mark}memoirist</a></header>`;
   }
+  // G2: every phone screen has the bottom bar, Home included, with Write in the middle.
   function tabbar(screen) {
     const cur = (s) => (s.includes(screen) ? M.raw('aria-current="page"') : '');
     return html`<nav class="tabbar" aria-label="Sections">
       <a href="#feed" ${cur(['feed', 'entry', 'loot'])}>${icon('home', { size: 24 })}Home</a>
       <a href="#feed">${icon('list', { size: 24 })}Timeline</a>
-      <a class="new" href="#entry" aria-label="New entry"><span>${icon('plus', { size: 22, stroke: 2.2 })}</span></a>
+      ${M.writeMenu({ label: 'Write', cls: 'write--tab' })}
       <a href="#era" ${cur(['era'])}>${icon('layers', { size: 24 })}Eras</a>
       <a href="#feed">${icon('user', { size: 24 })}You</a></nav>`;
   }
@@ -413,9 +458,9 @@ h1, h2, h3 { text-wrap: balance; }
   function post(e) {
     if (M.isSealed(e)) {
       const u = M.opening(e);
-      return html`<article class="post" aria-label="Sealed Loot Drop">
+      return html`<article class="post" data-sealed aria-label="Sealed Loot Drop">
         <header class="post-head">${dayBadge(e.entryDate)}<span class="t"><b>Loot Drop</b><small>${date(e.entryDate, 'long')}</small></span></header>
-        <a class="sealed-panel" href="#loot"><span class="lock">${icon('lock', { size: 28, stroke: 2 })}</span>
+        <a class="sealed-panel" href="#loot"><span class="sun">${sunrise()}</span>
           <span class="big">${daysLeft(u)}</span><span class="unit">days to go</span><span class="when">${u.opens}</span></a>
       </article>`;
     }
@@ -446,21 +491,27 @@ h1, h2, h3 { text-wrap: balance; }
         <span><b>${e.title}</b><small>${date(e.entryDate, 'medium')}</small></span></a>`)}</div></section>`;
   }
 
+  // A week in the feed is one line; tapping it opens the week's summary (D-25). Sealed entries never count (D-10).
+  function weekLine(w) {
+    const s = M.weekStats(w);
+    const bits = [plural(s.entryCount, 'entry', 'entries'), s.photoCount && plural(s.photoCount, 'photo'), s.voiceNoteCount && plural(s.voiceNoteCount, 'voice note')].filter(Boolean).join(', ');
+    return html`<a class="week-line" href="#feed" aria-label="${M.weekLabel(w)}: open the week's summary">
+      <span><h2>${M.weekLabel(w)}</h2><small>${bits}${s.tags.length ? `. ${s.tags.map((t) => t.name).join(', ')}` : ''}</small></span>${icon('chevronRight', { size: 20 })}</a>`;
+  }
+
   function feed() {
     return html`${topbar()}
       <main class="main"><h1 class="sr-only">Home</h1>
         <div class="feed">
           ${ringsRow()}
-          <div class="feed-otd">${otdRow()}</div>
           ${M.feedGroups().map((g) => html`
             ${g.era ? html`<a class="era-bar" href="#era"><img class="avatar" src="${M.cover(g.era)}" alt=""><span><b>${g.era.title}</b><small>${range(g.era.startDate, g.era.endDate)}</small></span><span class="chev">${icon('chevronRight', { size: 20 })}</span></a>` : ''}
-            ${g.weeks.map((w, i) => html`${weekCard(w, { lead: w === M.data.weeks[0] })}${w.entries.map(post)}`)}`)}
+            ${g.weeks.map((w) => html`${weekLine(w)}${w.entries.map(post)}`)}`)}
         </div>
-        <aside class="rail" aria-label="You, on this day and this week">
+        <aside class="rail" aria-label="You and on this day">
           <div class="me"><span class="initial">S</span><span><b>Sam</b><small>Your journal, private to you</small></span></div>
-          ${weekCard(M.data.weeks[0])}
-          <section aria-labelledby="eras-h"><div class="section-h"><h2 id="eras-h">Your Eras</h2><a href="#era">All</a></div>
-            <ul class="rail-list">${M.data.eras.map((er) => html`<li><a href="#era">${er.cover ? html`<img src="${M.cover(er)}" alt="">` : html`<span class="ph"></span>`}<span><b>${er.title}</b><small>${range(er.startDate, er.endDate)}</small></span></a></li>`)}</ul></section>
+          <section aria-labelledby="otd-h"><div class="section-h"><h2 id="otd-h">On this day</h2></div>
+            <ul class="rail-list">${M.data.onThisDay.map((e) => html`<li><a href="#entry"><img src="${M.src(M.images(e)[0])}" alt=""><span><b>${e.title}</b><small>${M.yearsAgo(e.entryDate)}, ${date(e.entryDate, 'medium')}</small></span></a></li>`)}</ul></section>
         </aside>
       </main>
       ${tabbar('feed')}`;
@@ -475,13 +526,12 @@ h1, h2, h3 { text-wrap: balance; }
         <div class="media"><img src="${M.src(pics[0])}" alt="${pics[0].alt}"><span class="count">1/${pics.length}</span>
           <div class="dots" aria-hidden="true">${pics.map((_, i) => html`<i class="${i === 0 ? 'on' : ''}"></i>`)}</div></div>
         <div class="entry-panel">
-          <header class="post-head">${dayBadge(e.entryDate)}<span class="t"><b>${date(e.entryDate, 'long')}</b><small>${w.eras.map((er) => er.title).join(' and ')}</small></span><button class="icon-btn" aria-label="More">${icon('more', { size: 22 })}</button></header>
+          <header class="post-head">${dayBadge(e.entryDate)}<span class="t"><b>${w.eras[0].title}</b><small>${date(e.entryDate, 'long')}</small></span><button class="icon-btn" aria-label="More">${icon('more', { size: 22 })}</button></header>
           <h1>${e.title}</h1>
           <div class="post-body">
             <div class="caption">${M.caption(e.contentJson, { headingTag: 'h4' })}</div>
             <div class="extras">${M.voiceNotes(e).map((v) => voice(v))}${sound(e.soundtrack)}</div>
             ${tagChips(e.tags)}
-            <p style="font-size:13px;color:var(--ink-2)">${date(e.entryDate, 'long')}, from the Trips template</p>
             <div class="actions"><a class="pill pill--soft" href="#entry">${icon('pen', { size: 18 })}Edit</a><a class="pill pill--soft" href="#loot">${icon('lock', { size: 18 })}Seal as a Loot Drop</a><button class="pill pill--ghost">Delete</button></div>
           </div>
           <section class="more-week" aria-labelledby="more-h"><div class="section-h" style="padding:0"><h2 id="more-h">More from this week</h2></div>
@@ -495,7 +545,8 @@ h1, h2, h3 { text-wrap: balance; }
   function eraScreen() {
     const p = M.eraPage(M.data.featured.eraId), e = p.era, t = p.totals;
     const tiles = p.rows.map((r) => {
-      const pic = r.thumbs[0];
+      const covers = M.data.eras.map((x) => x.cover);
+      const pic = r.thumbs.find((m) => covers.includes(m.file)) || r.thumbs[0];
       return pic
         ? html`<a class="tile" href="#feed"><img src="${M.src(pic)}" alt=""><span class="label">${r.title}<br>${plural(r.entryCount, 'entry', 'entries')}</span></a>`
         : html`<a class="tile text" href="#feed"><b>${r.title}</b><span><span class="n">${r.entryCount}</span><small> ${r.entryCount === 1 ? 'entry' : 'entries'}, ${range(r.startDate, r.endDate)}</small></span></a>`;
@@ -531,7 +582,7 @@ h1, h2, h3 { text-wrap: balance; }
     return html`${topbar({ back: { href: '#feed', label: 'Home' }, title: M.weekLabel(w) })}
       <main class="loot">
         <section class="loot-panel" aria-labelledby="loot-h">
-          <span class="lock">${icon('lock', { size: 30, stroke: 2 })}</span>
+          <span class="sun">${sunrise(96)}</span>
           <h1 id="loot-h">Sealed Loot Drop</h1>
           <span class="big">${daysLeft(u)}</span><span class="unit">days to go</span>
           <p class="when">${u.opens}</p>

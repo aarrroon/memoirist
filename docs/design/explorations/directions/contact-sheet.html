@@ -212,6 +212,62 @@ h1, h2, h3 { text-wrap: balance; }
   .loot .from-roll { grid-column: 1 / -1; }
 }
 .from-roll { display: grid; gap: 8px; width: 100%; max-width: 952px; }
+
+/* ---------- Review fixes (2026-10-29) ---------- */
+/* K6: titles in the print face; the pencil is for marks made by hand. */
+.print-card h3 { font: 600 23px/1.2 var(--print); }
+.entry-title { font: 700 34px/1.1 var(--print); letter-spacing: -.01em; }
+@media (min-width: 1100px) { .entry-title { font-size: 44px; } }
+/* K2: a text-only entry is a light frame with its title; only a sealed entry stays dark. */
+.frame.text .pic { background: #F1F2F2; }
+.frame.text .note { color: var(--ink); font: 600 12px/1.25 var(--print); }
+.rolls .mini span { background: #E4E5E5; }
+/* K1: the ring marks the photo chosen as the Era's cover. */
+.cover-note { position: absolute; right: -4px; top: -16px; font: 400 16px/1 var(--pencil); color: var(--grease); }
+.strip { padding-top: 24px; }
+
+/* A1: the first phone screen reaches an entry. */
+.ws-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: var(--ink); }
+.ws-head h3 { font-weight: 700; font-size: 22px; }
+.ws-head span { font-size: 13px; color: var(--ink-2); }
+.ws-head:hover h3 { text-decoration: underline; }
+.ws-facts { font-size: 14px; color: var(--ink-2); }
+.otd { display: grid; gap: 10px; }
+.otd-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.otd-head span { font-size: 13px; color: var(--ink-2); }
+@media (max-width: 1099px) {
+  .main { gap: 20px; padding-top: 14px; }
+  .slides { display: flex; gap: 10px; overflow-x: auto; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter); scrollbar-width: none; }
+  .slides::-webkit-scrollbar { display: none; }
+  .slide { flex: none; width: 236px; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 10px; }
+  .mount { padding: 9px 9px 18px; }
+  .mount .yr { font-size: 14px; bottom: 1px; left: 9px; }
+  .roll { padding: 12px; grid-template-columns: minmax(0, 1fr) 96px; }
+  .roll h2 { font-size: 22px; }
+  .roll img { width: 96px; }
+}
+
+/* A4: one New entry button within thumb reach. */
+.write { position: relative; }
+.write-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 0 20px 0 16px; border-radius: 3px; background: var(--amber); color: var(--film); font-weight: 700; font-size: 16px; }
+.write-btn:hover { background: #F0B45A; }
+.write-menu { position: absolute; z-index: 30; display: grid; min-width: 210px; padding: 6px; background: var(--film); color: #FFFFFF; border-radius: 4px; box-shadow: 0 12px 32px rgba(0, 0, 0, .3); }
+.write-menu[hidden] { display: none; }
+.write-menu button { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; color: #FFFFFF; font-size: 15px; text-align: left; border-radius: 3px; }
+.write-menu button:hover { background: var(--film-2); }
+.write--fab { position: fixed; z-index: 20; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+.write--fab .write-menu { right: 0; bottom: calc(100% + 8px); }
+.write--side { margin: 0 6px 18px; }
+.write--side .write-btn { width: 100%; min-height: 46px; }
+.write--side .write-menu { left: 0; right: 0; top: calc(100% + 6px); background: var(--film-2); }
+.main, .loot { padding-bottom: 100px; }
+@media (min-width: 1100px) { .write--fab { display: none; } }
+.print-card { grid-template-columns: minmax(0, 1fr); }
+.print-card > * { min-width: 0; }
+
+/* Scrolling rows stay inside the page gutter, so a half-shown card is clipped 16-20px in, never at the screen edge. */
+@media (max-width: 1099px) { .slides { margin: 0; padding: 0; } }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -254,42 +310,38 @@ h1, h2, h3 { text-wrap: balance; }
   ];
   function renderSide(screen) {
     side.innerHTML = String(html`<a class="wordmark" href="#feed"><i></i>memoirist</a>
-      <a class="btn" href="#entry">${icon('plus', { size: 18, stroke: 2 })}New entry</a>
+      ${M.writeMenu({ label: 'New entry', cls: 'write--side' })}
       <div class="side-nav">${NAV.map((n) => html`<a href="${n.href}" ${n.screens.includes(screen) ? M.raw('aria-current="page"') : ''}>${icon(n.icon, { size: 20 })}${n.label}</a>`)}</div>
-      <div class="side-nav side-foot"><a href="#feed">${icon('photos', { size: 20 })}Photo dump</a><a href="#feed">${icon('trash', { size: 20 })}Recently deleted</a><a href="#feed">${icon('sliders', { size: 20 })}Settings</a></div>`);
+      <div class="side-nav side-foot"><a href="#feed">${icon('trash', { size: 20 })}Recently deleted</a><a href="#feed">${icon('sliders', { size: 20 })}Settings</a></div>`);
   }
   function topbar({ back, title } = {}) {
     if (back) return html`<header class="topbar"><a class="icon-btn" href="${back}" aria-label="Back">${icon('arrowLeft', { size: 22 })}</a><span class="tb-title">${title}</span></header>`;
-    return html`<header class="topbar"><a class="wordmark" href="#feed"><i></i>memoirist</a><a class="icon-btn" href="#feed" aria-label="Photo dump">${icon('photos', { size: 22 })}</a><a class="icon-btn" href="#entry" aria-label="New entry">${icon('plus', { size: 24, stroke: 2 })}</a></header>`;
+    return html`<header class="topbar"><a class="wordmark" href="#feed"><i></i>memoirist</a></header>`;
   }
 
   // A week as a strip of film: one frame per entry, its frame number the day of the month.
   function strip(w) {
-    return html`<div class="strip" aria-hidden="true">${w.entries.map((e, i) => {
+    const covers = M.data.eras.map((x) => x.cover);
+    return html`<div class="strip" aria-hidden="true">${w.entries.map((e) => {
       const day = Number(e.entryDate.slice(8));
       const pic = M.images(e)[0];
-      let inside;
-      if (M.isSealed(e)) inside = icon('lock', { size: 22 });
+      let inside = '', kind = '';
+      if (M.isSealed(e)) kind = 'sealed';
       else if (pic) inside = html`<img src="${M.src(pic)}" alt="">`;
       else if (M.voiceNotes(e).length) { const b = M.waveform(e.id, 18); inside = M.raw(`<svg class="wave" viewBox="0 0 72 30" preserveAspectRatio="none">${b.map((v, k) => `<rect x="${k * 4}" y="${(15 - v * 14).toFixed(1)}" width="2.4" height="${(v * 28).toFixed(1)}"/>`).join('')}</svg>`); }
-      else inside = html`<span class="note">${M.displayTitle(e)}</span>`;
-      return html`<span class="frame ${M.isSealed(e) ? 'sealed' : ''}"><span class="pic">${inside}</span>${!M.isSealed(e) && e.title && i % 2 === 0 ? ring(e.id) : ''}<span class="edge"><span>${day}</span><span>${day}A</span></span></span>`;
+      else { inside = html`<span class="note">${M.displayTitle(e)}</span>`; kind = 'text'; }
+      const isCover = pic && covers.includes(pic.file);
+      return html`<span class="frame ${kind}"><span class="pic">${inside}</span>${isCover ? html`${ring(e.id)}<span class="cover-note">cover</span>` : ''}<span class="edge"><span>${day}</span><span>${day}A</span></span></span>`;
     })}</div>`;
   }
 
   function weekSheet(w, { lead = false } = {}) {
     const s = M.weekStats(w);
-    const tally = [plural(s.entryCount, 'frame'), s.photoCount && plural(s.photoCount, 'photo'), s.voiceNoteCount && plural(s.voiceNoteCount, 'voice note')].filter(Boolean).join(', ');
-    return html`<section class="week-sheet ${lead ? 'week-sheet--lead' : ''}" aria-label="Contact sheet of ${M.weekLabel(w)}">
-      <div class="ws-head"><h3>${M.weekLabel(w)}</h3><span>${range(w.startDate, w.endDate)}</span></div>
+    const facts = [plural(s.entryCount, 'entry', 'entries'), s.photoCount && plural(s.photoCount, 'photo'), s.voiceNoteCount && plural(s.voiceNoteCount, 'voice note')].filter(Boolean).join(', ');
+    return html`<section class="week-sheet ${lead ? 'week-sheet--lead' : ''}" aria-label="${M.weekLabel(w)}">
+      <a class="ws-head" href="#feed" aria-label="${M.weekLabel(w)}: open the week's summary"><h3>${M.weekLabel(w)}</h3><span>${range(w.startDate, w.endDate)}</span></a>
       ${strip(w)}
-      <p class="tally">${tally}${s.sealedCount ? ', one roll undeveloped' : ''}</p>
-      <ul class="frames-list">${w.entries.map((e) => {
-        const no = `No. ${Number(e.entryDate.slice(8))}`;
-        return M.isSealed(e)
-          ? html`<li><a class="sealed" href="#loot"><span class="no">${no}</span><span class="t">${icon('lock', { size: 15 })}Undeveloped until ${M.instant(e.unlockDate, { day: 'numeric', month: 'short', year: 'numeric' })}</span><span></span></a></li>`
-          : html`<li><a href="#entry"><span class="no">${no}</span><span class="t">${M.displayTitle(e)}</span><span class="i">${M.images(e).length ? icon(M.images(e)[0].kind === 'PAGE_SCAN' ? 'page' : 'image', { size: 16 }) : ''}${M.voiceNotes(e).length ? icon('mic', { size: 16 }) : ''}</span></a></li>`;
-      })}</ul>
+      <p class="ws-facts">${facts}${s.tags.length ? `. ${s.tags.map((t) => t.name).join(', ')}` : ''}</p>
       ${w.eras.length > 1 ? html`<p class="sub">Also in ${w.eras.slice(1).map((er) => er.title)}</p>` : ''}
     </section>`;
   }
@@ -306,13 +358,13 @@ h1, h2, h3 { text-wrap: balance; }
   function printCard(e) {
     if (M.isSealed(e)) {
       const u = M.opening(e);
-      return html`<article class="print-card" aria-label="Sealed Loot Drop"><p class="meta"><span>${date(e.entryDate, 'dayLong')}</span><span>No. ${Number(e.entryDate.slice(8))}</span></p>
-        <a class="canister-card" href="#loot">${canister(false)}<span><b>Undeveloped roll</b><span class="lab">${u.countdown}</span><small>${u.opens.replace(/^Opens/, 'Develops')}</small></span></a></article>`;
+      return html`<article class="print-card" data-sealed aria-label="Sealed Loot Drop"><p class="meta"><span>${date(e.entryDate, 'dayLong')}</span></p>
+        <a class="canister-card" href="#loot">${canister(false)}<span><b>Sealed Loot Drop</b><span class="lab">${u.countdown}</span><small>${u.opens}</small></span></a></article>`;
     }
     const pics = M.images(e);
     const heading = e.title || (e.contentJson ? null : M.displayTitle(e));
     return html`<article class="print-card" aria-label="${M.displayTitle(e)}">
-      <p class="meta"><span>${date(e.entryDate, 'dayLong')}</span><span>No. ${Number(e.entryDate.slice(8))}</span></p>
+      <p class="meta"><span>${date(e.entryDate, 'dayLong')}</span></p>
       ${heading ? html`<h3><a href="#entry">${heading}</a></h3>` : ''}
       ${pics.length ? html`<a class="photo ${pics[0].kind === 'PAGE_SCAN' ? 'page' : ''}" href="#entry"><img src="${M.src(pics[0])}" alt="${pics[0].alt}">${pics.length > 1 ? html`<span class="count">1 of ${pics.length}</span>` : ''}</a>` : ''}
       ${e.contentJson ? html`<div class="caption">${M.caption(e.contentJson, { headingTag: 'h5' })}</div>` : ''}
@@ -328,37 +380,38 @@ h1, h2, h3 { text-wrap: balance; }
       <main class="main feed">
         <h1 class="sr-only">Journal</h1>
         <aside class="rail" aria-label="On this day and this week">
-          <section aria-labelledby="otd-h" style="display:grid;gap:12px"><div class="ws-head"><h2 class="h2" id="otd-h">On this day</h2><span>Slides from other years</span></div>
+          <section class="otd" aria-labelledby="otd-h"><div class="otd-head"><h2 class="h2" id="otd-h">On this day</h2><span>Slides from other years</span></div>
             <div class="slides">${M.data.onThisDay.map((e) => html`<a class="slide" href="#entry"><span class="mount"><img src="${M.src(M.images(e)[0])}" alt="${M.images(e)[0].alt}"><span class="yr">${e.entryDate.slice(0, 4)}</span></span><span><b>${e.title}</b><small>${M.yearsAgo(e.entryDate)}</small></span></a>`)}</div></section>
           ${weekSheet(tw)}
         </aside>
         ${M.feedGroups().map((g) => html`
           <a class="roll lead" href="#era"><span><h2>${g.era.title}</h2><p>${range(g.era.startDate, g.era.endDate)}</p>${g.weeks[0].eras.length > 1 ? html`<p class="also">Inside ${g.weeks[0].eras[1].title}</p>` : ''}</span>${M.cover(g.era) ? html`<img src="${M.cover(g.era)}" alt="">` : ''}</a>
           ${g.weeks.map((w) => html`<div class="lead">${weekSheet(w, { lead: w === tw })}</div>${w.entries.map((e) => html`<div class="lead">${printCard(e)}</div>`)}`)}`)}
-      </main>`;
+      </main>
+      ${M.writeMenu({ label: 'New entry', cls: 'write--fab' })}`;
   }
 
   // ---------- Entry ----------
   function entryScreen() {
     const e = M.featured.entry(), w = M.weekOf(e.id), pics = M.images(e);
+    const covers = M.data.eras.map((x) => x.cover);
     return html`${topbar({ back: '#feed', title: M.weekLabel(w) })}
       <main class="main">
         <article class="lead" style="display:grid;gap:14px">
-          <p class="sub">${date(e.entryDate, 'long')}, frame No. 24</p>
-          <h1 style="font:400 44px/1 var(--pencil)">${e.title}</h1>
-          <div class="big-print"><img src="${M.src(pics[0])}" alt="${pics[0].alt}">
-            <svg class="crop" viewBox="0 0 100 70" preserveAspectRatio="none" aria-hidden="true"><path d="M6 18V8h12M82 8h12v10M94 52v10H82M18 62H6V52"/></svg></div>
-          <div class="strip" aria-hidden="true">${pics.map((m, i) => html`<span class="frame"><span class="pic"><img src="${M.src(m)}" alt=""></span>${i === 0 ? ring('pick') : ''}<span class="edge"><span>24</span><span>${i + 1}A</span></span></span>`)}</div>
+          <p class="sub">${date(e.entryDate, 'long')}</p>
+          <h1 class="entry-title">${e.title}</h1>
+          <div class="big-print"><img src="${M.src(pics[0])}" alt="${pics[0].alt}"></div>
+          <div class="strip" aria-hidden="true">${pics.map((m, i) => html`<span class="frame"><span class="pic"><img src="${M.src(m)}" alt=""></span>${covers.includes(m.file) ? html`${ring('pick')}<span class="cover-note">cover</span>` : ''}<span class="edge"><span>24</span><span>${i + 1}A</span></span></span>`)}</div>
           <div class="caption">${M.caption(e.contentJson, { headingTag: 'h4' })}</div>
           <div class="extras">${M.voiceNotes(e).map(voice)}${sound(e.soundtrack)}</div>
           ${tags(e.tags)}
-          <div class="actions"><a class="btn btn--line" href="#entry">${icon('pen', { size: 18 })}Edit</a><a class="btn btn--line" href="#loot">${icon('lock', { size: 18 })}Seal as a Loot Drop</a><button class="btn btn--text">Delete</button></div>
+          <div class="actions"><a class="btn btn--line" href="#entry">${icon('pen', { size: 18 })}Edit this entry</a><a class="btn btn--line" href="#loot">${icon('lock', { size: 18 })}Seal as a Loot Drop</a><button class="btn btn--text">Delete</button></div>
         </article>
         <aside class="rail">
-          <div class="loupe"><div class="lens"><img src="${M.src(pics[0])}" alt="A closer look at the cliff edge"></div><p>the cloud lifting, 6:41 am</p></div>
-          <div class="side-notes"><p><b>In</b> ${w.eras.map((er) => er.title).join(' and ')}</p><p><b>Week</b> ${M.weekLabel(w)}, ${range(w.startDate, w.endDate)}</p><p><b>Template</b> Trips</p></div>
+          <div class="side-notes"><p><b>In</b> ${w.eras.map((er) => er.title).join(' and ')}</p><p><b>Week</b> ${M.weekLabel(w)}, ${range(w.startDate, w.endDate)}</p></div>
         </aside>
-      </main>`;
+      </main>
+      ${M.writeMenu({ label: 'New entry', cls: 'write--fab' })}`;
   }
 
   // ---------- Era ----------
@@ -373,16 +426,17 @@ h1, h2, h3 { text-wrap: balance; }
           <p class="sub">${range(e.startDate, e.endDate)}, ${p.span} so far</p>
           <div class="extras">${sound(e.soundtrack)}</div>
         </header>
-        <div class="edge-figs lead"><div><b>${t.weekCount}</b><small>rolls (weeks)</small></div><div><b>${t.entryCount}</b><small>frames</small></div><div><b>${t.photoCount.toLocaleString('en-AU')}</b><small>photos</small></div><div><b>${t.voiceNoteCount}</b><small>voice notes</small></div></div>
+        <div class="edge-figs lead"><div><b>${t.weekCount}</b><small>weeks</small></div><div><b>${t.entryCount}</b><small>entries</small></div><div><b>${t.photoCount.toLocaleString('en-AU')}</b><small>photos</small></div><div><b>${t.voiceNoteCount}</b><small>voice notes</small></div></div>
         <aside class="rail">
-          <section style="display:grid;gap:10px"><h2 class="h2">Rolls in this Era</h2>
-            <ul class="rolls">${p.rows.map((r) => html`<li><a href="#feed"><span class="t">${r.title}</span><span class="n">${plural(r.entryCount, 'frame')}</span>
+          <section style="display:grid;gap:10px"><h2 class="h2">Weeks in this Era</h2>
+            <ul class="rolls">${p.rows.map((r) => html`<li><a href="#feed"><span class="t">${r.title}</span><span class="n">${plural(r.entryCount, 'entry', 'entries')}</span>
               <span class="mini">${r.thumbs.length ? r.thumbs.slice(0, 6).map((m) => html`<img src="${M.src(m)}" alt="">`) : Array.from({ length: Math.min(r.entryCount, 6) }, () => html`<span></span>`)}</span></a></li>`)}</ul>
-            <p class="sub">and ${p.notListedWeeks} earlier rolls, back to ${date(e.startDate, 'medium')}</p></section>
-          <section style="display:grid;gap:8px"><h2 class="h2">Shorter rolls inside this one</h2>${p.chaptersInside.map((c) => html`<a class="roll" href="#era" style="grid-template-columns:1fr"><span><h2 style="font-size:20px">${c.title}</h2><p>${range(c.startDate, c.endDate)}</p></span></a>`)}</section>
+            <p class="sub">and ${p.notListedWeeks} earlier weeks, back to ${date(e.startDate, 'medium')}</p></section>
+          <section style="display:grid;gap:8px"><h2 class="h2">Eras inside this one</h2>${p.chaptersInside.map((c) => html`<a class="roll" href="#era" style="grid-template-columns:1fr"><span><h2 style="font-size:20px">${c.title}</h2><p>${range(c.startDate, c.endDate)}</p></span></a>`)}</section>
           <a class="btn btn--line" href="#era" style="justify-self:start">${icon('calendar', { size: 18 })}Change dates or cover</a>
         </aside>
-      </main>`;
+      </main>
+      ${M.writeMenu({ label: 'New entry', cls: 'write--fab' })}`;
   }
 
   // ---------- Loot Drop ----------
@@ -392,17 +446,18 @@ h1, h2, h3 { text-wrap: balance; }
       <main class="loot">
         ${canister()}
         <h1>Sealed Loot Drop</h1>
-        <p class="opens">${u.opens.replace(/^Opens/, 'Develops on')}</p>
+        <p class="opens">${u.opens}</p>
         <p class="days">${u.countdown}</p>
-        <p class="sub">Exposed ${date(e.entryDate, 'long')}. Nobody can see it or change it before then, you included.</p>
+        <p class="sub">Nobody can see it or change it before then, you included.</p>
         <ol class="process">
-          <li><span class="st">1</span><span><b>Exposed</b> <span>${date(e.entryDate, 'medium')}</span></span></li>
-          <li class="now"><span class="st">2</span><span><b>In the canister</b> <span>today</span></span></li>
-          <li><span class="st">3</span><span><b>Develops</b> <span>${M.instant(e.unlockDate, { day: 'numeric', month: 'short', year: 'numeric' })}, 9:00 am</span></span></li>
-          <li><span class="st">4</span><span><b>Prints</b> <span>at the top of your journal, ready for you to write back</span></span></li>
+          <li><span class="st">1</span><span><b>Written</b> <span>${date(e.entryDate, 'long')}</span></span></li>
+          <li class="now"><span class="st">2</span><span><b>Sealed</b> <span>today</span></span></li>
+          <li><span class="st">3</span><span><b>Opens</b> <span>at 9:00 am, Melbourne time</span></span></li>
+          <li><span class="st">4</span><span><b>Then</b> <span>it waits at the top of your journal, and you can write back if you like</span></span></li>
         </ol>
         <div class="actions"><button class="btn">${icon('clock', { size: 18 })}Extend the seal</button><button class="btn btn--text">Delete</button></div>
-        <section class="from-roll" aria-labelledby="roll-h"><h2 class="h2" id="roll-h">From the ${M.weekLabel(w)} roll</h2>${strip(w)}<p class="sub">The last frame stays dark until it develops.</p></section>
+        <section class="from-roll" aria-labelledby="roll-h"><h2 class="h2" id="roll-h">From ${M.weekLabel(w)}</h2>${strip(w)}<p class="sub">The dark frame stays dark until it opens.</p></section>
+      ${M.writeMenu({ label: 'New entry', cls: 'write--fab' })}
       </main>`;
   }
 

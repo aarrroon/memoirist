@@ -350,6 +350,76 @@ a.toc-title:hover { text-decoration: underline; }
   .life li::after { top: 5px; left: 15px; right: -24px; bottom: auto; width: auto; height: 1px; }
 }
 
+
+/* ---------- Review fixes (2026-10-29) ---------- */
+/* M3: italic only for prompt labels and quotes; dates and meta in roman, with tabular figures. */
+.dateline, .rh-title, .rh-back, .rh-right, .scope, .plate-count, .filed, .tp-dates, .week-range, .aside-sub,
+.epi-attr, .toc-day, .l-range, .more, .inside span, .vault-count, .loot-from, .r-notes, .r-notes p,
+.wl-range, .wl-facts, .tp-span { font-style: normal; font-variant-numeric: lining-nums tabular-nums; }
+.life-what { font-style: normal; font-variant-caps: all-small-caps; letter-spacing: .06em; font-size: 15px; }
+
+/* A1: the feed's first phone screen reaches the first entry. */
+.otd-row { display: grid; gap: 14px; }
+@media (max-width: 1099px) {
+  .otd { gap: 8px; }
+  .otd .aside-h { font-size: var(--s1); color: var(--ink-2); }
+  .otd-row { display: flex; gap: 10px; overflow-x: auto; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter); scrollbar-width: none; }
+  .otd-row::-webkit-scrollbar { display: none; }
+  .epi { flex: none; width: 250px; grid-template-columns: 56px minmax(0, 1fr); gap: 10px; align-items: center; }
+  .epi img { width: 56px; height: 56px; }
+  .epi-title { font-size: 15px; }
+  .epi-quote { display: none; }
+  .epi-attr { margin-top: 1px; }
+  .grid { row-gap: 20px; padding-top: 14px; }
+  .title-page { grid-template-columns: 104px minmax(0, 1fr); min-height: 0; }
+  .title-page .frontis { aspect-ratio: auto; height: 100%; min-height: 118px; }
+  .title-page .tp-text { padding: 14px 18px; align-content: center; }
+  .title-page .tp-title { font-size: 30px; }
+}
+.week-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; margin-top: 22px; padding: 8px 0 10px; border-bottom: 1px solid var(--rule); text-decoration: none; }
+.week-line:hover .wl-title { text-decoration: underline; }
+.wl-range { display: none; }
+.wl-title { font-size: var(--s3); line-height: 1.2; }
+.wl-facts { display: block; font-size: var(--s1); color: var(--ink-2); line-height: 1.4; }
+.wl-go { color: var(--ink-2); display: grid; }
+.week .passage:first-of-type { margin-top: 22px; }
+@media (min-width: 1100px) {
+  .week-line { grid-template-columns: 160px minmax(0, 1fr) auto; column-gap: 40px; margin-top: 48px; }
+  .wl-range { display: block; text-align: right; font-size: var(--s1); color: var(--ink-2); }
+  .week .passage:first-of-type { margin-top: 40px; }
+}
+
+/* A4: one Write button within thumb reach; its menu holds New entry, Photo dump and Diary page. */
+.write { position: relative; }
+.write-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 0 22px 0 18px; border: 0; border-radius: 999px; background: var(--cloth); color: var(--cloth-ink); font: 600 16px var(--serif); }
+.write-btn:hover { background: #3A5B4C; }
+.write-menu { position: absolute; z-index: 30; display: grid; min-width: 210px; padding: 6px; background: var(--leaf); outline: 1px solid var(--rule); box-shadow: 0 10px 30px rgba(20, 30, 25, .18); }
+.write-menu[hidden] { display: none; }
+.write-menu button { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border: 0; background: none; font: 400 16px var(--serif); text-align: left; }
+.write-menu button:hover { background: var(--paper-2); }
+.write--fab { position: fixed; z-index: 20; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+.write--fab .write-menu { right: 0; bottom: calc(100% + 10px); }
+.write--side { margin: 0 0 22px; }
+.write--side .write-btn { width: 100%; min-height: 46px; border-radius: 0; }
+.write--side .write-menu { left: 0; right: 0; top: calc(100% + 6px); }
+.page { padding-bottom: 140px; }
+@media (min-width: 1100px) { .write--fab { display: none; } }
+
+/* M2: the opening date printed on the band; the line fills in as far as it has come. */
+.uncut .band-text { fill: var(--cloth-ink); font: 600 15px var(--serif); letter-spacing: .04em; }
+.life li.is-done::after { background: var(--cloth); }
+.life li.is-done::before { background: var(--cloth); border-color: var(--cloth); }
+
+/* M5: the desktop plate leaves room for the first lines of writing. */
+@media (min-width: 1100px) { .r-hero img { aspect-ratio: auto; height: min(58vh, 560px); } }
+
+/* A8: Spotify's mark in black, or white on bookcloth. */
+.sound .icon { color: #191414; }
+.era-title-page .sound .icon { color: #FFFFFF; }
+
+/* Scrolling rows stay inside the page gutter, so a half-shown card is clipped 16-20px in, never at the screen edge. */
+@media (max-width: 1099px) { .otd-row { margin: 0; padding: 0; } }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -377,19 +447,17 @@ a.toc-title:hover { text-decoration: underline; }
 
   const ribbon = M.raw('<svg viewBox="0 0 13 24" aria-hidden="true"><path d="M0 0h13v24l-6.5-5.5L0 24z" fill="#2E4A3D"/></svg>');
 
-  // The sealed pages: a few leaves still folded together and wrapped in a band of bookcloth, the way a
-  // sealed edition is banded. The same drawing at the same size for every Loot Drop, so nothing hints at
-  // what is inside (D-10).
-  function uncut({ label = 'Pages wrapped in a sealed band' } = {}) {
+  // The sealed pages: a few leaves still folded together and wrapped in a band of bookcloth, the way a new book
+  // is banded. The large drawing prints the opening date on the band. Every Loot Drop gets the same drawing at the
+  // same size, so nothing hints at what is inside (D-10).
+  function uncut({ band = '', label = 'Pages wrapped in a sealed band' } = {}) {
     return M.raw(`<svg class="uncut" viewBox="0 0 240 300" role="img" aria-label="${M.esc(label)}">
       <path class="leaf-3" d="M50 38h160v250H50z"/><path class="line" d="M50 38h160v250H50z"/>
       <path class="leaf-2" d="M42 30h160v250H42z"/><path class="line" d="M42 30h160v250H42z"/>
       <path class="leaf-1" d="M34 22h160v250H34z"/><path class="line" d="M34 22h160v250H34z"/>
       <path class="line" d="M34 31h160" opacity=".3"/>
       <path class="ribbon" d="M24 142h196v50H24z"/><path class="line" d="M24 142h196v50H24z"/>
-      <g fill="none" stroke="#EEF2EE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="111" y="164" width="18" height="15" rx="2"/><path d="M114.5 164v-4a5.5 5.5 0 0 1 11 0v4"/>
-      </g>
+      ${band ? `<text x="122" y="173" text-anchor="middle" class="band-text">${M.esc(band)}</text>` : ''}
     </svg>`);
   }
 
@@ -405,7 +473,7 @@ a.toc-title:hover { text-decoration: underline; }
     side.innerHTML = String(html`
       <a class="mark" href="#feed">${ribbon}memoirist</a>
       <p class="scope">Sam's journal</p>
-      <a class="btn btn--primary" href="#entry">${icon('pen', { size: 18 })} Write</a>
+      ${M.writeMenu({ label: 'Write', cls: 'write--side' })}
       <ul class="nav">${NAV.map((n) => html`<li><a href="${n.href}" ${n.screens.includes(screen) ? M.raw('aria-current="page"') : ''}>${icon(n.icon, { size: 18 })}${n.label}</a></li>`)}</ul>
       <div class="side-foot">
         <ul class="nav">
@@ -421,8 +489,7 @@ a.toc-title:hover { text-decoration: underline; }
     return html`<header class="runhead">
       ${back ? html`<a class="rh-back" href="${back.href}">${icon('arrowLeft', { size: 18 })}${back.label}</a>`
         : html`<button class="icon-btn" aria-label="Menu">${icon('menu', { size: 20 })}</button><h1 class="rh-title">${title}</h1>`}
-      <div class="rh-right"><span class="rh-date">${right}</span>
-        <a class="icon-btn" href="#entry" aria-label="Write an entry">${icon('pen', { size: 20 })}</a></div>
+      <div class="rh-right"><span class="rh-date">${right}</span></div>
     </header>`;
   }
 
@@ -465,7 +532,7 @@ a.toc-title:hover { text-decoration: underline; }
     const bits = [count(s.entryCount, 'entry', 'entries')];
     if (s.photoCount) bits.push(`${count(s.photoCount, 'photo')}${s.pageCount ? ` (${words(s.pageCount)} a diary page)` : ''}`);
     if (s.voiceNoteCount) bits.push(count(s.voiceNoteCount, 'voice note'));
-    return `${cap(andList(bits))}.${s.sealedCount ? ` ${cap(words(s.sealedCount))} more is sealed.` : ''}`;
+    return cap(andList(bits));
   }
 
   function tocRow(e) {
@@ -493,7 +560,7 @@ a.toc-title:hover { text-decoration: underline; }
 
   function passage(e) {
     if (M.isSealed(e)) {
-      return html`<article class="passage" aria-label="Sealed Loot Drop"><p class="dateline">${date(e.entryDate, 'dayLong')}</p>${vault(e)}</article>`;
+      return html`<article class="passage" data-sealed aria-label="Sealed Loot Drop"><p class="dateline">${date(e.entryDate, 'dayLong')}</p>${vault(e)}</article>`;
     }
     const pics = M.images(e), voices = M.voiceNotes(e);
     // An untitled entry with a caption is introduced by its first line already; don't print it twice.
@@ -511,47 +578,66 @@ a.toc-title:hover { text-decoration: underline; }
 
   function titlePage(era) {
     if (!era) return '';
-    return html`<header class="title-page on-cloth">
+    return html`<header class="title-page on-cloth" data-era="${era.title}">
       ${era.cover ? html`<img class="frontis" src="${M.cover(era)}" alt="">` : ''}
       <div class="tp-text"><h2 class="tp-title"><a href="#era">${era.title}</a></h2>
         <p class="tp-dates">${range(era.startDate, era.endDate)}</p></div>
     </header>`;
   }
 
+  // A week in the feed is one line; tapping it opens the week's summary (D-25).
+  function weekLine(w) {
+    const s = M.weekStats(w);
+    const tags = s.tags.map((t) => t.name).join(', ');
+    return html`<a class="week-line" href="#feed" aria-label="${M.weekLabel(w)}: open the week's summary">
+      <span class="wl-range">${range(w.startDate, w.endDate)}</span>
+      <span class="wl-main"><h2 class="wl-title" id="h-${w.id}">${M.weekLabel(w)}</h2><span class="wl-facts">${weekFacts(s)}${tags ? `. ${tags}` : ''}</span></span>
+      <span class="wl-go">${icon('chevronRight', { size: 18 })}</span></a>`;
+  }
+
+  function onThisDay() {
+    return html`<section class="otd" aria-labelledby="otd-h">
+      <h2 class="aside-h" id="otd-h">On this day</h2>
+      <div class="otd-row">${M.data.onThisDay.map((e) => {
+        const pic = M.images(e)[0];
+        return html`<a class="epi" href="#entry"><img src="${M.src(pic)}" alt="${pic.alt}">
+          <span><span class="epi-title">${e.title}</span>
+          <span class="epi-quote">${firstSentence(M.previewLine(e))}</span>
+          <span class="epi-attr">${M.yearsAgo(e.entryDate)}, ${date(e.entryDate, 'medium')}</span></span></a>`;
+      })}</div>
+    </section>`;
+  }
+
   function feed() {
-    const thisWeek = M.data.weeks[0];
     return html`<div class="page">
       ${runhead({ title: 'Journal', right: date(M.today(), 'long') })}
       <div class="grid">
-        <aside class="feed-aside" aria-label="On this day and this week">
-          <section class="otd" aria-labelledby="otd-h">
-            <h2 class="aside-h" id="otd-h">On this day</h2>
-            ${M.data.onThisDay.map((e) => {
-              const pic = M.images(e)[0];
-              return html`<a class="epi" href="#entry"><img src="${M.src(pic)}" alt="${pic.alt}">
-                <span><span class="epi-title">${e.title}</span>
-                <span class="epi-quote">${firstSentence(M.previewLine(e))}</span>
-                <span class="epi-attr">${M.yearsAgo(e.entryDate)}, ${date(e.entryDate, 'medium')}</span></span></a>`;
-            })}
-          </section>
-          <section class="contents-block" aria-labelledby="wk-aside-h">
-            <h2 class="aside-h" id="wk-aside-h">${M.weekLabel(thisWeek)}</h2>
-            <p class="aside-sub">${range(thisWeek.startDate, thisWeek.endDate)}</p>
-            ${contents(thisWeek)}
-          </section>
-        </aside>
+        <aside class="feed-aside" aria-label="On this day">${onThisDay()}</aside>
         <div class="feed-main">
           ${M.feedGroups().map((g) => html`<section class="chapter" aria-label="${g.era ? g.era.title : 'Weeks in no Era'}">
             ${titlePage(g.era)}
-            ${g.weeks.map((w) => html`<section class="week" aria-labelledby="h-${w.id}">
-              <header class="week-head"><h2 id="h-${w.id}">${M.weekLabel(w)}</h2><p class="week-range">${range(w.startDate, w.endDate)}</p></header>
-              ${contents(w)}
-              ${w.entries.map(passage)}
-            </section>`)}
+            ${g.weeks.map((w) => html`<section class="week" aria-labelledby="h-${w.id}">${weekLine(w)}${w.entries.map(passage)}</section>`)}
           </section>`)}
         </div>
       </div>
+      ${M.writeMenu({ label: 'Write', cls: 'write--fab' })}
     </div>`;
+  }
+
+  // M4: once an Era's title page has scrolled away, the running head names the Era, as a book's running head does.
+  let followHandler = null;
+  function followEra() {
+    if (followHandler) window.removeEventListener('scroll', followHandler);
+    const title = app.querySelector('.rh-title');
+    const pages = [...app.querySelectorAll('.title-page[data-era]')];
+    if (!title || !pages.length) { followHandler = null; return; }
+    followHandler = () => {
+      let current = 'Journal';
+      for (const pg of pages) if (pg.getBoundingClientRect().bottom < 64) current = pg.dataset.era;
+      title.textContent = current;
+    };
+    window.addEventListener('scroll', followHandler, { passive: true });
+    followHandler();
   }
 
   // ---------- Entry ----------
@@ -582,16 +668,16 @@ a.toc-title:hover { text-decoration: underline; }
         ${e.soundtrack ? soundtrack(e.soundtrack) : ''}
         <aside class="r-notes" aria-label="About this entry">
           <p>In ${M.raw(andList(w.eras.map((er) => String(html`<a href="#era">${er.title}</a>`))))}</p>
-          <p>Written from the Trips template</p>
           <p>Filed under ${tagLinks(e.tags)}</p>
         </aside>
         <nav class="r-turn" aria-label="Turn the page">${turn(before, 'Before')}${turn(after, 'After')}</nav>
         <div class="r-actions">
-          <a class="btn" href="#entry">${icon('pen', { size: 18 })} Edit</a>
+          <a class="btn" href="#entry">${icon('pen', { size: 18 })} Edit this entry</a>
           <a class="btn" href="#loot">${icon('lock', { size: 18 })} Seal as a Loot Drop</a>
           <button class="btn btn--quiet">Delete</button>
         </div>
       </article>
+      ${M.writeMenu({ label: 'Write', cls: 'write--fab' })}
     </div>`;
   }
 
@@ -617,7 +703,7 @@ a.toc-title:hover { text-decoration: underline; }
         <section class="era-body" aria-labelledby="contents-h">
           <ol class="leaders">${p.rows.map((r) => {
             const span = range(r.startDate, r.endDate);
-            const notes = [r.title !== span && span, r.isCurrent && 'this week', r.sealedCount && `${words(r.sealedCount)} sealed`].filter(Boolean);
+            const notes = [r.title !== span && span, r.isCurrent && 'this week'].filter(Boolean);
             return html`<li>
               <a href="#feed"><span class="l-title">${r.title}</span><span class="l-dots" aria-hidden="true"></span><span class="l-count">${count(r.entryCount, 'entry', 'entries')}</span></a>
               ${notes.length ? html`<span class="l-range">${notes.join(', ')}</span>` : ''}
@@ -626,13 +712,14 @@ a.toc-title:hover { text-decoration: underline; }
           <p class="more">${p.notListedWeeks} earlier weeks, back to ${date(e.startDate, 'plain')} <a href="#feed">Show every week</a></p>
         </section>
         <aside class="era-aside" aria-label="About this Era">
-          <section aria-labelledby="inside-h"><h2 class="aside-h" id="inside-h">Chapters inside this one</h2>
+          <section aria-labelledby="inside-h"><h2 class="aside-h" id="inside-h">Eras inside this one</h2>
             <ul class="inside">${p.chaptersInside.map((c) => html`<li><a href="#era">${c.title}</a><span>${range(c.startDate, c.endDate)}</span></li>`)}</ul></section>
           <section class="colophon" aria-labelledby="col-h"><h2 class="aside-h" id="col-h">In this Era</h2>
             <p class="figs">${t.weekCount} weeks, ${t.entryCount} entries, ${t.photoCount.toLocaleString('en-AU')} photos and ${t.voiceNoteCount} voice notes.</p></section>
           <div><a class="btn" href="#era">${icon('calendar', { size: 18 })} Change dates or cover</a></div>
         </aside>
       </div>
+      ${M.writeMenu({ label: 'Write', cls: 'write--fab' })}
     </div>`;
   }
 
@@ -644,12 +731,11 @@ a.toc-title:hover { text-decoration: underline; }
     return html`<div class="page">
       ${runhead({ back: { href: '#feed', label: M.weekLabel(w) }, right: w.eras[0].title })}
       <div class="loot-stage">
-        <figure class="loot-art">${uncut()}</figure>
+        <figure class="loot-art">${uncut({ band: `Opens ${M.instant(e.unlockDate, { day: 'numeric', month: 'short', year: 'numeric' })}` })}</figure>
         <div class="loot-text">
           <h1>Sealed Loot Drop</h1>
           <p class="loot-opens">${u.opens}</p>
-          ${u.countdown ? html`<p class="loot-count">${u.countdown}</p>` : ''}
-          <p class="loot-from">Dated ${date(e.entryDate, 'long')}</p>
+          <p class="loot-count">${u.countdown}</p>
           <p class="loot-note">Nobody can open it or change it before then, you included. You can still extend the seal, or delete it.</p>
           <div class="loot-actions">
             <button class="btn">${icon('clock', { size: 18 })} Extend the seal</button>
@@ -660,12 +746,13 @@ a.toc-title:hover { text-decoration: underline; }
       <section class="lifecycle" aria-labelledby="life-h">
         <h2 class="sr-only" id="life-h">What happens to it</h2>
         <ol class="life">
-          <li><span class="life-what">Written</span><span class="life-when">${date(e.entryDate, 'long')}</span></li>
-          <li class="is-now"><span class="life-what">Sealed, today</span><span class="life-when">${u.countdown ? cap(u.countdown.replace(/^in /, '')) + ' to go' : date(M.today(), 'long')}</span></li>
-          <li><span class="life-what">Opens</span><span class="life-when">${u.opens.replace(/^Opens /, '')}</span></li>
+          <li class="is-done"><span class="life-what">Written</span><span class="life-when">${date(e.entryDate, 'long')}</span></li>
+          <li class="is-now"><span class="life-what">Sealed</span><span class="life-when">Today, ${u.countdown.replace(/^in /, '')} to go</span></li>
+          <li><span class="life-what">Opens</span><span class="life-when">At nine in the morning, Melbourne time</span></li>
           <li><span class="life-what">Then</span><span class="life-when">It waits at the top of your journal until you read it, and you can write back to past you.</span></li>
         </ol>
       </section>
+      ${M.writeMenu({ label: 'Write', cls: 'write--fab' })}
     </div>`;
   }
 
@@ -673,6 +760,7 @@ a.toc-title:hover { text-decoration: underline; }
   M.mount((screen) => {
     renderSide(screen);
     app.innerHTML = String(SCREENS[screen]());
+    followEra();
   });
 })();
 </script>

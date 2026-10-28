@@ -38,6 +38,7 @@
 | `malformed-request` | 400 | Unreadable JSON, bad UUID, bad `X-Dev-User-Id` |
 | `not-found` | 404 | Missing **or not owned** |
 | `entry-sealed` | 409 | Changing a sealed entry's content, date, template or media; or moving its unlock date earlier |
+| `entry-stale` | 409 | `PUT /entries/{id}` sent a `version` older than the stored one: the entry changed elsewhere (D-23) |
 | `conflict` | 409 | Client-supplied `id` already used by another user, or by an entry in Recently deleted (D-30) |
 | `payload-too-large` | 413 | File over 25 MB, content over 200 KB |
 | `unsupported-media-type` | 415 | File type not in the allowed list |
@@ -80,11 +81,15 @@ Every paged endpoint takes `?page=0&size=10` (`size` max 50, unless the endpoint
   "updatedAt": "2026-10-20T03:30:00Z",
   "unlockDate": null,
   "isLocked": false,
+  "dateUnknown": false,
+  "version": 3,
   "media": [ { "...": "Media" } ]
 }
 ```
 - `title` is optional (D-24). `tags[].source` is `USER`, or from Phase 4 `AI` for an accepted suggestion (D-26).
 - `soundtrack` is a Spotify URI or `null` (D-35).
+- `dateUnknown` is `true` when the memory date is a guess (a photo-dump photo with no date of its own). Changing `entryDate` clears it. It isn't private, so sealed entries keep it (D-34).
+- `version` goes up on every change to the entry; send it back on `PUT` (D-23). It isn't private, so sealed entries keep it.
 - `replyToEntryId` names the opened Loot Drop this entry answers. `replyIds` lists the replies to an opened Loot Drop (D-33).
 
 **Sealed entry** (`unlockDate` is in the future): the same shape, with the private fields removed, including `soundtrack`, `replyToEntryId` and `replyIds`.
@@ -105,6 +110,8 @@ Every paged endpoint takes `?page=0&size=10` (`size` max 50, unless the endpoint
   "updatedAt": "2026-10-21T09:05:00Z",
   "unlockDate": "2027-10-21T09:00:00Z",
   "isLocked": true,
+  "dateUnknown": false,
+  "version": 1,
   "media": []
 }
 ```
@@ -125,6 +132,7 @@ A lightweight row for lists such as the all-entries timeline (D-25). No caption,
   "createdAt": "2026-10-20T03:30:00Z",
   "unlockDate": null,
   "isLocked": false,
+  "dateUnknown": false,
   "deletedAt": null
 }
 ```
@@ -132,6 +140,7 @@ A lightweight row for lists such as the all-entries timeline (D-25). No caption,
 - `firstMediaKind` is `PHOTO`, `PAGE_SCAN` or `VOICE_NOTE` for the first media item, or `null` when there is none. The client shows `title`, else `previewLine`, else *Photo* / *Diary page* / *Voice note* (D-24).
 - `photoCount` counts every image, diary pages included.
 - Sealed: `title`, `previewLine`, `photoCount`, `voiceNoteCount` and `firstMediaKind` are `null` and `tags` is empty.
+- `dateUnknown` is as on `Entry` (D-34).
 - `deletedAt` is set only in the Recently deleted list; the entry is erased 30 days after it (D-30).
 
 ### `Media`
@@ -177,9 +186,9 @@ Used by the feed and by week detail. `eras` lists every Era whose dates overlap 
 ### Eras (tag: Eras)
 | Method and path | Body | Success |
 |---|---|---|
-| `POST /eras` | `{ "id"?, "title": string(1–150), "description"?: string, "startDate": date, "endDate"?: date ≥ startDate, "soundtrack"?: Spotify URI or null, "coverMediaId"?: uuid or null, "pinnedInFeed"?: boolean (default `false`) }` | `201` era. It holds every week its dates overlap, existing weeks included (D-22). A cover must be an image from one of the user's own entries, otherwise `400`; another user's media is `404` (D-36) |
+| `POST /eras` | `{ "id"?, "title": string(1–150), "description"?: string, "startDate": date, "endDate"?: date ≥ startDate, "soundtrack"?: Spotify URI or null, "coverMediaId"?: uuid or null, "pinnedInFeed"?: boolean (default `false`) }` | `201` era. It holds every week its dates overlap, existing weeks included (D-22). A cover must be an image from one of the user's own entries, otherwise `400`; a photo from a sealed entry is `400`; another user's media, or a photo from an entry in Recently deleted, is `404` (D-36) |
 | `GET /eras` | — | `200` array of eras, `startDate` descending |
-| `GET /eras/{eraId}` | — | `200` era plus `"weeklyLogs": [{ "id", "title", "startDate", "endDate", "isClosed", "entryCount" }]`, newest first: the weeks its dates overlap. `entryCount` counts only the week's entries inside the Era's dates (D-22) |
+| `GET /eras/{eraId}` | — | `200` era plus `"weeklyLogs": [{ "id", "title", "startDate", "endDate", "isClosed", "entryCount" }]`, newest first: the weeks its dates overlap. `entryCount` counts only the week's entries inside the Era's dates (D-22), leaving out sealed entries and entries in Recently deleted (D-10, D-30) |
 | `PUT /eras/{eraId}` | Same as POST without `id` (full replace) | `200` era. New dates apply at once: it holds the weeks they overlap (D-22) |
 | `DELETE /eras/{eraId}` | — | `204`. Only the Era goes; its weeks, their entries and their other Eras stay |
 
@@ -226,13 +235,13 @@ Weeks are created automatically when an entry is created (D-08). There is no cre
 ### Entries (tag: Entries)
 | Method and path | Body | Success |
 |---|---|---|
-| `POST /entries` | `{ "id"?, "entryDate"?: date (default today in the user's zone; not after today; not before 1900-01-01), "templateId"?: uuid, "title"?: string(1–150) or null, "contentJson"?: TipTap doc or null, "tagIds"?: [uuid] (at most 20, the user's own), "soundtrack"?: Spotify URI or null, "replyToEntryId"?: uuid or null }` | `201` `Entry`, filed into the right week (created if needed). Replay of an existing own `id`: `200`. An entry may be created empty because media are uploaded afterwards (D-23). `replyToEntryId` must be one of the user's own Loot Drops that has opened, otherwise `400`; another user's is `404` (D-33) |
+| `POST /entries` | `{ "id"?, "entryDate"?: date (default today in the user's zone; not after today; not before 1900-01-01), "templateId"?: uuid, "title"?: string(1–150) or null, "contentJson"?: TipTap doc or null, "tagIds"?: [uuid] (at most 20, the user's own), "soundtrack"?: Spotify URI or null, "replyToEntryId"?: uuid or null, "dateUnknown"?: boolean (default `false`; the photo dump sets it, D-34) }` | `201` `Entry`, filed into the right week (created if needed). Replay of an existing own `id`: `200`. An entry may be created empty because media are uploaded afterwards (D-23). `replyToEntryId` must be one of the user's own Loot Drops that has opened, otherwise `400`; another user's is `404` (D-33) |
 | `GET /entries?page=0&size=50&tagId={uuid}` | — | `200` `PageResponse<EntrySummary>` of every entry, `entryDate` then `createdAt`, newest first. `tagId` is optional and filters by tag; sealed entries are left out while filtering (D-10). `size` max 100 here. Backs the all-entries timeline (D-25) |
 | `GET /entries/opened` | — | `200` `EntrySummary[]`: Loot Drops whose unlock time has passed and that haven't been marked seen, most recently opened first, at most 20 (D-10). Backs the *Opened* strip |
 | `GET /entries/deleted?page=0&size=10` | — | `200` `PageResponse<EntrySummary>` of the entries in Recently deleted, most recently deleted first, each with `deletedAt` (D-30). Sealed ones are redacted (D-10). Backs the *Recently deleted* screen |
 | `GET /entries/on-this-day` | — | `200` `EntrySummary[]`: entries from the same day and month in earlier years, newest year first, at most 20 (D-32). Sealed and deleted entries never appear. In a year that isn't a leap year, 29 February entries appear on 28 February. Backs the *On this day* strip |
 | `GET /entries/{entryId}` | — | `200` `Entry` (redacted if sealed) |
-| `PUT /entries/{entryId}` | `{ "entryDate": date, "templateId": uuid or null, "title": string or null, "contentJson": doc or null, "tagIds": [uuid], "soundtrack": Spotify URI or null, "replyToEntryId": uuid or null }` (full replace; a date change moves the entry to the matching week) | `200` `Entry`. Sealed: `409 entry-sealed`. A tag ID that isn't the user's: `404` |
+| `PUT /entries/{entryId}` | `{ "version": integer (the one last read), "entryDate": date, "templateId": uuid or null, "title": string or null, "contentJson": doc or null, "tagIds": [uuid], "soundtrack": Spotify URI or null, "replyToEntryId": uuid or null }` (full replace; a date change moves the entry to the matching week and clears `dateUnknown`, D-34) | `200` `Entry`. Sealed: `409 entry-sealed`. Stale `version`: `409 entry-stale`, nothing saved (D-23). A tag ID that isn't the user's: `404` |
 | `DELETE /entries/{entryId}` | — | `204`. Moves the entry to Recently deleted for 30 days; its media files stay until it is erased. Allowed even when sealed. An entry with no title, caption or media is erased at once (D-30) |
 | `POST /entries/{entryId}/restore` | — | `200` `Entry`, back in its week with its media, tags and seal as they were (D-30). Not in Recently deleted: `404` |
 | `POST /entries/{entryId}/erase` | — | `204`. Erases an entry in Recently deleted, with its media files, at once. Not in Recently deleted: `404` |

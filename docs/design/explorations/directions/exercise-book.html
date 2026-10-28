@@ -204,6 +204,56 @@ h1, h2, h3 { text-wrap: balance; }
 .checklist li { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 8px; align-items: baseline; min-height: var(--line); }
 .checklist i { width: 20px; height: 20px; border: 1.8px solid var(--ink); border-radius: 3px; display: grid; place-items: center; color: var(--margin); transform: translateY(4px); }
 .checklist b { font-family: var(--hand); font-size: 19px; font-weight: 700; }
+
+/* ---------- Review fixes (2026-10-29) ---------- */
+/* A taped print's corner poked 3px past a phone screen; the pages clip what hangs over their edge. */
+.book, .ruled { overflow-x: clip; }
+
+/* A1: On this day as mini prints in one row. */
+.otd h2 { font-size: 20px; }
+.otd-items { display: flex; gap: 14px; overflow-x: auto; padding: 10px 2px 6px; scrollbar-width: none; }
+.otd-items::-webkit-scrollbar { display: none; }
+.otd-item { flex: none; display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 10px; align-items: center; width: 220px; text-decoration: none; }
+.otd .print.mini { width: 62px; padding: 4px 4px 12px; margin: 0; }
+.otd .print.mini::before, .otd .print.mini::after { width: 26px; height: 10px; top: -5px; }
+.otd-item b { display: block; font: 700 16px/1.15 var(--hand); }
+.otd-item small { display: block; font: 400 13px/1.3 var(--print); color: var(--ink-2); margin-top: 2px; }
+
+/* E1: a week is one line of what happened. */
+.week-line { display: block; padding-top: 8px; text-decoration: none; }
+.week-line h2 { font: 700 26px/var(--line) var(--hand); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; }
+.week-line:hover h2 { text-decoration-color: var(--margin); }
+.wl-f { display: block; font: 400 15px/var(--line) var(--print); color: var(--ink-2); }
+.book-contents { display: none; }
+@media (min-width: 1100px) {
+  .book-contents { display: block; padding-top: var(--line); }
+  .book-contents h2 { font: 700 26px/var(--line) var(--hand); }
+}
+
+/* E2: the wax seal. E3: pen ticks for what has happened, no boxes. */
+.checklist i { border: 0; }
+
+/* A8: Spotify's own mark, in black. */
+.sound .spot { display: grid; color: #191414; }
+
+/* A4: one "New page" button: top right on desktop, within thumb reach on phones. */
+.write { position: relative; }
+.write-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 0 20px 0 16px; border: 2px solid var(--ink); border-radius: 999px; background: var(--ink); color: var(--page); font: 700 16px var(--print); }
+.write-btn:hover { background: #2C3B60; }
+.write-menu { position: absolute; z-index: 30; display: grid; min-width: 210px; padding: 6px; background: #FFFFFF; border: 2px solid var(--ink); border-radius: 10px 14px 12px 16px; }
+.write-menu[hidden] { display: none; }
+.write-menu button { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; font: 700 16px var(--hand); text-align: left; border-radius: 8px; }
+.write-menu button:hover { background: #EEF3F8; }
+.write--fab { position: fixed; z-index: 20; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+.write--fab .write-menu { right: 0; bottom: calc(100% + 8px); }
+.write--top { display: none; }
+.write--top .write-btn { min-height: 44px; }
+.write--top .write-menu { right: 0; top: calc(100% + 8px); }
+.book { padding-bottom: 96px; }
+@media (min-width: 1100px) { .write--fab { display: none; } .write--top { display: block; margin-left: auto; } .book { padding-bottom: 0; } }
+
+@media (max-width: 1099px) { .book > .ruled:first-of-type { padding-bottom: 4px; } .book > .ruled + .ruled { padding-top: 0; } }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -222,22 +272,24 @@ h1, h2, h3 { text-wrap: balance; }
   const shortUnlock = (e) => M.instant(e.unlockDate, { day: 'numeric', month: 'short', year: 'numeric' });
 
   // An envelope drawn in pen: the same drawing for every sealed Loot Drop.
+  // A wax seal's uneven edge: a circle whose radius wobbles in and out.
+  const waxEdge = (cx, cy, r) => `M${Array.from({ length: 16 }, (_, i) => { const a = (i / 16) * Math.PI * 2, rr = r + (i % 2 ? 1.7 : -0.7); return `${(cx + rr * Math.cos(a)).toFixed(1)} ${(cy + rr * Math.sin(a)).toFixed(1)}`; }).join('L')}Z`;
   const envelope = (w = 150) => M.raw(`<svg viewBox="0 0 150 108" width="${w}" aria-hidden="true">
     <path d="M6 10h138v90H6z" fill="#FFFFFF" stroke="#1E2A47" stroke-width="2.2" stroke-linejoin="round"/>
     <path d="M6 10l69 52 69-52" fill="none" stroke="#1E2A47" stroke-width="2.2" stroke-linejoin="round"/>
     <path d="M6 100l52-40M144 100l-52-40" fill="none" stroke="#1E2A47" stroke-width="1.6" opacity=".55"/>
     <rect x="-6" y="2" width="44" height="16" fill="rgba(226,219,199,.85)" transform="rotate(-22 16 10)"/>
     <rect x="112" y="2" width="44" height="16" fill="rgba(226,219,199,.85)" transform="rotate(20 134 10)"/>
-    <circle cx="75" cy="62" r="9" fill="#E0566B"/><path d="M71 62h8M75 58v8" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/></svg>`);
+    <path d="${waxEdge(75, 62, 13)}" fill="#B02A3C"/><circle cx="75" cy="62" r="8.2" fill="none" stroke="#7F1D2A" stroke-width="1.5"/>
+    <text x="75" y="66.4" text-anchor="middle" font-family="Kalam" font-weight="700" font-size="12" fill="#7F1D2A">m</text></svg>`);
 
   function topbar({ back, title } = {}) {
     if (back) return html`<header class="topbar"><a class="icon-btn" href="${back}" aria-label="Back">${icon('arrowLeft', { size: 22 })}</a><span class="tb-title">${title}</span><a class="wordmark desk-only" href="#feed">memoirist</a></header>`;
-    return html`<header class="topbar"><a class="wordmark" href="#feed">memoirist <small>Book 3</small></a>
-      <a class="btn btn--fill desk-btn" href="#entry">${icon('pen', { size: 18 })}New page</a>
-      <a class="icon-btn" href="#entry" aria-label="Write a new page">${icon('pen', { size: 22 })}</a></header>`;
+    return html`<header class="topbar"><a class="wordmark" href="#feed">memoirist</a>
+      ${M.writeMenu({ label: 'New page', cls: 'write--top' })}</header>`;
   }
   function tabs(screen) {
-    const T = [['Journal', '#feed', '#C9415A', ['feed', 'entry', 'loot']], ['Eras', '#era', '#2F7356', ['era']], ['Timeline', '#feed', '#3866A8', []], ['Templates', '#feed', '#8E6417', []], ['Tags', '#feed', '#6A5AA3', []]];
+    const T = [['Journal', '#feed', '#A8324A', ['feed', 'entry', 'loot']], ['Eras', '#era', '#2F7356', ['era']], ['Timeline', '#feed', '#3866A8', []], ['Templates', '#feed', '#7A5410', []], ['Tags', '#feed', '#6A5AA3', []]];
     return html`<nav class="tabs" aria-label="memoirist">${T.map(([l, h, c, s]) => html`<a href="${h}" style="background:${c}" ${s.includes(screen) ? M.raw('aria-current="page"') : ''}>${l}</a>`)}</nav>`;
   }
 
@@ -248,20 +300,18 @@ h1, h2, h3 { text-wrap: balance; }
       <svg class="wave" viewBox="0 0 200 26" preserveAspectRatio="none" aria-hidden="true"><path d="${path}" stroke="#4E5970" stroke-width="1.8" stroke-linecap="round"/></svg>
       <span class="dur">${M.duration(v.durationSeconds)}</span></div>`;
   }
-  const sound = (st) => html`<p class="sound">${icon('music', { size: 18 })}<span>Listening to <i>${st.title}</i>, ${st.artist}</span></p>`;
+  const sound = (st) => html`<p class="sound"><span class="spot">${icon('spotify', { size: 18 })}</span><span>Listening to <i>${st.title}</i>, ${st.artist}</span></p>`;
   const tagRow = (ts) => html`<div class="tags">${ts.map((t) => html`<a class="tag" href="#feed">${t.name}</a>`)}</div>`;
 
-  function contents(w) {
+  // A week is one line of what happened, never which days were missed (D-32); it opens the week's summary (D-25).
+  function weekFacts(w) {
     const s = M.weekStats(w);
-    const facts = [plural(s.entryCount, 'entry', 'entries'), s.photoCount && plural(s.photoCount, 'photo'), s.voiceNoteCount && plural(s.voiceNoteCount, 'voice note')].filter(Boolean).join(', ');
-    return html`<div class="box">
-      <p class="facts">${facts}${s.sealedCount ? ', and one sealed' : ''}</p>
-      <div class="ticks" aria-label="Days written">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => html`<span><i>${s.days[i] ? tick : ''}</i>${d}</span>`)}</div>
-      <ul class="toc">${w.entries.map((e) => M.isSealed(e)
-        ? html`<li><a class="sealed" href="#loot"><span class="td">${date(e.entryDate, 'weekdayShort')}</span><span class="tt">${icon('lock', { size: 15 })}Don't open until ${shortUnlock(e)}</span><span></span></a></li>`
-        : html`<li><a href="#entry"><span class="td">${date(e.entryDate, 'weekdayShort')}</span><span class="tt">${M.displayTitle(e)}</span><span class="ti">${M.images(e).length ? icon(M.images(e)[0].kind === 'PAGE_SCAN' ? 'page' : 'image', { size: 15 }) : ''}${M.voiceNotes(e).length ? icon('mic', { size: 15 }) : ''}</span></a></li>`)}</ul>
-      ${s.tags.length ? html`<p class="filed">Tags: ${s.tags.map((t, i) => html`${i ? ', ' : ''}<b>${t.name}</b>`)}</p>` : ''}
-    </div>`;
+    return [plural(s.entryCount, 'entry', 'entries'), s.photoCount && plural(s.photoCount, 'photo'), s.voiceNoteCount && plural(s.voiceNoteCount, 'voice note')].filter(Boolean).join(', ')
+      + (s.tags.length ? `. ${s.tags.map((t) => t.name).join(', ')}` : '');
+  }
+  function contents() {
+    return html`<section class="book-contents" aria-labelledby="contents-h"><h2 id="contents-h">Contents</h2>
+      <ul class="toc">${M.data.weeks.map((w) => html`<li><a href="#feed"><span class="td">${Number(w.startDate.slice(8))}</span><span class="tt">${M.weekLabel(w)}</span><span class="ti">${plural(M.weekStats(w).entryCount, 'entry', 'entries')}</span></a></li>`)}</ul></section>`;
   }
 
   function coverSmall(era, extra = '') {
@@ -274,8 +324,8 @@ h1, h2, h3 { text-wrap: balance; }
     const day = html`<span class="in-margin">${date(e.entryDate, 'weekdayShort')}<br>${Number(e.entryDate.slice(8))}</span>`;
     if (M.isSealed(e)) {
       const u = M.opening(e);
-      return html`<article class="entry-p" aria-label="Sealed Loot Drop">${day}
-        <a class="envelope" href="#loot">${envelope()}<span class="note"><b>Don't open until ${shortUnlock(e)}!</b>${u.countdown}<small>${u.opens}</small></span></a></article>`;
+      return html`<article class="entry-p" data-sealed aria-label="Sealed Loot Drop">${day}
+        <a class="envelope" href="#loot">${envelope()}<span class="note"><b>Don't open until ${shortUnlock(e)}!</b>${u.countdown}</span></a></article>`;
     }
     const pics = M.images(e);
     const heading = e.title || (e.contentJson ? null : M.displayTitle(e));
@@ -290,13 +340,15 @@ h1, h2, h3 { text-wrap: balance; }
 
   function weekOnPage(w) {
     return html`<section class="week" aria-labelledby="h-${w.id}">
-      <h2 id="h-${w.id}">${M.weekLabel(w)}</h2><p class="range">${range(w.startDate, w.endDate)}</p>
-      ${contents(w)}${w.entries.map(entryOnPage)}</section>`;
+      <a class="week-line" href="#feed" aria-label="${M.weekLabel(w)}: open the week's summary"><h2 id="h-${w.id}">${M.weekLabel(w)}</h2><span class="wl-f">${weekFacts(w)}</span></a>
+      ${w.entries.map(entryOnPage)}</section>`;
   }
 
+  // On this day as a row of mini prints, compact enough to leave room for today's page.
   function otd() {
     return html`<section class="otd" aria-labelledby="otd-h"><h2 id="otd-h">On this day</h2>
-      <div class="otd-items">${M.data.onThisDay.map((e, i) => html`<a href="#entry" style="text-decoration:none"><span class="print" style="--tilt:${i ? '2deg' : '-2.5deg'}"><img src="${M.src(M.images(e)[0])}" alt="${M.images(e)[0].alt}"><span class="cap">${e.title}</span></span><span class="ago">${M.yearsAgo(e.entryDate)}, ${date(e.entryDate, 'medium')}</span></a>`)}</div></section>`;
+      <div class="otd-items">${M.data.onThisDay.map((e, i) => html`<a class="otd-item" href="#entry"><span class="print mini" style="--tilt:${i ? '2deg' : '-2.5deg'}"><img src="${M.src(M.images(e)[0])}" alt="${M.images(e)[0].alt}"></span>
+        <span><b>${e.title}</b><small>${M.yearsAgo(e.entryDate)}</small></span></a>`)}</div></section>`;
   }
 
   // ---------- Feed ----------
@@ -309,15 +361,16 @@ h1, h2, h3 { text-wrap: balance; }
         <section class="ruled" aria-label="Inside cover">
           ${otd()}
           ${coverSmall(brunswick)}
-          <section class="week" aria-labelledby="h-now"><h2 id="h-now">${M.weekLabel(now)}</h2><p class="range">${range(now.startDate, now.endDate)}</p>${contents(now)}</section>
+          ${contents()}
         </section>
         <section class="ruled" aria-label="This week's pages">
-          ${now.entries.map(entryOnPage)}
+          ${weekOnPage(now)}
           ${coverSmall(grampians, M.raw('<span class="row"><span>Inside</span><i>The Brunswick Years</i></span>'))}
           ${weekOnPage(trip)}
         </section>
         ${tabs('feed')}
-      </main>`;
+      </main>
+      ${M.writeMenu({ label: 'New page', cls: 'write--fab' })}`;
   }
 
   // ---------- Entry ----------
@@ -340,7 +393,8 @@ h1, h2, h3 { text-wrap: balance; }
           <div style="display:flex;flex-wrap:wrap;gap:8px;padding:12px 0"><a class="btn" href="#entry">${icon('pen', { size: 18 })}Edit</a><a class="btn" href="#loot">${icon('lock', { size: 18 })}Seal as a Loot Drop</a><button class="btn btn--text">Delete</button></div>
         </section>
         ${tabs('entry')}
-      </main>`;
+      </main>
+      ${M.writeMenu({ label: 'New page', cls: 'write--fab' })}`;
   }
 
   // ---------- Era ----------
@@ -366,12 +420,13 @@ h1, h2, h3 { text-wrap: balance; }
           <ul class="leaders">${p.rows.map((r) => html`<li><a href="#feed"><span class="lt">${r.title}</span><span class="ld"></span><span class="ln">${plural(r.entryCount, 'entry', 'entries')}</span></a></li>`)}</ul>
           <p class="filed">and ${p.notListedWeeks} earlier weeks, back to ${date(e.startDate, 'medium')}</p>
           <p class="hand" style="font-size:20px;padding-top:var(--line)">So far: ${t.weekCount} weeks, ${t.entryCount} entries, ${t.photoCount.toLocaleString('en-AU')} photos, ${t.voiceNoteCount} voice notes</p>
-          <h2 class="hand" style="font-size:24px;font-weight:700;padding-top:var(--line)">Smaller books tucked inside</h2>
+          <h2 class="hand" style="font-size:24px;font-weight:700;padding-top:var(--line)">Eras inside this one</h2>
           <div class="inserts">${p.chaptersInside.map((c, i) => html`<a class="insert" href="#era" style="--tilt:${i ? '-1.2deg' : '1deg'}"><b>${c.title}</b><small>${range(c.startDate, c.endDate)}</small></a>`)}</div>
           <p style="padding:8px 0"><a class="btn" href="#era">${icon('calendar', { size: 18 })}Change dates or cover</a></p>
         </section>
         ${tabs('era')}
-      </main>`;
+      </main>
+      ${M.writeMenu({ label: 'New page', cls: 'write--fab' })}`;
   }
 
   // ---------- Loot Drop ----------
@@ -385,19 +440,19 @@ h1, h2, h3 { text-wrap: balance; }
         </section>
         <section class="ruled" aria-label="About this Loot Drop">
           <h1 class="hand" style="font-size:34px;line-height:40px;font-weight:700;padding-top:12px">Sealed Loot Drop</h1>
-          <p>${u.opens}.</p>
           <div class="sticky"><b>${days}</b><span>days to go</span></div>
-          <p>Dated ${date(e.entryDate, 'long')}. Nobody can open it or change it before then, you included.</p>
+          <p>Nobody can open it or change it before then, you included.</p>
           <ul class="checklist" style="padding-top:var(--line)">
             <li><i>${tick}</i><span><b>Written</b>, ${date(e.entryDate, 'medium')}</span></li>
             <li><i>${tick}</i><span><b>Sealed</b>, today</span></li>
-            <li><i></i><span><b>Opens</b>, ${M.instant(e.unlockDate, { day: 'numeric', month: 'short', year: 'numeric' })}</span></li>
-            <li><i></i><span><b>Write back</b> to past you</span></li>
+            <li><i></i><span><b>Opens</b> at 9:00 am</span></li>
+            <li><i></i><span>Then, if you like, <b>write back</b> to past you</span></li>
           </ul>
           <div style="display:flex;flex-wrap:wrap;gap:8px;padding:16px 0"><button class="btn btn--fill">${icon('clock', { size: 18 })}Extend the seal</button><button class="btn btn--text">Delete</button></div>
         </section>
         ${tabs('loot')}
-      </main>`;
+      </main>
+      ${M.writeMenu({ label: 'New page', cls: 'write--fab' })}`;
   }
 
   const SCREENS = { feed, entry: entryScreen, era: eraScreen, loot: lootScreen };

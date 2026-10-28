@@ -19,7 +19,8 @@ paths:
 - Configuration goes in `@ConfigurationProperties` records (`StorageProperties`, …), not scattered `@Value`.
 
 ## Persistence
-- Entities extend a base class with `@CreationTimestamp`/`@UpdateTimestamp` `Instant createdAt`/`updatedAt`.
+- Entities extend `TimestampedEntity` (`@CreationTimestamp`/`@UpdateTimestamp` `Instant createdAt`/`updatedAt`), which extends `BaseEntity` (the `id` and `Persistable<UUID>`). `Media` extends `BaseEntity` only (D-12).
+- `Entry` has a `@Version` field. Compare the client's `version` with the loaded one and throw `EntryStaleException`; never copy the client's value onto the entity (D-23).
 - Entities implement `Persistable<UUID>`. Use a `@Transient boolean isNew = true` that is cleared in `@PostLoad`/`@PostPersist`. IDs are set in the constructor: either the client's ID or `UUID.randomUUID()`.
 - JSONB fields use `@JdbcTypeCode(SqlTypes.JSON)`.
 - Every association is `LAZY`.

@@ -111,7 +111,7 @@ Everything runs locally with Docker Compose: Postgres plus SeaweedFS for object 
 - **On this day:** a strip at the top of the feed with entries from the same day in earlier years (D-32).
 - **Feed:** paged, newest weeks first, grouped by Era. A week in several Eras is listed once: a chapter that sits inside a bigger one (a trip inside "Uni Days") shows as a section nested inside it; when Eras only partly overlap, the most recently started one wins, with the others as chips. The user can pin an Era to make it win (D-22).
 - **Settings:** display name, timezone (default Australia/Melbourne) and birthday (D-33).
-- **Dev user:** a seeded local user, with no login yet, and optional sample content for building the UI (task 3.11).
+- **Dev user:** a seeded local user, with no login yet, and optional sample content for building the UI (task 3.16).
 - **API docs:** Swagger UI at `/swagger-ui.html`.
 - **Paper diaries:** a photo of a handwritten page is an ordinary photo on a backdated entry, marked as a page (D-20).
 

@@ -19,7 +19,7 @@ Settled choices for memoirist, and the questions still open.
 | D-09 | Entries have a memory date: backdated, never future, not before 1900 | 2026-10-25 | 2026-10-27 |
 | D-10 | Loot Drops use a strict seal, and opening one is surfaced | 2026-10-25 | 2026-10-28 |
 | D-11 | Ownership checks and local-only dev user | 2026-10-25 | |
-| D-12 | Clients may generate entity UUIDs | 2026-10-25 | 2026-10-28 |
+| D-12 | Clients may generate entity UUIDs | 2026-10-25 | 2026-10-29 |
 | D-13 | Frontend library set | 2026-10-25 | 2026-10-28 |
 | D-14 | Testing and CI approach | 2026-10-25 | |
 | D-15 | Backend code style | 2026-10-25 | |
@@ -30,7 +30,7 @@ Settled choices for memoirist, and the questions still open.
 | D-20 | Paper diaries: pages are marked media; reading them is on tap | 2026-10-26 | 2026-10-28 |
 | D-21 | One AI layer: ask, generate and surface, never chat | 2026-10-27 | 2026-10-28 |
 | D-22 | Eras can overlap and are defined by their dates | 2026-10-27 | 2026-10-28 |
-| D-23 | Capture and sealing behaviour (drafts, empty entries, partial uploads, 9 am unlocks) | 2026-10-27 | |
+| D-23 | Capture and sealing behaviour (drafts, empty entries, partial uploads, 9 am unlocks, stale edits) | 2026-10-27 | 2026-10-29 |
 | D-24 | Entries have an optional title; how lists name an entry | 2026-10-27 | |
 | D-25 | Week summary view and an all-entries timeline | 2026-10-27 | 2026-10-28 |
 | D-26 | Manual tags in Phase 1; AI tag suggestions in Phase 4 | 2026-10-27 | 2026-10-28 |
@@ -41,9 +41,9 @@ Settled choices for memoirist, and the questions still open.
 | D-31 | Build order: groups before the AI biographer; installing at launch | 2026-10-28 | |
 | D-32 | Bringing people back: On this day, a yearly letter and a weekly email | 2026-10-28 | |
 | D-33 | Loot Drop extras: suggested dates, a reply to past you and a first letter | 2026-10-28 | |
-| D-34 | Photo dump: photos filed by the day they were taken | 2026-10-28 | |
+| D-34 | Photo dump: photos filed by the day they were taken | 2026-10-28 | 2026-10-29 |
 | D-35 | Soundtracks: Spotify links, and search through our server | 2026-10-28 | |
-| D-36 | Era covers | 2026-10-28 | |
+| D-36 | Era covers | 2026-10-28 | 2026-10-29 |
 | D-37 | App lock | 2026-10-28 | |
 | D-38 | Product metrics: counts only, never content | 2026-10-28 | |
 | D-39 | Hard topics and the AI | 2026-10-28 | |
@@ -137,7 +137,9 @@ Seal last: create the entry, upload media, then call `POST /entries/{id}/seal`. 
 ## D-12 Client-generated UUIDs
 Create requests for eras, templates and entries may include an `id` (UUID v4). If the `id` already exists for the same user, the server returns the existing resource with `200` (a safe retry). If it exists for someone else, the server returns `409`. An `id` that belongs to one of the user's entries in Recently deleted also returns `409`; the user restores that entry instead (D-30). Without an `id`, the server generates one.
 **Why:** Phase 5 offline capture can create entries before reaching the server, with no ID remapping.
-**Consequence:** JPA entities with assigned IDs implement `Persistable<UUID>` so `save()` inserts directly instead of selecting first.
+**Consequence:** JPA entities with assigned IDs implement `Persistable<UUID>` so `save()` inserts directly instead of selecting first. Two base classes in `common/` carry this:
+- `BaseEntity` holds the UUID `id` and implements `Persistable<UUID>`.
+- `TimestampedEntity` extends it with `@CreationTimestamp createdAt` and `@UpdateTimestamp updatedAt` (`Instant`s). Every entity uses it except `Media`, which extends `BaseEntity` and keeps its own `uploaded_at`: the `media` table has no `created_at` or `updated_at`, and `ddl-auto=validate` would reject them.
 
 ## D-13 Frontend library set
 React 19, Vite, TypeScript, Tailwind CSS v4, Motion (`motion` package), TipTap, plus:
@@ -304,7 +306,7 @@ Answers to the gaps G-01 to G-07 found while drafting [USER_FLOWS.md](USER_FLOWS
 - **Partial uploads (G-03):** the entry is saved with the media that uploaded. Failed items stay in capture with *retry* and *remove* until capture is closed.
 - **Backdated entries (G-04):** after saving an entry that lands outside the week on screen, a toast names its week with a *go there* action.
 - **Unlock time (G-05):** the user picks a day; the entry unlocks at **09:00 in their timezone** on that day. The client turns that into the `unlockDate` instant; the API is unchanged.
-- **Two devices (G-06):** last save wins. Revisit when Phase 2 adds logins (Q21).
+- **Two devices (G-06):** entries use optimistic locking. `entries.version` goes up on every change; `PUT /entries/{id}` sends the `version` it read, and a stale one returns `409 entry-stale` instead of overwriting. The editor keeps the user's unsaved text and offers to load the latest version; there's no merge screen. Silent overwrites lose writing, the worst failure for a journal. The check is one column and Hibernate's `@Version`, it's in V1 so no later migration is needed, and it also guards Phase 5 offline sync. Decided 2026-10-29 (the optimistic-locking part of Q21).
 - **Choosing a template after typing (G-07):** its headings are inserted above the existing text.
 
 ## D-24 Entries have an optional title; how lists name an entry
@@ -372,7 +374,7 @@ Answers to the gaps G-01 to G-07 found while drafting [USER_FLOWS.md](USER_FLOWS
 
 **Why:** losing an entry by accident is the worst failure for a memory app, and other journals and photo apps let people undo it. Building it into V1 costs a column and a filter; adding it later would change what "delete" means across the API. The user chose it for Phase 1 on 2026-10-27, after the feature review (R-03).
 
-**Consequences:** V1 gains `entries.deleted_at`. Entry queries leave deleted rows out, and stored files are deleted when an entry is erased, not when it's deleted. A restore counts as an edit for AI results (D-21). Task 3.12 builds the API and task 4.12 the screen.
+**Consequences:** V1 gains `entries.deleted_at`. Entry queries leave deleted rows out, and stored files are deleted when an entry is erased, not when it's deleted. A restore counts as an edit for AI results (D-21). Task 3.11 builds the API and task 4.12 the screen.
 
 ## D-31 Build order: groups before the AI biographer
 The phases run in this order. The README Timeline is the source of truth for it (D-27).
@@ -413,9 +415,10 @@ All three are Phase 1.
 **Why:** they make sealing quicker and opening a moment (R-15, R-21). The user chose all three on 2026-10-28.
 
 ## D-34 Photo dump: photos filed by the day they were taken
-- **Photo dump (Phase 1):** the user picks many photos at once. The app reads each photo's own date (EXIF, in the user's timezone) before shrinking it (D-13), groups the photos by day, and creates one backdated entry per day with no caption, to fill in later. A day with more photos than the per-entry limit (20, D-17) becomes several entries. Photos with no date go into one entry dated today, marked so the user can fix the date.
+- **Photo dump (Phase 1):** the user picks many photos at once. The app reads each photo's own date (EXIF, in the user's timezone) before shrinking it (D-13), groups the photos by day, and creates one backdated entry per day with no caption, to fill in later. A day with more photos than the per-entry limit (20, D-17) becomes several entries. Photos with no date go into one entry dated today and marked *date unknown* (below).
 - **Photo dates for single photos:** when a photo is added in capture, its own date is offered as the memory date with one tap, so a photo taken last Tuesday is filed on last Tuesday.
-- It uses the existing endpoints (`POST /entries` with `entryDate`, then the media uploads), and client-generated ids make retries safe (D-12), so there's no new API.
+- **Date unknown:** `entries.date_unknown` marks an entry whose date is a guess. The photo dump sets it with `dateUnknown: true` on `POST /entries`; the server clears it when a `PUT` changes `entryDate`, and clients never send it on `PUT`. `Entry` and `EntrySummary` include `dateUnknown`, and it stays visible while sealed, because the memory date isn't private (D-10). The card shows a *date unknown, fix it* badge. Decided 2026-10-29: the mark has to survive reloads and other devices so the user can find what to fix, and a tag would mix a system marker into the user's own tags and counts.
+- It uses the existing endpoints (`POST /entries` with `entryDate` and, for undated photos, `dateUnknown`, then the media uploads), and client-generated ids make retries safe (D-12).
 - Only the date is read from a photo in the app. What the server does with a photo's GPS data is open question Q19.
 
 **Why:** it's the memory hoarder's exact problem, and it closes the review's photo-date gap (R-16, R-44). Chosen by the user on 2026-10-28.
@@ -434,6 +437,7 @@ All three are Phase 1.
 ## D-36 Era covers
 - **Phase 1:** an Era can have a cover photo (`eras.cover_media_id`): one of the user's own photos, usually from that Era. The feed shows it as the Era's title page above its weeks, and so does the Era's page.
 - A cover shows only while its entry is neither sealed (D-10) nor in Recently deleted (D-30); otherwise the Era has no cover. Removing the photo clears the cover.
+- Choosing a photo from a sealed entry as the cover is `400`; one from an entry in Recently deleted is `404`, like every other request about that entry (D-30).
 - The cover can be chosen whenever the Era is edited. From Phase 4, closing an Era offers it too (D-28).
 
 **Why:** chapters you can see make the journal feel like a book from day one (R-20, R-48). The user chose covers now and the closing ritual with the AI on 2026-10-28.
@@ -489,7 +493,7 @@ Decide each one before the sprint that needs it, then record it with `/record-de
 | Q17 | Withdrawing AI consent: does it also delete the summaries, profiles and cards already made? | Sprint 7 | Withdrawing stops all AI use at once. Existing results stay until the user chooses "delete AI-generated content", which removes everything derived |
 | Q19 | Share-link privacy: shared pages are built by `EntryMapper`, which includes private tags; a week link also shows entries added to that week later; and photos can carry GPS data | Sprint 5 | Shared and group views leave out tags and template; a week link shows only the entries it had when it was made; the server strips GPS data from photos on upload, keeping the capture date |
 | Q20 | Storage and backups: R2's free 10 GB holds about 4,000 phone photos across all users, and nothing restores data after a mistake or an outage | Sprint 5 | A per-user storage quota with a clear message; Neon point-in-time restore plus a scheduled copy of the bucket, with a restore tested before launch |
-| Q21 | Devices and sessions: two devices editing one entry (D-23 says last save wins), drafts left in local storage on a shared device, and CSRF if the token is in a cookie (Q2) | Sprint 5 | Optimistic locking on entries (`409` when stale); drafts kept per user and cleared on logout; a CSRF token if cookies are used |
+| Q21 | Devices and sessions: drafts left in local storage on a shared device, and CSRF if the token is in a cookie (Q2). Two devices editing one entry is settled in D-23 | Sprint 5 | Drafts kept per user and cleared on logout; a CSRF token if cookies are used |
 | Q22 | Encryption: entries aren't end-to-end encrypted, because the AI and share links need the server to read them. How do we say so? | Sprint 5 | Encrypted at rest by the providers, and said plainly in the privacy policy |
 | Q23 | AI summary lifecycle: adding an entry to, or moving one into, a week that already has a summary doesn't mark it stale (D-21 covers edit, seal, unlock and delete). Summaries and profiles also have no status for "not yet", "failed" or "nothing to say" | Sprint 7 | Adding or moving an entry marks that week's summary and its Eras' summaries stale. Each summary and profile has a `status`: `PENDING`, `READY`, `FAILED` or `SKIPPED` |
 | Q24 | Voice notes: the biographer and search can't read them. Transcribe them? | Sprint 8 (with Q7) | Optional and on tap, through the same `TranscriptionProvider` as pages |

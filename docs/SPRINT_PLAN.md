@@ -76,14 +76,15 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 - [ ] **2.3 V1 migration and local seed**
   - **Read:** DATABASE_SCHEMA (Phase 1 tables, V1 SQL, seed).
-  - **Do:** `db/migration/V1__core_schema.sql` and `db/seed-local/R__seed_dev_user.sql`, exactly as specified, including `users.birthday` and `entries.reply_to_entry_id` (D-33), `soundtrack` on `entries`, `weekly_logs` and `eras` (D-35), `eras.cover_media_id` (D-36), `media.purpose` (D-20), `entries.unlock_seen_at` (D-10), `entries.deleted_at` (D-30) and the 1900 date check (D-09). There's no week–Era table: Eras are worked out from their dates (D-22).
+  - **Do:** `db/migration/V1__core_schema.sql` and `db/seed-local/R__seed_dev_user.sql`, exactly as specified, including `users.birthday` and `entries.reply_to_entry_id` (D-33), `soundtrack` on `entries`, `weekly_logs` and `eras` (D-35), `eras.cover_media_id` (D-36), `media.purpose` (D-20), `entries.unlock_seen_at` (D-10), `entries.deleted_at` (D-30), `entries.version` (D-23), `entries.date_unknown` (D-34) and the 1900 date check (D-09). There's no week–Era table: Eras are worked out from their dates (D-22).
   - **Done when:** a Testcontainers test applies the migrations to an empty database and finds the dev user; local boot shows V1 in `flyway_schema_history`.
 
 - [ ] **2.4 Entities and repositories**
   - **Read:** `.claude/rules/backend.md`, DATABASE_SCHEMA, D-12.
   - **Do:**
     - Entities: `User`, `Era`, `Template`, `WeeklyLog`, `Entry`, `Media`, `Tag` (with `entry_tags` as the link). There's no week–Era entity (D-22).
-    - All extend a base class with `@CreationTimestamp` and `@UpdateTimestamp` `Instant`s and implement `Persistable<UUID>`.
+    - Two base classes (D-12): `BaseEntity` (UUID `id`, `Persistable<UUID>`) and `TimestampedEntity` (adds `@CreationTimestamp` and `@UpdateTimestamp` `Instant`s). `Media` extends `BaseEntity` and keeps `uploadedAt`; the rest extend `TimestampedEntity`.
+    - `Entry.version` is a `@Version` field (D-23).
     - JSONB fields use `@JdbcTypeCode(SqlTypes.JSON)`.
     - `Entry.media` uses `@OrderBy("displayOrder ASC")` and `@BatchSize(size = 50)`.
     - Repositories with user-scoped finders (`findByIdAndUserId`, …). Entry finders leave out entries in Recently deleted (D-30).
@@ -101,7 +102,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 - [ ] **2.6 Global error handling**
   - **Read:** API_CONTRACT (Errors).
   - **Do:** a `@RestControllerAdvice` mapping exceptions to the `ProblemDetail` types listed in API_CONTRACT (`timestamp`, `fieldErrors`), with no stack traces in responses.
-  - **Done when:** tests cover `400` with `fieldErrors`, `404`, `409`, `413` and `500`.
+  - **Done when:** tests cover `400` with `fieldErrors`, `404`, `409`, `409 entry-stale` (from an optimistic-locking failure), `413` and `500`.
 
 - [ ] **2.7 CI: backend**
   - **Do:** `.github/workflows/ci.yml` with a backend job that runs `./gradlew build` on JDK 25 with Testcontainers.
@@ -119,16 +120,17 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Done when:** a Testcontainers test (SeaweedFS) uploads, presigns (URL host = public endpoint; GET returns the bytes) and deletes.
 
 - [ ] **3.2 `/users/me`**
-  - **Done when:** GET and PATCH work; an invalid timezone returns `400`; tests pass.
+  - **Read:** D-07, API_CONTRACT §Users.
+  - **Done when:** tests prove GET and PATCH work; an unknown timezone returns `400`; a `displayName` that is blank or over 100 characters returns `400`. (`birthday` is task 3.13.)
 
 - [ ] **3.3 Eras CRUD** (`/new-endpoint`)
   - **Read:** D-22, API_CONTRACT §Eras.
-  - **Done when:** every row of API_CONTRACT §Eras works and is tested, including:
+  - **Done when:** every row of API_CONTRACT §Eras works and is tested (soundtracks are tested in 3.14 and covers in 3.15), including:
     - another user's era returns `404`
     - deleting an Era leaves its weeks, their entries and their other Eras untouched
     - a new Era holds the existing weeks its dates overlap
     - changing its dates changes which weeks it holds
-    - `GET /eras/{id}` counts only the entries inside its dates, so an Era from Saturday to Sunday doesn't count the rest of the week
+    - `GET /eras/{id}` counts only the entries inside its dates, so an Era from Saturday to Sunday doesn't count the rest of the week; sealed entries and entries in Recently deleted aren't counted (D-10, D-30)
     - a week's `eras` list puts pinned Eras first, then the latest start (D-22)
 
 - [ ] **3.4 Templates CRUD** (`/new-endpoint`)
@@ -143,11 +145,12 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - an entry written at 23:30 on Sunday Melbourne time lands in that Melbourne week, even though it's Sunday morning in UTC
     - a daylight-saving week boundary works
     - backdating works; a future date, or one before 1900-01-01, returns `400`
-    - changing the date moves the entry to the matching week
+    - changing the date moves the entry to the matching week and clears `dateUnknown`; `dateUnknown: true` on create is saved and shown, sealed or not (D-34)
     - disallowed nodes and `javascript:` links return `400`
-    - a sealed entry is redacted on GET, PUT, seal and feed responses, and in week detail
+    - a sealed entry is redacted on GET, PUT and seal responses (the feed and week detail are tested in 3.7)
     - editing a sealed entry returns `409`, as does moving its seal earlier
-    - deleting an entry, sealed or not, moves it to Recently deleted, after which `GET`, `PUT` and `seal` return `404` (restore, erase and the sweep are task 3.12)
+    - a `PUT` with an older `version` returns `409 entry-stale` and changes nothing; a current one saves and returns the next `version` (D-23)
+    - deleting an entry, sealed or not, moves it to Recently deleted, after which `GET`, `PUT` and `seal` return `404` (restore, erase and the sweep are task 3.11)
     - another user's entry returns `404`
     - replaying an existing ID returns `200`; another user's ID, or one in Recently deleted, returns `409`
 
@@ -159,6 +162,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 - [ ] **3.7 Weekly logs and feed**
   - **Read:** API_CONTRACT §Feed and §Weekly logs, TECH_STACK §2 (Weeks and the feed), D-22.
   - **Done when:**
+    - the feed and week detail (`GET /weekly-logs/{id}`) show sealed entries redacted (D-10)
     - the feed returns only non-empty weeks, newest first, with their Eras and redacted entries; entries in Recently deleted don't count, so a week whose entries are all deleted is left out (D-30)
     - the query count for a page doesn't grow with the number of entries or media (assert with Hibernate statistics)
     - PUT (the title), close and reopen work
@@ -185,14 +189,9 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:** `GET /entries/opened` and `POST /entries/{entryId}/mark-seen`; sealing an entry clears `unlock_seen_at`.
   - **Done when:** tests with a fixed `Clock` prove an entry appears once its unlock time passes, disappears after mark-seen, appears again after being sealed and unlocking again, and never appears while sealed (mark-seen returns `409`); another user's entry returns `404`.
 
-- [ ] **3.11 Local sample content**
-  - **Read:** D-11, TECH_STACK §2 (Profiles).
-  - **Do:** a seeder that runs only in the `local` profile, behind a property (for example `memoirist.sample-content=true`). It creates overlapping Eras, tags, a template and a few weeks of entries: one started from the template, a backdated diary page, a photo-only entry, a sealed Loot Drop, an entry with a soundtrack and an entry in Recently deleted, and one Era has a cover. A few generated placeholder images are uploaded through `StorageService`. Running it twice changes nothing.
-  - **Done when:** on an empty local database with the property on, `GET /feed` returns the sample content, and a test proves the seeder bean doesn't exist in the `test` profile.
-
-- [ ] **3.12 Recently deleted** (D-30, `/new-endpoint`)
+- [ ] **3.11 Recently deleted** (D-30, `/new-endpoint`)
   - **Read:** D-30, API_CONTRACT §Entries.
-  - **Do:** `GET /entries/deleted`, `POST /entries/{entryId}/restore` and `/erase`, and a daily sweep that erases entries deleted more than 30 days ago, with their stored files.
+  - **Do:** `GET /entries/deleted`, `POST /entries/{entryId}/restore` and `/erase`, and a sweep that erases entries deleted more than 30 days ago, with their stored files. The sweep is a service method that is safe to repeat; a daily `@Scheduled` job only calls it, so Sprint 5 can start it another way (Q5).
   - **Done when:** tests with a fixed `Clock` prove:
     - a deleted entry is left out of the feed, its week, the timeline, tag counts and filters, and the Opened strip, and comes back in all of them when restored
     - restoring keeps its media, tags and seal, and a sealed entry stays redacted in the list
@@ -200,7 +199,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - an empty entry is erased at once and never listed
     - restore and erase return `404` for an entry that isn't in Recently deleted, or is another user's
 
-- [ ] **3.13 On this day** (D-32, `/new-endpoint`)
+- [ ] **3.12 On this day** (D-32, `/new-endpoint`)
   - **Read:** D-10, D-30, D-32, API_CONTRACT §Entries.
   - **Do:** `GET /entries/on-this-day`: the user's entries from the same day and month in earlier years, newest year first, as `EntrySummary` rows.
   - **Done when:** tests with a fixed `Clock` prove:
@@ -210,7 +209,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - "the same day" follows the user's timezone
     - another user's entries never appear
 
-- [ ] **3.14 Loot Drop replies and the birthday** (D-33, `/new-endpoint`)
+- [ ] **3.13 Loot Drop replies and the birthday** (D-33, `/new-endpoint`)
   - **Read:** D-10, D-33, API_CONTRACT §Users and §Entries.
   - **Do:** `birthday` on `GET` and `PATCH /users/me`; `replyToEntryId` on `POST` and `PUT /entries`; `replyToEntryId` and `replyIds` on `Entry`.
   - **Done when:** tests prove:
@@ -220,7 +219,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - a birthday in the future is `400`
     - a sealed reply is redacted like any entry
 
-- [ ] **3.15 Soundtracks and Spotify search** (D-35, `/new-endpoint`)
+- [ ] **3.14 Soundtracks and Spotify search** (D-35, `/new-endpoint`)
   - **Read:** D-29, D-35, API_CONTRACT §Entries, §Weekly logs, §Eras and §Music.
   - **Do:**
     - `soundtrack` (a checked Spotify URI) on entries, weeks and Eras.
@@ -232,15 +231,20 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - search returns at most 10 results
     - missing settings, or a `429` from Spotify, return `503 music-search-unavailable`
     - the token is fetched once and reused
-    - search terms appear in no URL or log line
+    - search terms appear in none of our URLs and in no log line, including `RestClient` request logging (the call to Spotify itself carries them, over HTTPS)
 
-- [ ] **3.16 Era covers** (D-36)
+- [ ] **3.15 Era covers** (D-36)
   - **Read:** D-10, D-30, D-36, API_CONTRACT §Eras.
   - **Do:** `coverMediaId` on `POST` and `PUT /eras`, and a presigned `cover` on the Era shape.
   - **Done when:** tests prove:
-    - a cover must be an image from one of the user's own entries; anything else is `400`, and another user's is `404`
+    - a cover must be an image from one of the user's own entries; anything else, or a photo from a sealed entry, is `400`; another user's, or one from an entry in Recently deleted, is `404`
     - the cover is hidden while its entry is sealed or in Recently deleted
     - removing the photo clears the cover
+
+- [ ] **3.16 Local sample content**
+  - **Read:** D-11, TECH_STACK §2 (Profiles).
+  - **Do:** a seeder that runs only in the `local` profile, behind a property (for example `memoirist.sample-content=true`). It creates overlapping Eras, tags, a template and a few weeks of entries: one started from the template, a backdated diary page, a photo-only entry, a sealed Loot Drop, an entry with a soundtrack and an entry in Recently deleted, and one Era has a cover. A few generated placeholder images are uploaded through `StorageService`. Running it twice changes nothing.
+  - **Done when:** on an empty local database with the property on, `GET /feed` returns the sample content, and a test proves the seeder bean doesn't exist in the `test` profile.
 
 - [ ] **3.17 API review**
   - **Do:** run `/sync-docs`; check that every endpoint has its tag and documented error responses in Swagger.
@@ -275,7 +279,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 - [ ] **4.4 Feed**
   - **Do:** infinite scroll over `GET /feed` (`useInfiniteQuery`), sticky era headers and week sections. A week in several Eras is grouped under `eras[0]`, with the others as chips; when `eras[0]` sits wholly inside another of the week's Eras, the week shows as a section nested inside that Era, one level deep (D-22).
-  - **Done when:** the feed shows the local sample content (3.11); there are empty, loading and error states; component tests pass.
+  - **Done when:** the feed shows the local sample content (3.16); there are empty, loading and error states; component tests pass.
 
 - [ ] **4.5 Entry card**
   - **Do:** an Embla carousel (images and an audio player; keyboard-operable) and a read-only caption rendered from JSON (no `dangerouslySetInnerHTML`).
@@ -290,7 +294,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - Multi-file upload with reorder; failed items stay with retry or remove (D-23). A photo can be marked as a diary page (D-20).
     - A draft kept in local storage, and a keep-or-discard prompt on close (D-23).
     - The flow: create (client UUID) → upload → reorder.
-  - **Done when:** creating an entry with a title, a tag and two photos shows it in the feed in the right week; save is disabled for an empty entry; an empty template prompt isn't saved; a photo marked as a diary page is saved as a page; a backdated save shows a toast that links to its week; a reload keeps the draft; validation errors from the API are shown on the right fields.
+  - **Done when:** creating an entry with a title, a tag and two photos shows it in the feed in the right week; save is disabled for an empty entry; an empty template prompt isn't saved; a photo marked as a diary page is saved as a page; a backdated save shows a toast that links to its week; a reload keeps the draft; validation errors from the API are shown on the right fields; a `409 entry-stale` keeps the typed text and offers to load the latest version (D-23).
 
 - [ ] **4.7 Voice notes**
   - **Do:** a `MediaRecorder` recorder that picks `audio/webm;codecs=opus` or `audio/mp4`.
@@ -324,12 +328,12 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:**
     - A *photo dump* action. It reads each photo's own date before shrinking it (with `exifr`, approved on 2026-10-28, D-13) and groups the photos by day in the user's timezone.
     - It creates one backdated entry per day, reusing the capture upload flow; a day with more than 20 photos becomes several entries.
-    - Undated photos go into one entry dated today, marked so the date can be fixed.
+    - Undated photos go into one entry dated today, created with `dateUnknown: true`; the card shows a *date unknown, fix it* badge (D-34).
     - In capture, a single photo's own date is offered as the memory date.
   - **Done when:** component tests cover:
     - photos from three days becoming three entries
     - a 25-photo day becoming two entries
-    - undated photos
+    - undated photos giving one entry with the *date unknown* badge, which goes once the date is changed
     - a failed upload retried without duplicates (client ids, D-12)
     - the date suggestion for one photo, accepted and dismissed
 
