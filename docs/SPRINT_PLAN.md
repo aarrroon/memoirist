@@ -37,7 +37,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - context7 (up-to-date library docs) is already set up in `.mcp.json`; nothing to install.
   - **Done when:** `java -version` reports 25, `docker info` succeeds, `node -v` is 22 or later, and `.env` exists (and is gitignored).
 
-- [ ] **1.3 Docker Compose: Postgres and SeaweedFS**
+- [x] **1.3 Docker Compose: Postgres and SeaweedFS**
   - **Read:** TECH_STACK §1, D-03, D-04.
   - **Do:**
     - Root `docker-compose.yml` with two services:

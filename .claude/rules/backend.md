@@ -47,7 +47,7 @@ paths:
 ## Testing
 - Anything touching the database or storage gets a `@SpringBootTest` with Testcontainers:
   - Postgres image `pgvector/pgvector:pg17`, wired with `@ServiceConnection`.
-  - SeaweedFS as a `GenericContainer`.
+  - SeaweedFS as a `GenericContainer`, on the tag Compose pins (D-03, Version).
   - Share containers across test classes through one base class or config.
 - Pure logic (`WeekCalendar`, `EntryContentValidator`, `ContentTextExtractor`, `EntryMapper`) gets plain unit tests with a fixed `Clock`.
 - Every endpoint is tested for: the happy path, `400` validation, `404` for another user's resource, and `409 entry-sealed` wherever sealing applies.

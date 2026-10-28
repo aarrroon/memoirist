@@ -32,7 +32,11 @@
 | Backend (Spring Boot) | 8080 | Swagger UI at `/swagger-ui.html`, OpenAPI at `/v3/api-docs`, health at `/actuator/health` |
 | Frontend (Vite) | 5173 | Proxies `/api` to `:8080`, so there's no CORS in development |
 
-Don't publish SeaweedFS's internal volume-server port to the host. It defaults to 8080 and clashes with the backend. SeaweedFS takes its S3 credentials from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, which Compose maps from `.env` (D-03). Pin the image tag, and confirm this against the docs for that version.
+**Compose (`docker-compose.yml`, task 1.3):**
+- Postgres runs `pgvector/pgvector:pg17`. SeaweedFS runs `chrislusf/seaweedfs:4.48` as `weed server -s3`: the master, a volume server, the filer and the S3 gateway in one process. The tag stays pinned, and D-03 says why; the SeaweedFS test container (task 3.1) uses the same tag.
+- Both services have health checks and named volumes. Every port is published on `127.0.0.1` only, because the filer UI has no login.
+- Don't publish SeaweedFS's internal volume-server port to the host. It defaults to 8080 and clashes with the backend.
+- SeaweedFS takes its S3 credentials from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, which Compose maps from `.env` (D-03). Compose refuses to start if either is empty. With both set, 4.48 rejects unsigned requests with `403` (checked in task 1.3).
 
 ## 2. Backend (`/backend`)
 

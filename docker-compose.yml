@@ -1,0 +1,79 @@
+# Local data services for memoirist: Postgres and SeaweedFS (task 1.3, docs/TECH_STACK.md §1).
+# The apps run on the host. Start with `docker compose up -d`; docs/DEVELOPMENT.md has the rest.
+#
+# Every credential comes from .env (copy .env.example). `${VAR:?...}` makes Compose refuse to
+# start when one is missing or empty, so SeaweedFS can't come up without its keys, which would
+# let it accept unsigned requests (D-03).
+name: memoirist
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17 # Postgres 17; pgvector is installed but enabled only in Phase 4 (D-04)
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # Defaults for psql and pg_isready inside the container, so
+      # `docker compose exec postgres psql` opens the memoirist database as the app's user.
+      PGUSER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      PGDATABASE: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+    ports:
+      - "127.0.0.1:5432:5432" # this machine only
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # -h 127.0.0.1 checks over TCP. On first start the image runs a temporary server that
+      # listens only on its Unix socket while it creates the database, and that would pass too early.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  seaweedfs:
+    # Pinned. 4.50 and 4.51 hold the first write on a fresh server for about 15 seconds
+    # (github.com/seaweedfs/seaweedfs/issues/12145); move on once a release fixes that.
+    image: chrislusf/seaweedfs:4.48
+    # One process runs the master, a volume server, the filer and the S3 gateway.
+    # -s3.iam=false, -s3.port.iceberg=0, -s3.port.lance=0
+    #                             no IAM management API and no Iceberg or Lance catalog servers;
+    #                             the app needs only S3
+    # -ip.bind=0.0.0.0            listen on every interface, so published ports and the health check reach it
+    # -master.peers=none          single-master mode, so a restarted master leads at once
+    # -master.telemetry=false     send no usage statistics to seaweedfs.com
+    # -volume.preStopSeconds=1    wait 1 second, not 10, before the volume server stops; the wait only
+    #                             helps clusters, where writes can move to another server
+    command:
+      - server
+      - -s3
+      - -s3.iam=false
+      - -s3.port.iceberg=0
+      - -s3.port.lance=0
+      - -ip.bind=0.0.0.0
+      - -master.peers=none
+      - -master.telemetry=false
+      - -volume.preStopSeconds=1
+    environment:
+      # The gateway's one S3 identity (D-03). No identity file and no -s3.config.
+      AWS_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY:?set STORAGE_ACCESS_KEY in .env}
+      AWS_SECRET_ACCESS_KEY: ${STORAGE_SECRET_KEY:?set STORAGE_SECRET_KEY in .env}
+    ports:
+      - "127.0.0.1:8333:8333" # S3 API
+      - "127.0.0.1:8888:8888" # filer UI; it has no login, so it stays on this machine
+      # Not published: the volume server's 8080 (the backend's port), the master's 9333 and the gRPC ports.
+    volumes:
+      - seaweedfs-data:/data
+    # A clean stop takes about 17 seconds: the filer waits up to 15 for open streams to close.
+    # Without this, Docker sends SIGKILL after its default grace period.
+    stop_grace_period: 30s
+    healthcheck:
+      # The S3 gateway starts listening only once it can reach the filer.
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8333/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  postgres-data:
+  seaweedfs-data:

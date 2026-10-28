@@ -73,9 +73,10 @@ Settled choices for memoirist, and the questions still open.
 
 **Consequences:** one storage implementation (AWS SDK v2 `S3Client` + `S3Presigner`). Switching providers only changes endpoint, region, credentials and path-style settings. RustFS (MinIO-like, 1.0 in September 2026) is the fallback if SeaweedFS causes trouble.
 
-**Local credentials:** SeaweedFS's S3 gateway reads its one identity from environment variables. Compose maps `STORAGE_ACCESS_KEY` and `STORAGE_SECRET_KEY` from `.env` to `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. No identity file is committed, and nothing passes `-s3.config` or stores identities in the filer, because either makes SeaweedFS ignore the environment variables. The image tag is pinned.
+**Local credentials:** SeaweedFS's S3 gateway reads its one identity from environment variables. Compose maps `STORAGE_ACCESS_KEY` and `STORAGE_SECRET_KEY` from `.env` to `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. No identity file is committed, and nothing passes `-s3.config` or stores identities in the filer. SeaweedFS's wiki says either would make it ignore the environment variables, but the pinned 4.48 merges them instead, so an identity file would add keys rather than replace the `.env` ones.
 - **Why:** the keys have one home (`.env`), as Postgres's do, and the backend sees the same variables locally and on R2. A config file only pays off with several identities.
-- **Watch out:** when no credentials load, SeaweedFS allows every request unsigned. Task 1.3 checks that an unsigned request gets `403`.
+- **Watch out:** when no credentials load, SeaweedFS allows every request unsigned. Compose refuses to start unless both keys are set (`${VAR:?}`), and task 1.3 checked that an unsigned request gets `403`.
+- **Version:** the image is pinned to `chrislusf/seaweedfs:4.48` (task 1.3). 4.50 and 4.51 hold the first write on a fresh server for about 15 seconds ([seaweedfs#12145](https://github.com/seaweedfs/seaweedfs/issues/12145)), which every Testcontainers run would pay, and 4.49 has no plain image. This bullet is the tag's one home: Compose and the Testcontainers SeaweedFS (task 3.1) both use it. Move to a later release once one fixes that, and check the `403` again.
 
 ## D-04 PostgreSQL 17 everywhere
 Locally the image is `pgvector/pgvector:pg17`; production is Neon on Postgres 17. One major version in both places avoids surprises. pgvector is installed in the image but only enabled in Phase 4.
