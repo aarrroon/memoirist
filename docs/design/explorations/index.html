@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>memoirist design directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..800&display=swap">
+<style>
+/* The comparison page: six directions, the same journal, the same four screens. Quiet on purpose, so the
+   screenshots do the talking. Each board below is also exported as one image to send. */
+:root {
+  --ground: #E9EAEA;
+  --board: #FFFFFF;
+  --ink: #161718;
+  --ink-2: #5B5F63;
+  --line: #DDDFE0;
+  --font: 'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); font: 400 16px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
+img { display: block; max-width: 100%; }
+a { color: inherit; }
+h1, h2, h3, p { margin: 0; }
+.page { max-width: 1600px; margin: 0 auto; padding: 32px 0 80px; display: grid; gap: 32px; }
+.board { background: var(--board); padding: 52px 56px 44px; display: grid; gap: 30px; }
+.intro h1 { font-size: 44px; font-weight: 750; letter-spacing: -.02em; line-height: 1.1; }
+.intro p { font-size: 18px; color: var(--ink-2); max-width: 70ch; margin-top: 10px; }
+.over { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 24px; }
+.over a { text-decoration: none; display: grid; gap: 10px; align-content: start; }
+.over img, .phones img { border-radius: 22px; outline: 1px solid var(--line); }
+.over b { font-size: 19px; font-weight: 700; display: flex; gap: 8px; align-items: baseline; }
+.over small { font-size: 14px; color: var(--ink-2); line-height: 1.35; }
+.num { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: #FFFFFF; font-size: 15px; font-weight: 700; flex: none; }
+.head { display: grid; grid-template-columns: minmax(0, 1fr) 470px; gap: 48px; align-items: start; }
+.head h2 { font-size: 46px; font-weight: 750; letter-spacing: -.02em; line-height: 1.05; display: flex; gap: 14px; align-items: center; }
+.head h2 .num { width: 44px; height: 44px; font-size: 22px; }
+.from { font-size: 15px; color: var(--ink-2); margin-top: 8px; }
+.idea { font-size: 20px; line-height: 1.45; margin-top: 14px; max-width: 58ch; }
+.facts { display: grid; gap: 12px; padding-top: 6px; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatches span { display: grid; gap: 4px; font-size: 12px; color: var(--ink-2); }
+.swatches i { width: 56px; height: 40px; border-radius: 6px; outline: 1px solid rgba(0, 0, 0, .12); }
+.facts p { font-size: 15px; }
+.facts b { font-weight: 650; }
+.phones { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; }
+.desks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.desks img { border-radius: 10px; outline: 1px solid var(--line); }
+figure { margin: 0; display: grid; gap: 10px; }
+figcaption { font-size: 15px; font-weight: 600; color: var(--ink-2); }
+.verdict { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; padding-top: 22px; border-top: 1px solid var(--line); font-size: 16px; }
+.verdict b { display: block; font-size: 14px; font-weight: 700; color: var(--ink-2); margin-bottom: 2px; }
+.credit { font-size: 13px; color: var(--ink-2); }
+.open { font-size: 15px; font-weight: 600; }
+@media (max-width: 900px) {
+  .page { padding: 0 0 48px; gap: 16px; }
+  .board { padding: 28px 16px; gap: 22px; }
+  .over { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .head { grid-template-columns: 1fr; gap: 18px; }
+  .head h2 { font-size: 32px; }
+  .phones { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .desks, .verdict { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<main class="page" id="page"></main>
+<script>
+(() => {
+  const DIRECTIONS = [
+    { id: 'exercise-book', name: 'Exercise Book', from: 'From DIRECTIONS.md: Scrapbook / analogue',
+      idea: 'Your paper diary is the app: an exercise book with feint blue rules and a red margin, dates written in the margin, photos taped in as prints. A sealed Loot Drop is an envelope taped to the page.',
+      palette: [['#FBFCFC', 'Page'], ['#BCD3EC', 'Rule'], ['#E0566B', 'Margin'], ['#1E2A47', 'Ink'], ['#2F7356', 'Cover']],
+      fonts: 'Kalam (handwriting) and Atkinson Hyperlegible Next (print)', suits: 'People who write on paper, and anyone who finds apps cold',
+      good: 'The most personal of the six. Made for paper diarists, and the envelope makes sealing feel like an event.',
+      watch: 'Handwriting can feel childish to some, and busy pages are harder to keep accessible.' },
+    { id: 'memoir', name: 'Memoir', from: 'From DIRECTIONS.md: Quiet editorial',
+      idea: 'Your journal typeset like a printed book: each Era opens on a bookcloth title page, photos are plates, dates sit in the margin. A sealed Loot Drop is a bundle of pages wrapped in a band.',
+      palette: [['#F2F4F1', 'Paper'], ['#1B1D1A', 'Ink'], ['#5E625B', 'Grey'], ['#2E4A3D', 'Bookcloth']],
+      fonts: 'Newsreader', suits: 'Reflective writers and readers',
+      good: 'Calm and timeless. The type does the work, and the AI chapter summaries planned for later would read like a real book.',
+      watch: 'Quieter on photos, and can feel slow for quick dumps.' },
+    { id: 'observatory', name: 'Observatory', from: 'From DIRECTIONS.md: Night sky / time capsule',
+      idea: 'A dark journal under Melbourne’s sky. Every week shows the real phase of the moon, an Era is a constellation of its weeks, and a sealed Loot Drop is a star whose light hasn’t arrived yet.',
+      palette: [['#0C0D0F', 'Night'], ['#15171A', 'Surface'], ['#E8E7E2', 'Starlight'], ['#9C988F', 'Dust'], ['#F0DCA0', 'Moonlight']],
+      fonts: 'IM Fell English (titles) and Hanken Grotesk', suits: 'Night-time writers and time-capsule lovers',
+      good: 'Atmospheric. Photos glow on dark, and Loot Drops feel a bit magical.',
+      watch: 'Dark-only can feel gloomy by day, and the old-style title font is harder to read small.' },
+    { id: 'golden-hour', name: 'Golden Hour', from: 'From DIRECTIONS.md: Warm Instagram-modern',
+      idea: 'The social feed you already know, made private. The stories row is your weeks: each ring has seven segments, filled on the days you wrote. A sealed Loot Drop is a golden panel counting down.',
+      palette: [['#FFFFFF', 'White'], ['#141414', 'Ink'], ['#F2F2F2', 'Surface'], ['#F2701D', 'Golden hour']],
+      fonts: 'Figtree', suits: 'Photo hoarders, and friends joining later',
+      good: 'Instantly familiar, so anyone gets it in seconds. The week rings are a simple new idea.',
+      watch: 'The closest to Instagram, so the least distinctive. It might feel like social media.' },
+    { id: 'colour-chapters', name: 'Colour Chapters', from: 'A new idea',
+      idea: 'Every Era gets its own colour, taken from its cover, so scrolling moves through fields of colour and you always know which chapter you’re in. On desktop, a strip shows your life as coloured blocks.',
+      palette: [['#1E5B48', 'Brunswick'], ['#F3C33F', 'Grampians'], ['#2F4F7A', 'Uni'], ['#C9503A', 'Japan'], ['#111111', 'Ink']],
+      fonts: 'Archivo, from extra-condensed to normal width', suits: 'People who think in chapters of life',
+      good: 'Makes Eras the hero. Bold, memorable, and the chapter is always obvious.',
+      watch: 'Loud colours can fight photos and heavy entries, and each Era needs a colour rule.' },
+    { id: 'contact-sheet', name: 'Contact Sheet', from: 'A new idea',
+      idea: 'A photographer’s lightbox. Each week is a strip of film whose frame numbers are the days, kept frames are circled in red grease pencil, and a sealed Loot Drop is a roll still in its canister.',
+      palette: [['#F3F4F4', 'Lightbox'], ['#141414', 'Film'], ['#D2262F', 'Grease pencil'], ['#E6A23C', 'Edge print']],
+      fonts: 'IBM Plex Sans Condensed and Covered By Your Grace (grease pencil)', suits: 'Camera-roll hoarders and photographers',
+      good: 'Photo-first and crafty. “Undeveloped roll” is a natural Loot Drop.',
+      watch: 'Text-only entries feel secondary, and film terms may lose people who never shot film.' },
+  ];
+  const SCREENS = [['feed', 'Feed'], ['entry', 'Entry'], ['era', 'Era'], ['loot', 'Sealed Loot Drop']];
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const shot = (d, s, w) => `screenshots/${d.id}/${s}-${w}.jpg`;
+
+  const overview = `<section class="board" id="board-overview">
+    <div class="intro"><h1>Six ways memoirist could look</h1>
+      <p>memoirist is a private journal that looks like your own Instagram feed, filed into weeks and life chapters (Eras), with Loot Drops: entries sealed until a future date. Same journal, same screens, six looks. Which do you like best, and why?</p></div>
+    <div class="over">${DIRECTIONS.map((d, i) => `<a href="#board-${d.id}"><img src="${shot(d, 'feed', 375)}" alt="${esc(d.name)} feed on a phone"><b><span class="num">${i + 1}</span>${esc(d.name)}</b><small>${esc(d.suits)}</small></a>`).join('')}</div>
+    <p class="credit">Photos from Wikimedia Commons (CC BY-SA, CC BY and CC0; credits in shared/photos/CREDITS.md). The journal is invented.</p>
+  </section>`;
+
+  const boards = DIRECTIONS.map((d, i) => `<section class="board" id="board-${d.id}">
+    <div class="head">
+      <div><h2><span class="num">${i + 1}</span>${esc(d.name)}</h2><p class="from">${esc(d.from)}</p><p class="idea">${esc(d.idea)}</p></div>
+      <div class="facts">
+        <div class="swatches">${d.palette.map(([hex, name]) => `<span><i style="background:${hex}"></i>${esc(name)}</span>`).join('')}</div>
+        <p><b>Type:</b> ${esc(d.fonts)}</p>
+        <p><b>Suits:</b> ${esc(d.suits)}</p>
+        <p><a class="open" href="directions/${d.id}.html">Open the clickable version</a></p>
+      </div>
+    </div>
+    <div class="phones">${SCREENS.map(([s, label]) => `<figure><img src="${shot(d, s, 375)}" alt="${esc(d.name)}: ${label} on a phone"><figcaption>${label}</figcaption></figure>`).join('')}</div>
+    <div class="desks">${SCREENS.slice(0, 2).map(([s, label]) => `<figure><img src="${shot(d, s, 1440)}" alt="${esc(d.name)}: ${label} on a laptop"><figcaption>${label} on a laptop</figcaption></figure>`).join('')}</div>
+    <div class="verdict"><p><b>Good</b>${esc(d.good)}</p><p><b>Watch out</b>${esc(d.watch)}</p></div>
+  </section>`).join('');
+
+  document.getElementById('page').innerHTML = overview + boards;
+})();
+</script>
+</body>
+</html>

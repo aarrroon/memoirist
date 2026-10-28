@@ -25,7 +25,7 @@
 - **`frontend-design` plugin:** pushes towards bolder, less generic designs.
 - **Mixing sources** gives more varied options than asking one source four times.
 
-Mockups go in `docs/design/mockups/` (one HTML file per direction).
+Explorations and mockups live in `docs/design/explorations/` (see [explorations/README.md](explorations/README.md)).
 
 ## Notes and ideas
 _Add anything you like here as it comes up: apps whose look you like, colours, fonts, screenshots._

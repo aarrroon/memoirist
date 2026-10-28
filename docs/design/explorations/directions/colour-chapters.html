@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Colour Chapters direction for memoirist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+<style>
+/* Colour Chapters: every Era owns a flat colour taken from its cover, so scrolling the journal moves through
+   fields of colour and you always know which chapter you are in. One family (Archivo) at two extremes:
+   extra-condensed black for chapter names and figures, normal width for reading. Square corners everywhere. */
+:root {
+  --paper: #F4F4F3;
+  --ink: #111111;
+  --ink-2: #555555;        /* 7:1 on paper */
+  --brunswick: #1E5B48;    /* W-class tram green, from the terrace's paintwork */
+  --grampians: #F3C33F;    /* sunrise over the Pinnacle */
+  --uni: #2F4F7A;
+  --japan: #C9503A;
+  --font: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --gutter: 18px;
+  --dur: 140ms;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--font); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { text-wrap: balance; }
+:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.icon { flex: none; }
+.poster { font-stretch: 62%; font-weight: 900; letter-spacing: -.01em; line-height: .88; }
+
+/* A band is a chapter: its colour comes from the Era, and its text colour is chosen for contrast. */
+.band { background: var(--band, var(--paper)); color: var(--on, var(--ink)); }
+.band--brunswick { --band: var(--brunswick); --on: #F4F4F3; --on-2: #C7DBD2; }
+.band--grampians { --band: var(--grampians); --on: #111111; --on-2: #3D3110; }
+.band--uni { --band: var(--uni); --on: #F4F4F3; --on-2: #CBD6E6; }
+.band--japan { --band: var(--japan); --on: #FFFFFF; --on-2: #FBE3DD; }
+.muted { color: var(--on-2, var(--ink-2)); }
+
+/* ---------- Shell ---------- */
+.topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 6px; height: 56px; padding: 0 6px 0 var(--gutter); background: var(--paper); }
+.wordmark { font-weight: 850; font-stretch: 100%; font-size: 21px; letter-spacing: -.02em; margin-right: auto; display: inline-flex; align-items: center; gap: 8px; }
+.wordmark i { display: inline-grid; grid-template-columns: repeat(3, 6px); gap: 2px; }
+.wordmark i b { height: 18px; }
+.nav { display: none; }
+.icon-btn { width: 44px; height: 44px; display: grid; place-items: center; }
+.icon-btn:hover { background: rgba(0, 0, 0, .06); }
+.btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; background: var(--ink); color: var(--paper); font-weight: 700; font-size: 15px; transition: opacity var(--dur); }
+.btn:hover { opacity: .85; }
+.btn--line { background: none; color: currentColor; border: 2px solid currentColor; }
+.btn--line:hover { background: rgba(0, 0, 0, .08); opacity: 1; }
+.btn--ghost { background: none; color: currentColor; text-decoration: underline; text-underline-offset: 3px; padding: 0 8px; }
+.tb-title { margin-right: auto; font-weight: 800; font-size: 16px; }
+.rail { display: none; }
+.nav-mark, .nav-btn { display: none; }
+@media (min-width: 1100px) {
+  .topbar { height: 64px; padding: 0 28px; gap: 28px; }
+  .nav-mark, .nav-btn { display: inline-flex; }
+  .topbar .tb-title { display: none; }
+  .topbar .wordmark { margin-right: 12px; }
+  .nav { display: flex; gap: 22px; margin-right: auto; font-weight: 600; font-size: 15px; }
+  .nav a { padding: 8px 0; border-bottom: 3px solid transparent; }
+  .nav a[aria-current="page"] { border-bottom-color: var(--ink); }
+  .nav a:hover { border-bottom-color: rgba(0, 0, 0, .25); }
+  .topbar .icon-btn { display: none; }
+  .frame { display: grid; grid-template-columns: 220px minmax(0, 1fr); }
+  .rail { display: block; position: sticky; top: 64px; height: calc(100vh - 64px); padding: 18px 18px 22px 28px; }
+}
+
+/* The chapter rail: your life as colour, sized by time, overlaps shown inset. */
+.rail h2 { font-size: 13px; font-weight: 700; color: var(--ink-2); margin-bottom: 10px; }
+.map { position: relative; height: calc(100% - 30px); }
+.map a { position: absolute; display: block; padding: 6px 8px; font-weight: 800; font-stretch: 75%; font-size: 14px; line-height: 1.05; overflow: hidden; }
+.map .yr { position: absolute; left: -2px; font-size: 11px; font-weight: 600; color: var(--ink-2); transform: translateX(-100%); padding-right: 6px; }
+.map .gap { position: absolute; left: 0; right: 30px; background: repeating-linear-gradient(135deg, #E2E2E0 0 6px, transparent 6px 12px); } /* taste-skill-ignore: a hatch for time in no Era */
+.map a.here { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+/* ---------- Feed ---------- */
+.otd { padding: 6px var(--gutter) 22px; display: grid; gap: 12px; }
+.otd h2, .section-h { font-weight: 800; font-size: 20px; letter-spacing: -.01em; }
+.otd-list { display: grid; gap: 8px; }
+.otd-card { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: stretch; }
+.otd-card img { width: 96px; height: 96px; object-fit: cover; }
+.otd-card .t { padding: 10px 12px; display: grid; align-content: space-between; }
+.otd-card .ago { font-size: 30px; }
+.otd-card b { font-weight: 650; font-size: 15px; line-height: 1.25; }
+@media (min-width: 1100px) { .otd { padding: 28px 40px 30px; } .otd-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
+
+.chapter { padding: 26px var(--gutter) 34px; }
+.ch-head { display: grid; gap: 8px; padding-bottom: 18px; }
+.ch-head h2 { font-size: 64px; }
+.ch-head p { font-weight: 600; font-size: 15px; }
+.ch-cover { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; margin-top: 8px; }
+.also { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.also i { width: 14px; height: 14px; background: var(--brunswick); border: 2px solid var(--on); }
+@media (min-width: 1100px) {
+  .chapter { padding: 40px 40px 56px; }
+  .ch-head { grid-template-columns: minmax(0, 1fr) 380px; column-gap: 32px; align-items: end; padding-bottom: 28px; }
+  .ch-head h2 { font-size: 112px; }
+  .ch-head .ch-cover { grid-column: 2; grid-row: 1 / span 3; margin: 0; }
+  .ch-body { display: grid; grid-template-columns: minmax(0, 560px) 320px; gap: 48px; align-items: start; }
+  .ch-body .week-sum { grid-column: 2; grid-row: 1 / span 20; position: sticky; top: 84px; }
+}
+
+.week-sum { display: grid; gap: 14px; padding: 18px 0 8px; border-top: 3px solid var(--on); }
+.week-sum h3 { font-size: 34px; }
+.week-sum .range { font-size: 14px; font-weight: 600; }
+.figs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.figs div { display: grid; }
+.figs b { font-stretch: 62%; font-weight: 900; font-size: 52px; line-height: .9; }
+.figs small { font-size: 13px; font-weight: 600; }
+.daystrip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.daystrip span { display: grid; place-items: center; height: 34px; font-size: 12px; font-weight: 700; border: 2px solid currentColor; }
+.daystrip span.on { background: var(--on); color: var(--band); border-color: var(--on); }
+.wk-list { list-style: none; margin: 0; padding: 0; }
+.wk-list a { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 44px; border-bottom: 2px solid rgba(0, 0, 0, .14); font-size: 15px; font-weight: 550; }
+.band--brunswick .wk-list a, .band--uni .wk-list a { border-bottom-color: rgba(255, 255, 255, .22); }
+.wk-list a:hover .wt { text-decoration: underline; }
+.wk-list .wd { font-size: 12px; font-weight: 800; }
+.wk-list .wt { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.wk-list .wi { display: flex; gap: 4px; }
+.wk-list .sealed .wt { display: flex; gap: 6px; align-items: center; font-weight: 750; }
+
+.post { display: grid; gap: 12px; padding: 26px 0 6px; }
+.post .meta { font-size: 13px; font-weight: 700; }
+.post h3 { font-size: 40px; }
+.post h3 a:hover { text-decoration: underline; text-decoration-thickness: 3px; }
+.post .pic { position: relative; }
+.post .pic img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+.post .pic.page img { aspect-ratio: 3 / 4; width: min(100%, 360px); }
+.post .pic .n { position: absolute; left: 0; bottom: 0; padding: 4px 10px; background: var(--band); color: var(--on); font-weight: 800; font-size: 13px; }
+.caption p + p, .caption ul + p, .caption p + ul { margin-top: .6em; }
+.caption h4, .caption h5 { font-stretch: 75%; font-weight: 850; font-size: 17px; margin: .9em 0 .1em; }
+.caption > :first-child { margin-top: 0; }
+.caption ul { margin: .3em 0 0; padding-left: 1.2em; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border: 2px solid currentColor; font-size: 13px; font-weight: 700; }
+.extras { display: flex; flex-wrap: wrap; gap: 8px; }
+.voice, .sound { display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 14px 0 4px; border: 2px solid currentColor; min-width: 0; max-width: 100%; font-weight: 650; font-size: 14px; }
+.voice .play { width: 34px; height: 34px; background: var(--on, var(--ink)); color: var(--band, var(--paper)); display: grid; place-items: center; flex: none; }
+.voice svg { width: 130px; min-width: 0; height: 22px; fill: currentColor; }
+.sound { padding-left: 12px; }
+.sound span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* The sealed slab: black, fixed size, the date as a poster (D-10). */
+.slab { display: grid; align-content: space-between; height: 300px; padding: 20px; background: var(--ink); color: var(--paper); }
+.slab .date { font-stretch: 62%; font-weight: 900; font-size: min(21vw, 92px); line-height: .85; color: var(--grampians); letter-spacing: -.01em; }
+.slab .left { font-stretch: 75%; font-weight: 850; font-size: 26px; }
+.slab .when { font-size: 14px; font-weight: 600; color: #CFCFCD; }
+.slab .lock { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; }
+
+/* ---------- Entry ---------- */
+.entry { padding: 22px var(--gutter) 40px; display: grid; gap: 16px; }
+.entry h1 { font-size: 72px; }
+.entry .meta { font-weight: 700; font-size: 14px; }
+.collage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.collage img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+.collage img:first-child { grid-column: 1 / -1; aspect-ratio: 4 / 3; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (min-width: 1100px) {
+  .entry { grid-template-columns: minmax(0, 1fr) 420px; column-gap: 48px; padding: 44px 40px 72px; align-items: start; }
+  .entry > * { grid-column: 1; }
+  .entry h1 { font-size: 132px; grid-column: 1 / -1; }
+  .entry .meta { grid-column: 1 / -1; }
+  .entry .collage { grid-column: 1; grid-row: 3 / span 6; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .entry .side { grid-column: 2; grid-row: 3; display: grid; gap: 16px; }
+}
+@media (max-width: 1099px) { .entry .side { display: grid; gap: 16px; } }
+
+/* ---------- Era ---------- */
+.era { padding: 24px var(--gutter) 40px; display: grid; gap: 18px; }
+.era h1 { font-size: min(15.5vw, 80px); }
+.era .lead { font-size: 19px; font-weight: 500; max-width: 34ch; }
+.era-figs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 10px; border-top: 3px solid var(--on); padding-top: 14px; }
+.era-figs b { display: block; font-stretch: 62%; font-weight: 900; font-size: 64px; line-height: .9; }
+.era-figs small { font-weight: 650; font-size: 14px; }
+.bars-chart { border-top: 3px solid var(--on); padding-top: 14px; }
+.bars-chart svg { display: block; width: 100%; height: auto; margin-top: 10px; }
+.bars-chart text { font: 700 12px var(--font); fill: var(--on); }
+.inside { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.inside a { padding: 12px; display: grid; gap: 18px; min-height: 120px; align-content: space-between; }
+.inside b { font-stretch: 70%; font-weight: 900; font-size: 22px; line-height: .95; }
+@media (min-width: 1100px) { .inside b { font-size: 26px; } }
+.inside small { font-size: 13px; font-weight: 600; }
+@media (min-width: 1100px) {
+  .era { grid-template-columns: minmax(0, 1fr) 400px; column-gap: 48px; padding: 44px 40px 72px; align-items: start; }
+  .era h1 { font-size: 168px; grid-column: 1 / -1; }
+  .era .lead, .era .meta-row { grid-column: 1; }
+  .era .ch-cover { grid-column: 2; grid-row: 2 / span 2; margin: 0; }
+  .era-figs { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .era-figs b { font-size: 96px; }
+  .bars-chart { grid-column: 1; }
+  .era .side { grid-column: 2; display: grid; gap: 16px; }
+}
+@media (max-width: 1099px) { .era .side { display: grid; gap: 16px; } }
+
+/* ---------- Loot Drop ---------- */
+.loot { min-height: calc(100vh - 56px); background: var(--ink); color: var(--paper); padding: 26px var(--gutter) 40px; display: grid; align-content: space-between; gap: 28px; }
+.loot .date { font-stretch: 62%; font-weight: 900; font-size: min(23vw, 128px); line-height: .82; color: var(--grampians); letter-spacing: -.015em; }
+.loot h1 { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.loot .left { font-stretch: 70%; font-weight: 900; font-size: 44px; line-height: .95; }
+.loot .when { font-size: 16px; font-weight: 600; color: #CFCFCD; max-width: 36ch; }
+.loot .rule { font-size: 14px; color: #B5B5B2; max-width: 40ch; }
+.loot .btn { background: var(--grampians); color: var(--ink); }
+.loot .btn--ghost { background: none; color: var(--paper); }
+.life { display: none; list-style: none; margin: 0; padding: 0; gap: 0; align-content: start; }
+.life li { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 16px; padding: 14px 0; border-top: 2px solid #333; align-items: baseline; }
+.life b { font-stretch: 62%; font-weight: 900; font-size: 30px; line-height: 1; color: #8A8A87; }
+.life li.now b { color: var(--grampians); }
+.life span { font-size: 15px; font-weight: 600; color: #CFCFCD; }
+@media (min-width: 1100px) {
+  .loot { min-height: calc(100vh - 64px); padding: 48px 56px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-content: center; column-gap: 72px; }
+  .loot .date { font-size: 300px; grid-column: 1 / -1; }
+  .loot .stack { display: grid; gap: 14px; }
+  .life { display: grid; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../shared/content.js"></script>
+<script src="../shared/helpers.js"></script>
+<script>
+(() => {
+  const { html, icon, date, range } = M;
+  const app = document.getElementById('app');
+  const BAND = { 'era-brunswick': 'brunswick', 'era-grampians': 'grampians', 'era-uni': 'uni', 'era-japan': 'japan' };
+  const plural = (n, one, many = `${one}s`) => `${n.toLocaleString('en-AU')} ${n === 1 ? one : many}`;
+  const daysLeft = (u) => (u.countdown.match(/\d+/) || [u.countdown])[0];
+  const shortDate = (iso) => M.instant(iso, { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.');
+  const mark = M.raw('<i aria-hidden="true"><b style="background:var(--uni)"></b><b style="background:var(--brunswick)"></b><b style="background:var(--grampians)"></b></i>');
+
+  function topbar(screen, { back, title } = {}) {
+    const cur = (s) => (s.includes(screen) ? M.raw('aria-current="page"') : '');
+    return html`<header class="topbar">
+      ${back ? html`<a class="icon-btn" href="${back}" aria-label="Back">${icon('arrowLeft', { size: 22 })}</a><span class="tb-title">${title}</span>` : html`<a class="wordmark" href="#feed">${mark}memoirist</a>`}
+      ${back ? html`<a class="wordmark nav-mark" href="#feed">${mark}memoirist</a>` : ''}
+      <nav class="nav" aria-label="memoirist"><a href="#feed" ${cur(['feed', 'entry', 'loot'])}>Journal</a><a href="#era" ${cur(['era'])}>Eras</a><a href="#feed">Timeline</a><a href="#feed">Templates</a><a href="#feed">Tags</a></nav>
+      <a class="btn nav-btn" href="#entry">${icon('plus', { size: 18, stroke: 2.2 })}New entry</a>
+      <a class="icon-btn" href="#entry" aria-label="New entry">${icon('plus', { size: 24, stroke: 2 })}</a>
+    </header>`;
+  }
+
+  // The chapter rail: every Era as a block on a time axis from 2019 to now. Inner chapters sit inset.
+  function rail(currentId) {
+    const t0 = Date.parse('2019-01-01'), t1 = Date.parse(M.today());
+    const y = (d) => ((Date.parse(d) - t0) / (t1 - t0)) * 100;
+    const blocks = [...M.data.eras].sort((a, b) => (a.startDate < b.startDate ? -1 : 1)).map((e) => {
+      const inner = M.data.eras.some((o) => o !== e && o.startDate <= e.startDate && (!o.endDate || o.endDate >= (e.endDate || M.today())) && o.id !== e.id);
+      const top = y(e.startDate), h = Math.max(y(e.endDate || M.today()) - top, 2.2);
+      return html`<a class="band band--${BAND[e.id]} ${e.id === currentId ? 'here' : ''}" href="#era" style="top:${top.toFixed(2)}%;height:${h.toFixed(2)}%;left:${inner ? '34px' : '0'};right:${inner ? '0' : '30px'}" title="${e.title}">${h > 6 ? e.title : ''}</a>`;
+    });
+    const years = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026].map((yr) => html`<span class="yr" style="top:${y(`${yr}-01-01`).toFixed(2)}%">${yr}</span>`);
+    return html`<aside class="rail" aria-label="Your chapters"><h2>Your chapters, 2019 to now</h2>
+      <div class="map"><span class="gap" style="top:${y('2023-11-24').toFixed(2)}%;height:${(y('2024-03-02') - y('2023-11-24')).toFixed(2)}%"></span>${years}${blocks}</div></aside>`;
+  }
+
+  function voice(v) {
+    const bars = M.waveform(v.id, 32);
+    return html`<span class="voice"><button class="play" aria-label="Play voice note, ${M.duration(v.durationSeconds)}">${icon('play', { size: 14 })}</button>
+      <svg viewBox="0 0 ${bars.length * 4} 22" preserveAspectRatio="none" aria-hidden="true">${M.raw(bars.map((b, i) => `<rect x="${i * 4}" y="${(11 - b * 10).toFixed(1)}" width="2.4" height="${(b * 20).toFixed(1)}"/>`).join(''))}</svg>
+      <span>${M.duration(v.durationSeconds)}</span></span>`;
+  }
+  const sound = (st) => html`<button class="sound">${icon('spotify', { size: 18 })}<span>${st.title}, ${st.artist}</span></button>`;
+  const tags = (ts) => html`<div class="tags">${ts.map((t) => html`<a class="tag" href="#feed">${t.name}</a>`)}</div>`;
+
+  function weekSum(w) {
+    const s = M.weekStats(w);
+    return html`<section class="week-sum" aria-label="Summary of ${M.weekLabel(w)}">
+      <h3 class="poster">${M.weekLabel(w)}</h3><p class="range">${range(w.startDate, w.endDate)}</p>
+      <div class="figs"><div><b>${s.entryCount}</b><small>${s.entryCount === 1 ? 'entry' : 'entries'}</small></div><div><b>${s.photoCount}</b><small>photos</small></div><div><b>${s.voiceNoteCount}</b><small>${s.voiceNoteCount === 1 ? 'voice note' : 'voice notes'}</small></div></div>
+      <div class="daystrip" aria-label="Days written">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => html`<span class="${s.days[i] ? 'on' : ''}">${d}</span>`)}</div>
+      <ul class="wk-list">${w.entries.map((e) => M.isSealed(e)
+        ? html`<li><a class="sealed" href="#loot"><span class="wd">${date(e.entryDate, 'weekdayShort')}</span><span class="wt">${icon('lock', { size: 15, stroke: 2.2 })}Sealed until ${shortDate(e.unlockDate)}</span><span></span></a></li>`
+        : html`<li><a href="#entry"><span class="wd">${date(e.entryDate, 'weekdayShort')}</span><span class="wt">${M.displayTitle(e)}</span><span class="wi">${M.images(e).length ? icon(M.images(e)[0].kind === 'PAGE_SCAN' ? 'page' : 'image', { size: 16 }) : ''}${M.voiceNotes(e).length ? icon('mic', { size: 16 }) : ''}</span></a></li>`)}</ul>
+      ${w.eras.length > 1 ? html`<p class="also"><i></i>Also in ${w.eras.slice(1).map((er) => er.title)}</p>` : ''}
+    </section>`;
+  }
+
+  function post(e) {
+    if (M.isSealed(e)) {
+      const u = M.opening(e);
+      return html`<article class="post" aria-label="Sealed Loot Drop"><p class="meta">${date(e.entryDate, 'dayLong')}</p>
+        <a class="slab" href="#loot"><span class="lock">${icon('lock', { size: 18, stroke: 2.2 })}Sealed Loot Drop</span><span class="date">${shortDate(e.unlockDate)}</span>
+          <span><span class="left" style="display:block">${daysLeft(u)} days to go</span><span class="when">${u.opens}</span></span></a></article>`;
+    }
+    const pics = M.images(e);
+    const heading = e.title || (e.contentJson ? null : M.displayTitle(e));
+    return html`<article class="post" aria-label="${M.displayTitle(e)}">
+      <p class="meta">${date(e.entryDate, 'dayLong')}</p>
+      ${heading ? html`<h3 class="poster"><a href="#entry">${heading}</a></h3>` : ''}
+      ${pics.length ? html`<a class="pic ${pics[0].kind === 'PAGE_SCAN' ? 'page' : ''}" href="#entry"><img src="${M.src(pics[0])}" alt="${pics[0].alt}">${pics.length > 1 ? html`<span class="n">1 / ${pics.length}</span>` : ''}</a>` : ''}
+      ${e.contentJson ? html`<div class="caption">${M.caption(e.contentJson, { headingTag: 'h5' })}</div>` : ''}
+      ${M.voiceNotes(e).length || e.soundtrack ? html`<div class="extras">${M.voiceNotes(e).map(voice)}${e.soundtrack ? sound(e.soundtrack) : ''}</div>` : ''}
+      ${e.tags.length ? tags(e.tags) : ''}
+    </article>`;
+  }
+
+  function feed() {
+    return html`${topbar('feed')}
+      <div class="frame">${rail('era-brunswick')}
+        <main>
+          <h1 class="sr-only">Journal</h1>
+          <section class="otd" aria-labelledby="otd-h"><h2 id="otd-h">On this day</h2>
+            <div class="otd-list">${M.data.onThisDay.map((e) => html`<a class="otd-card band band--${BAND[e.eras[0].id]}" href="#entry"><img src="${M.src(M.images(e)[0])}" alt="${M.images(e)[0].alt}">
+              <span class="t"><span class="ago poster">${M.yearsAgo(e.entryDate)}</span><span><b>${e.title}</b><span class="muted" style="display:block;font-size:13px;font-weight:600">${e.eras[0].title}</span></span></span></a>`)}</div></section>
+          ${M.feedGroups().map((g) => html`<section class="chapter band band--${BAND[g.era.id]}" aria-label="${g.era.title}">
+            <header class="ch-head"><h2 class="poster"><a href="#era">${g.era.title}</a></h2><p>${range(g.era.startDate, g.era.endDate)}</p>
+              ${M.cover(g.era) ? html`<img class="ch-cover" src="${M.cover(g.era)}" alt="">` : ''}</header>
+            ${g.weeks.map((w) => html`<div class="ch-body">${weekSum(w)}${w.entries.map(post)}</div>`)}
+          </section>`)}
+        </main>
+      </div>`;
+  }
+
+  // ---------- Entry ----------
+  function entryScreen() {
+    const e = M.featured.entry(), w = M.weekOf(e.id), pics = M.images(e);
+    return html`${topbar('entry', { back: '#feed', title: M.weekLabel(w) })}
+      <main class="band band--grampians"><article class="entry">
+        <p class="meta">${date(e.entryDate, 'long')}, ${w.eras[0].title}</p>
+        <h1 class="poster">${e.title}</h1>
+        <div class="collage">${pics.map((m) => html`<img src="${M.src(m)}" alt="${m.alt}">`)}</div>
+        <div class="side">
+          <div class="caption">${M.caption(e.contentJson, { headingTag: 'h4' })}</div>
+          <div class="extras">${M.voiceNotes(e).map(voice)}${sound(e.soundtrack)}</div>
+          ${tags(e.tags)}
+          <p style="font-size:14px;font-weight:600">From the Trips template. Also in ${w.eras[1].title}.</p>
+          <div class="actions"><a class="btn" href="#entry">${icon('pen', { size: 18 })}Edit</a><a class="btn btn--line" href="#loot">${icon('lock', { size: 18 })}Seal as a Loot Drop</a><button class="btn btn--ghost">Delete</button></div>
+        </div>
+      </article></main>`;
+  }
+
+  // ---------- Era ----------
+  function weekBars(id) {
+    const series = M.eraSeries(id), e = M.era(id);
+    const W = 640, H = 200, base = 176, max = Math.max(...series.map((s) => s.entryCount));
+    const bw = W / series.length;
+    const colourOf = (s) => { const c = M.data.eras.find((x) => x.id !== id && x.startDate <= M.addDays(s.startDate, 6) && (x.endDate || '9999') >= s.startDate && x.startDate >= e.startDate); return c ? `var(--${BAND[c.id]})` : 'var(--on)'; };
+    const bars = series.map((s, i) => { const h = (s.entryCount / max) * (base - 12); return `<rect x="${(i * bw).toFixed(2)}" y="${(base - h).toFixed(1)}" width="${Math.max(bw - 1.5, 1).toFixed(2)}" height="${h.toFixed(1)}" fill="${colourOf(s)}"/>`; }).join('');
+    const years = [2025, 2026].map((yv) => { const i = series.findIndex((s) => s.startDate >= `${yv}-01-01`); return `<text x="${(i * bw).toFixed(1)}" y="${H - 4}">${yv}</text>`; }).join('');
+    return M.raw(`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Entries per week across ${M.esc(e.title)}; trips inside it are coloured"><text x="0" y="${H - 4}">Mar 2024</text>${years}<path d="M0 ${base + 0.5}H${W}" stroke="var(--on)" stroke-width="1"/>${bars}</svg>`);
+  }
+
+  function eraScreen() {
+    const p = M.eraPage(M.data.featured.eraId), e = p.era, t = p.totals;
+    return html`${topbar('era', { back: '#feed', title: 'Eras' })}
+      <main class="band band--brunswick"><section class="era" aria-labelledby="era-h">
+        <h1 class="poster" id="era-h">${e.title}</h1>
+        <p class="lead">${e.description}</p>
+        <img class="ch-cover" src="${M.cover(e)}" alt="Victorian terrace houses with iron lace verandahs, the cover of this Era">
+        <p class="meta-row" style="font-weight:650">${range(e.startDate, e.endDate)}, ${p.span} so far</p>
+        <div class="era-figs"><div><b>${t.weekCount}</b><small>weeks</small></div><div><b>${t.entryCount}</b><small>entries</small></div><div><b>${t.photoCount.toLocaleString('en-AU')}</b><small>photos</small></div><div><b>${t.voiceNoteCount}</b><small>voice notes</small></div></div>
+        <section class="bars-chart" aria-labelledby="bars-h"><h2 id="bars-h" class="section-h">Every week, by how much you wrote</h2>${weekBars(e.id)}</section>
+        <div class="side">
+          <h2 class="section-h">Chapters inside this one</h2>
+          <div class="inside">${p.chaptersInside.map((c) => html`<a class="band band--${BAND[c.id]}" href="#era"><b>${c.title}</b><small>${range(c.startDate, c.endDate)}</small></a>`)}</div>
+          <div class="extras">${sound(e.soundtrack)}</div>
+          <a class="btn btn--line" href="#era" style="justify-self:start">${icon('calendar', { size: 18 })}Change dates or cover</a>
+        </div>
+      </section></main>`;
+  }
+
+  // ---------- Loot Drop ----------
+  function lootScreen() {
+    const e = M.featured.lootDrop(), w = M.weekOf(e.id), u = M.opening(e);
+    return html`${topbar('loot', { back: '#feed', title: M.weekLabel(w) })}
+      <main class="loot">
+        <p class="date" aria-hidden="true">${shortDate(e.unlockDate)}</p>
+        <div class="stack" style="display:grid;gap:14px">
+          <h1>${icon('lock', { size: 18, stroke: 2.2 })}Sealed Loot Drop</h1>
+          <p class="left">${daysLeft(u)} days to go</p>
+          <p class="when">${u.opens}. Dated ${date(e.entryDate, 'long')}, in ${w.eras[0].title}.</p>
+          <p class="rule">Nobody can open it or change it before then, you included.</p>
+          <div class="actions"><button class="btn">${icon('clock', { size: 18 })}Extend the seal</button><button class="btn btn--ghost">Delete</button></div>
+        </div>
+        <ol class="life" aria-label="What happens to it">
+          <li><b>Written</b><span>${date(e.entryDate, 'long')}</span></li>
+          <li class="now"><b>Sealed</b><span>Today, ${date(M.today(), 'long')}</span></li>
+          <li><b>Opens</b><span>${u.opens.replace(/^Opens /, '')}</span></li>
+          <li><b>Then</b><span>It waits at the top of your journal until you read it, and you can write back to past you.</span></li>
+        </ol>
+      </main>`;
+  }
+
+  const SCREENS = { feed, entry: entryScreen, era: eraScreen, loot: lootScreen };
+  M.mount((screen) => { app.innerHTML = String(SCREENS[screen]()); });
+})();
+</script>
+</body>
+</html>

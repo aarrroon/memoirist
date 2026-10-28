@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Exercise Book direction for memoirist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;700&family=Kalam:wght@400;700&display=swap">
+<style>
+/* Exercise Book: your paper diary is the interface. An Australian exercise book: feint blue rules every 32px with
+   the text set on them, a red margin where dates are written by hand, photos as instant prints held on with paper
+   tape, and each Era its own book with a coloured cover and a label. Kalam is the hand; Atkinson Hyperlegible Next
+   the print. On desktop the book lies open on a desk, with index tabs for navigation. */
+:root {
+  --page: #FBFCFC;
+  --rule: #BCD3EC;          /* feint blue */
+  --margin: #E0566B;        /* the red margin line */
+  --ink: #1E2A47;           /* blue-black pen: 13:1 on the page */
+  --ink-2: #4E5970;         /* pencil grey: 7:1 */
+  --tape: rgba(226, 219, 199, .82);
+  --desk: #D5DCE4;
+  --green-book: #2F7356;
+  --orange-book: #E39A2D;
+  --blue-book: #3866A8;
+  --hand: 'Kalam', 'Bradley Hand', 'Segoe Print', cursive;
+  --print: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif;
+  --line: 32px;
+  --margin-x: 46px;
+  --dur: 150ms;
+}
+@media (min-width: 1100px) { :root { --margin-x: 84px; } }
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 400 17px/var(--line) var(--print); -webkit-font-smoothing: antialiased; }
+img { display: block; max-width: 100%; }
+a { color: inherit; }
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+h1, h2, h3, p { margin: 0; font-weight: 400; }
+h1, h2, h3 { text-wrap: balance; }
+:focus-visible { outline: 2px dashed var(--ink); outline-offset: 3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.icon { flex: none; }
+.hand { font-family: var(--hand); }
+
+/* The ruled page: a feint rule every 32px, text set on them, and the red margin. */
+.ruled {
+  position: relative;
+  background-color: var(--page);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='32'%3E%3Crect y='31' width='8' height='1' fill='%23BCD3EC'/%3E%3C/svg%3E");
+  background-position: 0 -8px;
+  padding-left: calc(var(--margin-x) + 12px);
+  padding-right: 16px;
+}
+.ruled::before { content: ""; position: absolute; top: 0; bottom: 0; left: var(--margin-x); width: 2px; background: var(--margin); opacity: .8; }
+.in-margin { position: absolute; left: 0; width: calc(var(--margin-x) - 4px); text-align: right; font-family: var(--hand); font-size: 15px; line-height: 1.1; color: var(--ink); padding-top: 8px; }
+
+/* ---------- Shell ---------- */
+.topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 4px; height: 56px; padding: 0 6px 0 16px; background: var(--page); border-bottom: 2px solid var(--ink); }
+.wordmark { font-family: var(--hand); font-weight: 700; font-size: 26px; text-decoration: none; margin-right: auto; display: flex; align-items: baseline; gap: 8px; }
+.wordmark small { font-size: 15px; font-weight: 400; color: var(--ink-2); }
+.tb-title { font-family: var(--hand); font-size: 20px; margin-right: auto; }
+.icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; }
+.icon-btn:hover { background: rgba(30, 42, 71, .07); }
+.btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 2px solid var(--ink); border-radius: 999px; background: var(--page); font: 700 15px var(--print); text-decoration: none; }
+.btn:hover { background: #EEF3F8; }
+.btn--fill { background: var(--ink); color: var(--page); }
+.btn--fill:hover { background: #2C3B60; }
+.btn--text { border-color: transparent; text-decoration: underline; text-underline-offset: 3px; padding: 0 8px; }
+.tabs { display: none; }
+.desk-only, .desk-btn { display: none; }
+@media (min-width: 1100px) {
+  .desk-only { display: flex; margin-left: auto; margin-right: 0; }
+  .desk-btn { display: inline-flex; }
+  .topbar .tb-title { display: none; }
+  body { background: var(--desk); }
+  .topbar { position: static; background: none; border: 0; max-width: min(1180px, calc(100vw - 260px)); margin: 0 auto; padding: 18px 8px 10px; height: auto; }
+  .topbar .icon-btn { display: none; }
+  .book { position: relative; max-width: min(1180px, calc(100vw - 260px)); margin: 0 auto 64px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border: 2px solid #9AA7B6; border-radius: 4px; }
+  .book > .ruled { min-height: calc(100vh - 140px); padding-top: 24px; padding-bottom: 48px; }
+  .book > .ruled + .ruled { border-left: 6px solid #E3E8EE; }
+  .tabs { display: grid; gap: 6px; position: absolute; left: 100%; top: 40px; }
+  .tabs a { display: block; width: 104px; padding: 6px 12px 6px 14px; border-radius: 0 10px 10px 0; font: 700 14px/1.4 var(--print); color: var(--page); text-decoration: none; transform: translateX(-4px); }
+  .tabs a[aria-current="page"] { transform: translateX(6px); }
+  .tabs a:hover { transform: translateX(2px); }
+}
+@media (max-width: 1099px) { .book > .ruled { padding-top: 16px; padding-bottom: 40px; } }
+
+/* ---------- Prints, tape, notes ---------- */
+.print { position: relative; display: block; width: min(100%, 300px); padding: 9px 9px 30px; background: #FFFFFF; outline: 1px solid rgba(30, 42, 71, .14); transform: rotate(var(--tilt, -1.2deg)); margin: 12px 0 18px; text-decoration: none; }
+.print img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+.print.page img { aspect-ratio: 3 / 4; }
+.print figcaption, .print .cap { position: absolute; left: 10px; right: 10px; bottom: 4px; font: 400 15px/1.4 var(--hand); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.print::before, .print::after { content: ""; position: absolute; top: -10px; width: 64px; height: 22px; background: var(--tape); }
+.print::before { left: -14px; transform: rotate(-32deg); }
+.print::after { right: -14px; transform: rotate(28deg); }
+.print.one-tape::after { display: none; }
+.print.one-tape::before { left: 50%; transform: translateX(-50%) rotate(-3deg); }
+.prints { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; }
+.prints .print { width: 46%; padding: 6px 6px 18px; margin: 10px 0 6px; }
+.prints .print::before, .prints .print::after { width: 40px; height: 16px; top: -7px; }
+
+/* ---------- On this day ---------- */
+.otd { position: relative; display: grid; gap: 4px; padding-top: 8px; }
+.otd h2 { font-family: var(--hand); font-weight: 700; font-size: 24px; line-height: var(--line); }
+.otd-items { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: start; }
+.otd .print { width: 100%; padding: 6px 6px 40px; margin: 12px 0 4px; }
+.otd .print .cap { bottom: 4px; white-space: normal; font-size: 14px; line-height: 1.15; }
+.otd .ago { display: block; font: 400 13px/1.3 var(--print); color: var(--ink-2); margin-top: 8px; }
+
+/* ---------- An Era: its exercise book cover ---------- */
+.cover { position: relative; display: grid; gap: 14px; padding: 22px 18px 24px; background: var(--book); color: #FFFFFF; margin: 22px 0 12px; border-radius: 3px 10px 10px 3px; text-decoration: none; }
+.cover::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 10px; background: rgba(0, 0, 0, .16); }
+.label { background: #FFFFFF; color: var(--ink); border-radius: 8px; padding: 6px 14px 8px; display: grid; outline: 2px solid rgba(0, 0, 0, .25); }
+.label .row { display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: baseline; border-bottom: 1.5px solid #9DB0C9; min-height: 36px; }
+.label .row:last-child { border-bottom: 0; }
+.label .row span { font: 700 12px/1 var(--print); color: var(--ink-2); }
+.label .row b { font: 700 22px/1.15 var(--hand); color: var(--ink); }
+.label .row i { font: 400 18px/1.2 var(--hand); font-style: normal; }
+.cover .print { width: 70%; margin: 4px 0 0 auto; --tilt: 2deg; }
+.cover--small { grid-template-columns: minmax(0, 1fr) 96px; align-items: center; gap: 12px; padding: 16px 12px 18px 22px; }
+.cover--small .label { min-width: 0; padding: 4px 10px 6px; }
+.cover--small .label .row { grid-template-columns: 44px minmax(0, 1fr); }
+.cover--small .label .row b { font-size: 18px; }
+.cover--small .label .row i { font-size: 15px; }
+.cover--small .print { width: 100%; margin: 0; padding: 5px 5px 14px; }
+.cover--small .print::before, .cover--small .print::after { width: 36px; height: 14px; top: -6px; }
+
+/* ---------- A week ---------- */
+.week { position: relative; padding-top: var(--line); }
+.week h2 { font: 700 28px/var(--line) var(--hand); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; }
+.week .range { font-size: 15px; color: var(--ink-2); }
+.box { margin: 8px 0 10px; padding: 4px 14px 8px; border: 2px solid var(--ink); border-radius: 6px 12px 8px 14px; background: rgba(255, 255, 255, .7); }
+.box .facts { font: 400 19px/var(--line) var(--hand); }
+.ticks { display: flex; gap: 8px; font: 700 14px/1 var(--print); color: var(--ink-2); padding: 6px 0 8px; }
+.ticks span { display: grid; justify-items: center; gap: 4px; width: 26px; }
+.ticks i { width: 22px; height: 22px; border: 1.8px solid var(--ink-2); border-radius: 4px; display: grid; place-items: center; color: var(--margin); }
+.toc { list-style: none; margin: 0; padding: 0; }
+.toc a { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 6px; align-items: baseline; min-height: var(--line); text-decoration: none; }
+.toc a:hover .tt { text-decoration: underline; }
+.toc .td { font: 400 15px var(--hand); color: var(--ink-2); }
+.toc .tt { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.toc .ti { display: flex; gap: 4px; color: var(--ink-2); align-self: center; }
+.toc .sealed .tt { font-family: var(--hand); color: var(--margin); display: flex; gap: 6px; align-items: center; }
+.filed { font-size: 15px; color: var(--ink-2); }
+.filed b { font-weight: 700; color: var(--ink); }
+
+/* ---------- Entries on the page ---------- */
+.entry-p { position: relative; padding-top: var(--line); }
+.entry-p > .in-margin { left: calc(-1 * (var(--margin-x) + 12px)); top: var(--line); }
+.entry-p h3 { font: 700 26px/var(--line) var(--hand); }
+.entry-p h3 a { text-decoration: none; }
+.entry-p h3 a:hover { text-decoration: underline; }
+.caption p + p, .caption ul + p, .caption p + ul { margin-top: var(--line); }
+.caption h3, .caption h4, .caption h5 { font: 700 20px/var(--line) var(--hand); margin: var(--line) 0 0; color: var(--ink); }
+.caption > :first-child { margin-top: 0; }
+.caption ul { margin: 0; padding-left: 1.1em; }
+.extras { display: grid; gap: 4px; padding: 4px 0; }
+.voice { display: flex; align-items: center; gap: 10px; min-height: 44px; min-width: 0; }
+.voice .play { width: 40px; height: 40px; border: 2px solid var(--ink); border-radius: 50% 46% 52% 48%; display: grid; place-items: center; flex: none; }
+.voice svg.wave { flex: 1; min-width: 0; max-width: 200px; height: 26px; }
+.voice .dur { font: 400 16px var(--hand); }
+.sound { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 15px; }
+.sound i { font-family: var(--hand); font-style: normal; font-size: 18px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0; }
+.tag { display: inline-flex; align-items: center; height: 28px; padding: 0 10px 0 14px; background: #FFFFFF; border: 1.5px solid var(--ink); border-radius: 3px 12px 12px 3px; font: 700 13px var(--print); text-decoration: none; position: relative; }
+.tag::before { content: ""; position: absolute; left: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--ink); }
+
+/* The sealed Loot Drop: an envelope taped into the book, the same for every one (D-10). */
+.envelope { position: relative; display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; align-items: center; height: 150px; margin: 10px 0 8px; text-decoration: none; }
+.envelope svg { width: 150px; height: 108px; transform: rotate(-3deg); }
+.envelope .note { font: 400 18px/1.25 var(--hand); }
+.envelope .note b { display: block; font-weight: 700; font-size: 20px; color: var(--margin); }
+.envelope .note small { display: block; font: 400 14px/1.35 var(--print); color: var(--ink-2); margin-top: 4px; }
+
+/* ---------- Era screen ---------- */
+.era-cover { position: relative; margin: 18px 0 8px; padding: 30px 26px; background: var(--green-book); border-radius: 4px 14px 14px 4px; display: grid; gap: 22px; }
+.era-cover::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: rgba(0, 0, 0, .18); border-radius: 4px 0 0 4px; }
+.era-cover .label .row { grid-template-columns: 50px minmax(0, 1fr); }
+.era-name { font: 700 24px/1.15 var(--hand); padding: 4px 0; }
+@media (min-width: 1100px) { .era-name { font-size: 30px; } }
+.era-cover .print { width: min(78%, 300px); justify-self: center; --tilt: -2deg; }
+.era-cover .booknum { font: 700 15px var(--print); color: #E6F0EA; }
+.leaders { list-style: none; margin: 0; padding: 0; }
+.leaders a { display: grid; grid-template-columns: minmax(0, auto) minmax(12px, 1fr) auto; gap: 6px; align-items: baseline; min-height: var(--line); text-decoration: none; }
+.leaders a:hover .lt { text-decoration: underline; }
+.leaders .lt { font: 400 19px/var(--line) var(--hand); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.leaders .ld { border-bottom: 2px dotted var(--ink-2); transform: translateY(-8px); }
+.leaders .ln { font-size: 15px; font-variant-numeric: tabular-nums; }
+.inserts { display: grid; gap: 10px; padding: 8px 0; }
+.insert { position: relative; padding: 4px 12px 6px; background: #FFFFFF; outline: 1px solid rgba(30, 42, 71, .2); transform: rotate(var(--tilt, 1deg)); text-decoration: none; display: block; }
+.insert b { font: 700 20px/var(--line) var(--hand); display: block; }
+.insert small { font-size: 14px; color: var(--ink-2); }
+.insert::before { content: ""; position: absolute; top: -8px; left: 40%; width: 46px; height: 16px; background: var(--tape); transform: rotate(-4deg); }
+
+/* ---------- Loot Drop screen ---------- */
+.big-envelope { display: grid; justify-items: center; gap: 6px; padding: 30px 0 12px; }
+.big-envelope svg { width: min(100%, 300px); height: auto; transform: rotate(-2deg); }
+.big-envelope p { font: 700 24px/1.25 var(--hand); color: var(--margin); text-align: center; max-width: 18ch; }
+.sticky { position: relative; justify-self: start; padding: 14px 18px 16px; background: #FFF4C2; outline: 1px solid rgba(30, 42, 71, .12); transform: rotate(-2deg); margin: 16px 0 8px; }
+.sticky b { display: block; font: 700 40px/1 var(--hand); }
+.sticky span { font: 400 18px var(--hand); }
+.checklist { list-style: none; margin: 0; padding: 0; }
+.checklist li { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 8px; align-items: baseline; min-height: var(--line); }
+.checklist i { width: 20px; height: 20px; border: 1.8px solid var(--ink); border-radius: 3px; display: grid; place-items: center; color: var(--margin); transform: translateY(4px); }
+.checklist b { font-family: var(--hand); font-size: 19px; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../shared/content.js"></script>
+<script src="../shared/helpers.js"></script>
+<script>
+(() => {
+  const { html, icon, date, range } = M;
+  const app = document.getElementById('app');
+  const BOOK = { 'era-brunswick': 'var(--green-book)', 'era-grampians': 'var(--orange-book)', 'era-uni': 'var(--blue-book)', 'era-japan': '#B84A3A' };
+  const plural = (n, one, many = `${one}s`) => `${n.toLocaleString('en-AU')} ${n === 1 ? one : many}`;
+  const tick = M.raw('<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8.5l3.2 3.4L13.5 3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+  const tilt = (id) => `${((M.seeded(id)() - 0.5) * 3.2).toFixed(2)}deg`;
+  const shortUnlock = (e) => M.instant(e.unlockDate, { day: 'numeric', month: 'short', year: 'numeric' });
+
+  // An envelope drawn in pen: the same drawing for every sealed Loot Drop.
+  const envelope = (w = 150) => M.raw(`<svg viewBox="0 0 150 108" width="${w}" aria-hidden="true">
+    <path d="M6 10h138v90H6z" fill="#FFFFFF" stroke="#1E2A47" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M6 10l69 52 69-52" fill="none" stroke="#1E2A47" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M6 100l52-40M144 100l-52-40" fill="none" stroke="#1E2A47" stroke-width="1.6" opacity=".55"/>
+    <rect x="-6" y="2" width="44" height="16" fill="rgba(226,219,199,.85)" transform="rotate(-22 16 10)"/>
+    <rect x="112" y="2" width="44" height="16" fill="rgba(226,219,199,.85)" transform="rotate(20 134 10)"/>
+    <circle cx="75" cy="62" r="9" fill="#E0566B"/><path d="M71 62h8M75 58v8" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/></svg>`);
+
+  function topbar({ back, title } = {}) {
+    if (back) return html`<header class="topbar"><a class="icon-btn" href="${back}" aria-label="Back">${icon('arrowLeft', { size: 22 })}</a><span class="tb-title">${title}</span><a class="wordmark desk-only" href="#feed">memoirist</a></header>`;
+    return html`<header class="topbar"><a class="wordmark" href="#feed">memoirist <small>Book 3</small></a>
+      <a class="btn btn--fill desk-btn" href="#entry">${icon('pen', { size: 18 })}New page</a>
+      <a class="icon-btn" href="#entry" aria-label="Write a new page">${icon('pen', { size: 22 })}</a></header>`;
+  }
+  function tabs(screen) {
+    const T = [['Journal', '#feed', '#C9415A', ['feed', 'entry', 'loot']], ['Eras', '#era', '#2F7356', ['era']], ['Timeline', '#feed', '#3866A8', []], ['Templates', '#feed', '#8E6417', []], ['Tags', '#feed', '#6A5AA3', []]];
+    return html`<nav class="tabs" aria-label="memoirist">${T.map(([l, h, c, s]) => html`<a href="${h}" style="background:${c}" ${s.includes(screen) ? M.raw('aria-current="page"') : ''}>${l}</a>`)}</nav>`;
+  }
+
+  function voice(v) {
+    const bars = M.waveform(v.id, 40);
+    const path = bars.map((b, i) => `M${i * 5 + 1} ${(13 - b * 11).toFixed(1)}V${(13 + b * 11).toFixed(1)}`).join('');
+    return html`<div class="voice"><button class="play" aria-label="Play voice note, ${M.duration(v.durationSeconds)}">${icon('play', { size: 16 })}</button>
+      <svg class="wave" viewBox="0 0 200 26" preserveAspectRatio="none" aria-hidden="true"><path d="${path}" stroke="#4E5970" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span class="dur">${M.duration(v.durationSeconds)}</span></div>`;
+  }
+  const sound = (st) => html`<p class="sound">${icon('music', { size: 18 })}<span>Listening to <i>${st.title}</i>, ${st.artist}</span></p>`;
+  const tagRow = (ts) => html`<div class="tags">${ts.map((t) => html`<a class="tag" href="#feed">${t.name}</a>`)}</div>`;
+
+  function contents(w) {
+    const s = M.weekStats(w);
+    const facts = [plural(s.entryCount, 'entry', 'entries'), s.photoCount && plural(s.photoCount, 'photo'), s.voiceNoteCount && plural(s.voiceNoteCount, 'voice note')].filter(Boolean).join(', ');
+    return html`<div class="box">
+      <p class="facts">${facts}${s.sealedCount ? ', and one sealed' : ''}</p>
+      <div class="ticks" aria-label="Days written">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => html`<span><i>${s.days[i] ? tick : ''}</i>${d}</span>`)}</div>
+      <ul class="toc">${w.entries.map((e) => M.isSealed(e)
+        ? html`<li><a class="sealed" href="#loot"><span class="td">${date(e.entryDate, 'weekdayShort')}</span><span class="tt">${icon('lock', { size: 15 })}Don't open until ${shortUnlock(e)}</span><span></span></a></li>`
+        : html`<li><a href="#entry"><span class="td">${date(e.entryDate, 'weekdayShort')}</span><span class="tt">${M.displayTitle(e)}</span><span class="ti">${M.images(e).length ? icon(M.images(e)[0].kind === 'PAGE_SCAN' ? 'page' : 'image', { size: 15 }) : ''}${M.voiceNotes(e).length ? icon('mic', { size: 15 }) : ''}</span></a></li>`)}</ul>
+      ${s.tags.length ? html`<p class="filed">Tags: ${s.tags.map((t, i) => html`${i ? ', ' : ''}<b>${t.name}</b>`)}</p>` : ''}
+    </div>`;
+  }
+
+  function coverSmall(era, extra = '') {
+    return html`<a class="cover cover--small" href="#era" style="--book:${BOOK[era.id]}">
+      <span class="label"><span class="row"><span>Name</span><b>${era.title}</b></span><span class="row"><span>From</span><i>${date(era.startDate, 'medium')}${era.endDate ? ` to ${date(era.endDate, 'medium')}` : ''}</i></span>${extra}</span>
+      ${era.cover ? html`<span class="print"><img src="${M.cover(era)}" alt=""></span>` : ''}</a>`;
+  }
+
+  function entryOnPage(e) {
+    const day = html`<span class="in-margin">${date(e.entryDate, 'weekdayShort')}<br>${Number(e.entryDate.slice(8))}</span>`;
+    if (M.isSealed(e)) {
+      const u = M.opening(e);
+      return html`<article class="entry-p" aria-label="Sealed Loot Drop">${day}
+        <a class="envelope" href="#loot">${envelope()}<span class="note"><b>Don't open until ${shortUnlock(e)}!</b>${u.countdown}<small>${u.opens}</small></span></a></article>`;
+    }
+    const pics = M.images(e);
+    const heading = e.title || (e.contentJson ? null : M.displayTitle(e));
+    return html`<article class="entry-p" aria-label="${M.displayTitle(e)}">${day}
+      ${heading ? html`<h3><a href="#entry">${heading}</a></h3>` : ''}
+      ${pics.length ? html`<a class="print ${pics[0].kind === 'PAGE_SCAN' ? 'page one-tape' : ''}" href="#entry" style="--tilt:${tilt(e.id)}"><img src="${M.src(pics[0])}" alt="${pics[0].alt}">${pics.length > 1 ? html`<span class="cap">1 of ${pics.length}</span>` : ''}</a>` : ''}
+      ${e.contentJson ? html`<div class="caption">${M.caption(e.contentJson, { headingTag: 'h5' })}</div>` : ''}
+      ${M.voiceNotes(e).length || e.soundtrack ? html`<div class="extras">${M.voiceNotes(e).map(voice)}${e.soundtrack ? sound(e.soundtrack) : ''}</div>` : ''}
+      ${e.tags.length ? tagRow(e.tags) : ''}
+    </article>`;
+  }
+
+  function weekOnPage(w) {
+    return html`<section class="week" aria-labelledby="h-${w.id}">
+      <h2 id="h-${w.id}">${M.weekLabel(w)}</h2><p class="range">${range(w.startDate, w.endDate)}</p>
+      ${contents(w)}${w.entries.map(entryOnPage)}</section>`;
+  }
+
+  function otd() {
+    return html`<section class="otd" aria-labelledby="otd-h"><h2 id="otd-h">On this day</h2>
+      <div class="otd-items">${M.data.onThisDay.map((e, i) => html`<a href="#entry" style="text-decoration:none"><span class="print" style="--tilt:${i ? '2deg' : '-2.5deg'}"><img src="${M.src(M.images(e)[0])}" alt="${M.images(e)[0].alt}"><span class="cap">${e.title}</span></span><span class="ago">${M.yearsAgo(e.entryDate)}, ${date(e.entryDate, 'medium')}</span></a>`)}</div></section>`;
+  }
+
+  // ---------- Feed ----------
+  function feed() {
+    const [now, trip] = M.data.weeks;
+    const brunswick = M.era('era-brunswick'), grampians = M.era('era-grampians');
+    return html`${topbar()}
+      <main class="book">
+        <h1 class="sr-only">Journal</h1>
+        <section class="ruled" aria-label="Inside cover">
+          ${otd()}
+          ${coverSmall(brunswick)}
+          <section class="week" aria-labelledby="h-now"><h2 id="h-now">${M.weekLabel(now)}</h2><p class="range">${range(now.startDate, now.endDate)}</p>${contents(now)}</section>
+        </section>
+        <section class="ruled" aria-label="This week's pages">
+          ${now.entries.map(entryOnPage)}
+          ${coverSmall(grampians, M.raw('<span class="row"><span>Inside</span><i>The Brunswick Years</i></span>'))}
+          ${weekOnPage(trip)}
+        </section>
+        ${tabs('feed')}
+      </main>`;
+  }
+
+  // ---------- Entry ----------
+  function entryScreen() {
+    const e = M.featured.entry(), w = M.weekOf(e.id), pics = M.images(e);
+    return html`${topbar({ back: '#feed', title: M.weekLabel(w) })}
+      <main class="book">
+        <section class="ruled" aria-label="Photos">
+          <span class="in-margin" style="top:22px">${date(e.entryDate, 'weekdayShort')}<br>24</span>
+          <p class="hand" style="font-size:18px;color:var(--ink-2);padding-top:8px">${date(e.entryDate, 'long')}</p>
+          <h1 class="hand" style="font-size:40px;line-height:44px;font-weight:700;padding:6px 0 8px">${e.title}</h1>
+          <span class="print" style="--tilt:-1.5deg;width:min(100%,420px)"><img src="${M.src(pics[0])}" alt="${pics[0].alt}"><span class="cap">The cloud burning off, 6:41 am</span></span>
+          <div class="prints">${pics.slice(1).map((m, i) => html`<span class="print" style="--tilt:${[2, -2, 1.5][i]}deg"><img src="${M.src(m)}" alt="${m.alt}"></span>`)}</div>
+        </section>
+        <section class="ruled" aria-label="The entry">
+          <div class="caption" style="padding-top:8px">${M.caption(e.contentJson, { headingTag: 'h3' })}</div>
+          <div class="extras">${M.voiceNotes(e).map(voice)}${sound(e.soundtrack)}</div>
+          ${tagRow(e.tags)}
+          <p class="filed">In <b>${w.eras[0].title}</b>, inside <b>${w.eras[1].title}</b>. From the Trips template.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;padding:12px 0"><a class="btn" href="#entry">${icon('pen', { size: 18 })}Edit</a><a class="btn" href="#loot">${icon('lock', { size: 18 })}Seal as a Loot Drop</a><button class="btn btn--text">Delete</button></div>
+        </section>
+        ${tabs('entry')}
+      </main>`;
+  }
+
+  // ---------- Era ----------
+  function eraScreen() {
+    const p = M.eraPage(M.data.featured.eraId), e = p.era, t = p.totals;
+    return html`${topbar({ back: '#feed', title: 'Eras' })}
+      <main class="book">
+        <section class="ruled" aria-label="The cover">
+          <div class="era-cover">
+            <span class="booknum">Book 3 of 3</span>
+            <div class="label">
+              <div class="row"><span>Name</span><h1 class="era-name">${e.title}</h1></div>
+              <div class="row"><span>From</span><i>${date(e.startDate, 'plain')}</i></div>
+              <div class="row"><span>To</span><i>still writing, ${p.span} so far</i></div>
+            </div>
+            <span class="print one-tape"><img src="${M.cover(e)}" alt="Victorian terrace houses with iron lace verandahs, the cover of this Era"></span>
+          </div>
+          <p class="hand" style="font-size:20px">${e.description}</p>
+          ${sound(e.soundtrack)}
+        </section>
+        <section class="ruled" aria-label="Contents">
+          <h2 class="hand" style="font-size:28px;font-weight:700;padding-top:8px;text-decoration:underline;text-underline-offset:6px">Contents</h2>
+          <ul class="leaders">${p.rows.map((r) => html`<li><a href="#feed"><span class="lt">${r.title}</span><span class="ld"></span><span class="ln">${plural(r.entryCount, 'entry', 'entries')}</span></a></li>`)}</ul>
+          <p class="filed">and ${p.notListedWeeks} earlier weeks, back to ${date(e.startDate, 'medium')}</p>
+          <p class="hand" style="font-size:20px;padding-top:var(--line)">So far: ${t.weekCount} weeks, ${t.entryCount} entries, ${t.photoCount.toLocaleString('en-AU')} photos, ${t.voiceNoteCount} voice notes</p>
+          <h2 class="hand" style="font-size:24px;font-weight:700;padding-top:var(--line)">Smaller books tucked inside</h2>
+          <div class="inserts">${p.chaptersInside.map((c, i) => html`<a class="insert" href="#era" style="--tilt:${i ? '-1.2deg' : '1deg'}"><b>${c.title}</b><small>${range(c.startDate, c.endDate)}</small></a>`)}</div>
+          <p style="padding:8px 0"><a class="btn" href="#era">${icon('calendar', { size: 18 })}Change dates or cover</a></p>
+        </section>
+        ${tabs('era')}
+      </main>`;
+  }
+
+  // ---------- Loot Drop ----------
+  function lootScreen() {
+    const e = M.featured.lootDrop(), w = M.weekOf(e.id), u = M.opening(e);
+    const days = (u.countdown.match(/\d+/) || [u.countdown])[0];
+    return html`${topbar({ back: '#feed', title: M.weekLabel(w) })}
+      <main class="book">
+        <section class="ruled" aria-label="The envelope">
+          <div class="big-envelope">${envelope(300)}<p>Don't open until ${M.instant(e.unlockDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}!</p></div>
+        </section>
+        <section class="ruled" aria-label="About this Loot Drop">
+          <h1 class="hand" style="font-size:34px;line-height:40px;font-weight:700;padding-top:12px">Sealed Loot Drop</h1>
+          <p>${u.opens}.</p>
+          <div class="sticky"><b>${days}</b><span>days to go</span></div>
+          <p>Dated ${date(e.entryDate, 'long')}. Nobody can open it or change it before then, you included.</p>
+          <ul class="checklist" style="padding-top:var(--line)">
+            <li><i>${tick}</i><span><b>Written</b>, ${date(e.entryDate, 'medium')}</span></li>
+            <li><i>${tick}</i><span><b>Sealed</b>, today</span></li>
+            <li><i></i><span><b>Opens</b>, ${M.instant(e.unlockDate, { day: 'numeric', month: 'short', year: 'numeric' })}</span></li>
+            <li><i></i><span><b>Write back</b> to past you</span></li>
+          </ul>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;padding:16px 0"><button class="btn btn--fill">${icon('clock', { size: 18 })}Extend the seal</button><button class="btn btn--text">Delete</button></div>
+        </section>
+        ${tabs('loot')}
+      </main>`;
+  }
+
+  const SCREENS = { feed, entry: entryScreen, era: eraScreen, loot: lootScreen };
+  M.mount((screen) => { app.innerHTML = String(SCREENS[screen]()); });
+})();
+</script>
+</body>
+</html>

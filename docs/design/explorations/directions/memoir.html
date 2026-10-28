@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Memoir direction for memoirist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap">
+<style>
+/* Memoir: the journal typeset as a printed book. Text sits in a 62-character column with dates in
+   the margin, photos are plates, each Era opens on a bookcloth title page, and a sealed Loot Drop is
+   an uncut page. Square corners throughout; surfaces separate by tone, never by shadow. */
+:root {
+  --paper: #F2F4F1;      /* the page: a bone with a little of the cloth in it, not a cream */
+  --leaf: #FBFCFA;       /* a sheet lifted off the page */
+  --paper-2: #E8ECE6;    /* one tone down: panels, plate mounts */
+  --paper-3: #DADFD7;    /* two tones down: the leaves underneath */
+  --rule: #D3D8D0;
+  --ink: #1B1D1A;
+  --ink-2: #5E625B;      /* 5.9:1 on paper */
+  --cloth: #2E4A3D;      /* bookcloth: title pages, the primary action, the band */
+  --cloth-ink: #EEF2EE;
+  --cloth-ink-2: #BFCCC3;
+
+  --serif: 'Newsreader', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --s1: 14px;  /* margin notes, meta */
+  --s2: 17px;  /* reading text */
+  --s3: 21px;  /* section heads */
+  --s4: 28px;  /* screen titles */
+  --s5: 40px;  /* chapter titles */
+  --gutter: 20px;
+  --dur: 160ms;
+}
+@media (min-width: 1100px) {
+  :root { --s2: 18px; --s3: 24px; --s4: 36px; --s5: 64px; --gutter: 48px; }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 400 var(--s2)/1.6 var(--serif);
+  font-variant-numeric: oldstyle-nums proportional-nums;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+h1, h2, h3, h4 { font-weight: 400; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+:focus-visible { outline: 2px solid var(--cloth); outline-offset: 3px; }
+.on-cloth :focus-visible { outline-color: var(--cloth-ink); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.skip { position: absolute; left: -9999px; }
+.skip:focus { left: 16px; top: 12px; z-index: 20; background: var(--leaf); padding: 8px 12px; }
+.icon { flex: none; }
+.figs { font-variant-numeric: lining-nums tabular-nums; }
+
+/* ---------- Shell: a sidebar on the page ground; on phones a 52px running head ---------- */
+.shell { min-height: 100vh; }
+.side { display: none; }
+@media (min-width: 1100px) {
+  .shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); }
+  .side {
+    display: flex; flex-direction: column; gap: 4px;
+    position: sticky; top: 0; height: 100vh; padding: 26px 18px 22px 26px;
+    border-right: 1px solid var(--rule);
+  }
+}
+.mark { display: inline-flex; align-items: center; gap: 10px; font-size: 27px; font-style: italic; letter-spacing: -.01em; text-decoration: none; line-height: 1; }
+.mark svg { width: 13px; height: 24px; }
+.scope { color: var(--ink-2); font-size: var(--s1); font-style: italic; margin: 6px 0 22px 23px; }
+.side .btn--primary { margin: 0 0 22px; justify-content: center; }
+.nav { list-style: none; margin: 0; padding: 0; }
+.nav a { display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 10px; text-decoration: none; font-size: 16px; }
+.nav a:hover { background: var(--paper-2); }
+.nav a[aria-current="page"] { background: var(--paper-2); }
+.nav .icon { color: var(--ink-2); }
+.side-foot { margin-top: auto; display: grid; gap: 14px; }
+.who { display: flex; align-items: center; gap: 10px; font-size: var(--s1); color: var(--ink-2); padding: 0 10px; }
+.who b { font-weight: 400; color: var(--ink); display: block; font-size: 15px; }
+.initial { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #D7E2DA; color: var(--cloth); font-size: 15px; font-style: italic; }
+
+/* ---------- The page ---------- */
+.page { max-width: 1200px; margin: 0 auto; padding: 0 var(--gutter) 120px; }
+.runhead {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 8px;
+  height: 52px; margin: 0 calc(-1 * var(--gutter)); padding: 0 calc(var(--gutter) - 12px);
+  background: var(--paper); border-bottom: 1px solid var(--rule);
+}
+.rh-title, .rh-back { font-size: var(--s1); font-style: italic; font-weight: 400; margin: 0; }
+.rh-back { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 4px; text-decoration: none; }
+.rh-back:hover { text-decoration: underline; }
+.rh-right { margin-left: auto; display: flex; align-items: center; gap: 4px; font-size: var(--s1); font-style: italic; color: var(--ink-2); }
+.icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--ink); }
+.icon-btn:hover { background: var(--paper-2); }
+.rh-date { display: none; }
+@media (min-width: 1100px) {
+  .runhead { height: 60px; padding: 0 var(--gutter); }
+  .rh-title { font-size: 18px; }
+  .rh-back { font-size: 16px; padding: 0; }
+  .runhead .icon-btn { display: none; }
+  .rh-date { display: block; }
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px;
+  border: 1px solid var(--ink); background: transparent; font-size: 16px; text-decoration: none;
+  transition: background-color var(--dur), color var(--dur);
+}
+.btn:hover { background: var(--paper-2); }
+.btn--primary { background: var(--cloth); border-color: var(--cloth); color: var(--cloth-ink); }
+.btn--primary:hover { background: #3A5B4C; }
+.btn--quiet { border-color: transparent; text-decoration: underline; padding: 0 6px; }
+
+/* A three-column page: margin notes, the text column, an aside. Phones read one column. */
+.grid { display: grid; row-gap: 36px; padding-top: 28px; }
+@media (min-width: 1100px) {
+  .grid { grid-template-columns: 160px minmax(0, 600px) 264px; column-gap: 40px; align-items: start; padding-top: 48px; }
+}
+
+/* ---------- Pieces shared by the screens ---------- */
+.dateline { font-size: var(--s1); font-style: italic; color: var(--ink-2); }
+.plate { margin: 0; }
+.plate img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; background: var(--paper-2); }
+.plate--page img { aspect-ratio: 3 / 4; width: min(100%, 340px); }
+.plate-count { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: var(--s1); font-style: italic; color: var(--ink-2); }
+.dots { display: flex; gap: 5px; }
+.dots i { width: 6px; height: 6px; background: var(--paper-3); }
+.dots i.on { background: var(--ink); }
+.caption p + p, .caption ul + p, .caption p + ul { margin-top: .75em; }
+.caption h3, .caption h4 { font-size: var(--s1); font-style: italic; color: var(--ink-2); margin: 1.3em 0 .15em; }
+.caption > :first-child { margin-top: 0; }
+.caption ul { margin: .4em 0 0; padding-left: 1.2em; }
+.caption li + li { margin-top: .15em; }
+.filed { font-size: var(--s1); color: var(--ink-2); font-style: italic; }
+.filed a { color: var(--ink); font-style: normal; }
+.voice { display: flex; align-items: center; gap: 12px; max-width: 440px; min-width: 0; }
+.play { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 1px solid var(--ink); background: transparent; }
+.play:hover { background: var(--paper-2); }
+/* An svg with no width defaults to 300px and won't shrink as a flex item; let it. */
+.wave { flex: 1; min-width: 0; width: 100%; height: 28px; fill: var(--ink); }
+.wave rect.later { fill: var(--paper-3); }
+.dur { font-size: var(--s1); color: var(--ink-2); font-variant-numeric: lining-nums tabular-nums; }
+.sound { display: flex; align-items: center; gap: 10px; font-size: var(--s1); color: var(--ink-2); }
+.sound cite { font-style: italic; color: var(--ink); }
+.sound .btn--quiet { min-height: 44px; margin-left: auto; color: var(--ink); }
+.note-label { font-style: italic; }
+
+/* The uncut page: three leaves still folded together, a ribbon left in them. */
+.uncut { display: block; width: 100%; height: auto; }
+.uncut .leaf-3 { fill: var(--paper-3); }
+.uncut .leaf-2 { fill: var(--paper-2); }
+.uncut .leaf-1 { fill: var(--leaf); }
+.uncut .line { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.uncut .ribbon { fill: var(--cloth); }
+
+/* ---------- Feed ---------- */
+.feed-aside { display: grid; gap: 40px; }
+.feed-main { min-width: 0; }
+@media (min-width: 1100px) {
+  .feed-aside { grid-column: 3; grid-row: 1; position: sticky; top: 92px; }
+  .feed-main { grid-column: 1 / 3; grid-row: 1; }
+  .week > .contents { display: none; }      /* the first week's contents sit in the aside */
+  .week + .chapter .week > .contents,
+  .chapter + .chapter .week > .contents { display: grid; }
+}
+@media (max-width: 1099px) {
+  .feed-aside .contents-block { display: none; }  /* phones read each week's contents inline */
+}
+.aside-h { font-size: var(--s3); line-height: 1.2; }
+.aside-sub { font-size: var(--s1); font-style: italic; color: var(--ink-2); margin-top: 2px; }
+
+.otd { display: grid; gap: 14px; }
+.epi { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; align-items: start; text-decoration: none; }
+.epi img { width: 64px; height: 64px; object-fit: cover; }
+.epi-title { display: block; font-size: var(--s2); line-height: 1.3; }
+.epi:hover .epi-title { text-decoration: underline; }
+.epi-quote { display: block; font-style: italic; font-size: var(--s1); line-height: 1.45; margin-top: 3px; }
+.epi-attr { display: block; font-size: var(--s1); color: var(--ink-2); margin-top: 4px; }
+
+.title-page { display: grid; background: var(--cloth); color: var(--cloth-ink); margin: 0 calc(-1 * var(--gutter)); }
+.title-page .frontis { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.tp-text { padding: 22px var(--gutter) 26px; display: grid; gap: 6px; align-content: end; }
+.tp-title { font-size: var(--s5); font-weight: 300; line-height: 1.02; letter-spacing: -.02em; }
+.tp-title a { text-decoration: none; }
+.tp-title a:hover { text-decoration: underline; text-decoration-thickness: 2px; }
+.tp-dates { font-style: italic; color: var(--cloth-ink-2); font-size: var(--s1); }
+@media (min-width: 1100px) {
+  /* The frontispiece faces the title, as in a printed book: picture on the left page, title on the right. */
+  .title-page { margin: 0; grid-template-columns: 360px minmax(0, 1fr); min-height: 260px; }
+  .title-page .frontis { height: 100%; aspect-ratio: auto; }
+  .title-page .tp-text { padding: 36px 40px 34px; }
+  .title-page .tp-title { font-size: 52px; }
+  .tp-dates { font-size: 16px; }
+}
+.chapter + .chapter { margin-top: 72px; }
+
+.week { display: grid; gap: 0; }
+.week-head { display: grid; gap: 2px; margin-top: 40px; }
+.week-head h2 { font-size: var(--s4); line-height: 1.15; }
+.week-range { font-size: var(--s1); font-style: italic; color: var(--ink-2); }
+@media (min-width: 1100px) {
+  .week-head { grid-template-columns: 160px minmax(0, 1fr); column-gap: 40px; align-items: baseline; margin-top: 56px; }
+  .week-head .week-range { grid-column: 1; grid-row: 1; text-align: right; }
+  .week-head h2 { grid-column: 2; }
+}
+
+.contents { display: grid; gap: 14px; margin-top: 18px; }
+@media (min-width: 1100px) { .week > .contents { margin-left: 200px; } }
+.facts { line-height: 1.45; }
+.also { font-size: var(--s1); font-style: italic; color: var(--ink-2); }
+.also a { color: var(--ink); }
+.thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+.thumbs img { width: 46px; height: 46px; object-fit: cover; }
+.toc { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.toc-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 44px; border-bottom: 1px solid var(--rule); }
+.toc-day { font-size: var(--s1); font-style: italic; color: var(--ink-2); }
+.toc-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-decoration: none; font-size: 16px; }
+a.toc-title:hover { text-decoration: underline; }
+.toc-icons { display: flex; gap: 4px; color: var(--ink-2); }
+.toc-row.is-sealed .toc-title { display: flex; align-items: center; gap: 7px; font-style: italic; color: var(--ink-2); font-size: var(--s1); }
+
+.week, .passage, .reading { grid-template-columns: minmax(0, 1fr); }
+.passage { display: grid; gap: 14px; margin-top: 52px; }
+.passage > * { min-width: 0; }
+.passage-title { font-size: var(--s3); line-height: 1.2; }
+.passage-title a { text-decoration: none; }
+.passage-title a:hover { text-decoration: underline; }
+@media (max-width: 1099px) {
+  .passage .plate { margin: 4px calc(-1 * var(--gutter)) 0; }
+  .passage .plate-count { padding: 0 var(--gutter); }
+  .passage .plate--page { margin: 4px 0 0; }
+}
+@media (min-width: 1100px) {
+  .passage { grid-template-columns: 160px minmax(0, 1fr); column-gap: 40px; row-gap: 16px; margin-top: 64px; }
+  .passage > * { grid-column: 2; }
+  .passage > .dateline { grid-column: 1; grid-row: 1; text-align: right; padding-top: 6px; }
+}
+
+/* The sealed card has the same size whatever it holds (D-10). */
+.vault {
+  display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 18px; align-items: center;
+  height: 152px; padding: 0 22px; background: var(--paper-2); text-decoration: none;
+  transition: background-color var(--dur);
+}
+.vault:hover { background: var(--paper-3); }
+.vault-h { font-size: var(--s3); line-height: 1.2; }
+.vault-when { font-size: var(--s1); margin-top: 4px; }
+.vault-count { font-size: var(--s1); font-style: italic; color: var(--ink-2); }
+
+/* ---------- Entry ---------- */
+.reading { display: grid; row-gap: 22px; padding-top: 24px; }
+.reading > * { min-width: 0; }
+.r-title { font-size: var(--s4); line-height: 1.1; letter-spacing: -.01em; }
+.r-hero { margin: 0 calc(-1 * var(--gutter)); }
+.r-hero img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.r-strip { display: flex; gap: 6px; padding: 10px var(--gutter) 0; align-items: center; }
+.r-strip img { width: 58px; height: 44px; object-fit: cover; opacity: .55; }
+.r-strip img.on { opacity: 1; outline: 2px solid var(--ink); outline-offset: 2px; }
+.r-strip .plate-count { margin: 0 0 0 auto; }
+.r-caption { font-size: var(--s2); line-height: 1.65; }
+.r-notes { display: grid; gap: 10px; font-size: var(--s1); color: var(--ink-2); }
+.r-notes p { font-style: italic; }
+.r-notes a { color: var(--ink); font-style: normal; }
+.r-turn { display: grid; gap: 10px; }
+.turn { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: center; text-decoration: none; min-height: 44px; }
+.turn img { width: 56px; height: 56px; object-fit: cover; }
+.turn span { display: block; }
+.turn .which { font-size: var(--s1); font-style: italic; color: var(--ink-2); }
+.turn:hover .t { text-decoration: underline; }
+.r-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 8px; }
+@media (min-width: 1100px) {
+  .reading { grid-template-columns: 160px minmax(0, 600px) 264px; column-gap: 40px; row-gap: 26px; padding-top: 48px; }
+  .reading > * { grid-column: 2; }
+  .r-dateline { grid-column: 1; grid-row: 1; text-align: right; padding-top: 14px; }
+  .r-title { grid-row: 1; }
+  .r-hero { grid-column: 2 / 4; margin: 0; }
+  .r-hero img { aspect-ratio: 3 / 2; }
+  .r-strip { padding: 12px 0 0; }
+  .r-notes { grid-column: 1; grid-row: 3 / span 3; text-align: right; align-content: start; padding-top: 4px; }
+  .r-turn { grid-column: 3; grid-row: 3 / span 3; align-content: start; }
+}
+
+/* ---------- Era ---------- */
+.era-title-page { display: grid; background: var(--cloth); color: var(--cloth-ink); margin: 0 calc(-1 * var(--gutter)); }
+.era-title-page .frontis { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; }
+.era-title-page .tp-text { padding: 26px var(--gutter) 32px; gap: 10px; }
+.era-title-page .tp-span { font-size: var(--s1); color: var(--cloth-ink-2); }
+.tp-desc { font-style: italic; font-size: var(--s3); line-height: 1.35; margin-top: 8px; max-width: 26ch; }
+.era-title-page .sound { color: var(--cloth-ink-2); margin-top: 10px; }
+.era-title-page .sound cite { color: var(--cloth-ink); }
+.era-title-page .sound .btn--quiet { color: var(--cloth-ink); margin-left: 4px; }
+.contents-h { font-size: var(--s3); }
+.leaders { list-style: none; margin: 16px 0 0; padding: 0; }
+.leaders li { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.leaders a { display: flex; align-items: baseline; gap: 8px; min-width: 0; text-decoration: none; }
+.leaders a:hover .l-title { text-decoration: underline; }
+.l-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; max-width: 70%; }
+.l-dots { flex: 1; min-width: 12px; overflow: hidden; white-space: nowrap; color: var(--paper-3); }
+.l-dots::after { content: ". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . "; color: var(--ink-2); letter-spacing: .12em; }
+.l-count { font-size: var(--s1); font-variant-numeric: lining-nums tabular-nums; white-space: nowrap; }
+.l-range { grid-column: 1 / -1; font-size: var(--s1); font-style: italic; color: var(--ink-2); }
+.l-now { color: var(--cloth); font-style: italic; }
+.more { margin-top: 14px; font-size: var(--s1); color: var(--ink-2); font-style: italic; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.more a { color: var(--ink); font-style: normal; }
+.era-aside { display: grid; gap: 34px; }
+.inside { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+.inside a { text-decoration: none; font-size: 16px; }
+.inside a:hover { text-decoration: underline; }
+.inside span { display: block; font-size: var(--s1); font-style: italic; color: var(--ink-2); }
+.colophon p { margin-top: 8px; line-height: 1.5; }
+@media (min-width: 1100px) {
+  .era-title-page { margin: 0; grid-template-columns: 520px minmax(0, 1fr); min-height: 460px; margin-top: 40px; }
+  .era-title-page .frontis { height: 100%; aspect-ratio: auto; }
+  .era-title-page .tp-text { padding: 56px 56px 48px; align-content: center; }
+  .era-body { grid-column: 2; grid-row: 1; }
+  .era-label { grid-column: 1; grid-row: 1; text-align: right; font-style: italic; padding-top: 2px; }
+  .era-aside { grid-column: 3; grid-row: 1; }
+  .era-body .leaders { margin-top: 0; }
+}
+
+/* ---------- Loot Drop ---------- */
+.loot-stage { display: grid; gap: 28px; padding-top: 32px; justify-items: start; }
+.loot-art { width: min(240px, 70%); margin: 0 auto; }
+.loot-text { display: grid; gap: 12px; max-width: 520px; }
+.loot-text h1 { font-size: var(--s4); line-height: 1.1; }
+.loot-opens { font-size: var(--s3); line-height: 1.3; }
+.loot-count { font-size: var(--s3); font-style: italic; color: var(--cloth); }
+.loot-from { font-size: var(--s1); font-style: italic; color: var(--ink-2); }
+.loot-note { margin-top: 8px; padding: 16px 18px; background: var(--paper-2); font-size: 16px; line-height: 1.5; }
+.loot-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.lifecycle { margin-top: 48px; }
+.life { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.life li { position: relative; display: grid; gap: 2px; align-content: start; padding: 0 0 22px 26px; }
+.life li::before { content: ""; position: absolute; left: 0; top: 7px; width: 9px; height: 9px; background: var(--paper); border: 1.5px solid var(--ink); }
+.life li::after { content: ""; position: absolute; left: 5px; top: 18px; bottom: 0; width: 1px; background: var(--rule); }
+.life li:last-child::after { display: none; }
+.life li.is-now::before { background: var(--cloth); border-color: var(--cloth); }
+.life-what { font-size: var(--s1); font-style: italic; color: var(--ink-2); }
+.life-when { font-size: 16px; line-height: 1.45; }
+@media (min-width: 1100px) {
+  .loot-stage { grid-template-columns: 340px minmax(0, 520px); column-gap: 88px; align-items: center; justify-content: center; padding-top: 72px; }
+  .loot-art { width: 100%; }
+  .lifecycle { max-width: 1000px; margin: 72px auto 0; }
+  .life { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 28px; }
+  .life li { padding: 26px 0 0; }
+  .life li::before { top: 0; left: 0; }
+  .life li::after { top: 5px; left: 15px; right: -24px; bottom: auto; width: auto; height: 1px; }
+}
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#app">Skip to the journal</a>
+<div class="shell">
+  <nav class="side" id="side" aria-label="memoirist"></nav>
+  <main id="app" tabindex="-1"></main>
+</div>
+<script src="../shared/content.js"></script>
+<script src="../shared/helpers.js"></script>
+<script>
+(() => {
+  const { html, icon, date, range } = M;
+  const app = document.getElementById('app');
+  const side = document.getElementById('side');
+
+  // Small counts read as words, the way a book sets them.
+  const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+  const words = (n) => (n <= 10 ? WORDS[n] : n.toLocaleString('en-AU'));
+  const count = (n, one, many = `${one}s`) => `${words(n)} ${n === 1 ? one : many}`;
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const andList = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+  const firstSentence = (s) => (s ? (s.match(/^.*?[.!?](\s|$)/)?.[0] || s).trim() : '');
+
+  const ribbon = M.raw('<svg viewBox="0 0 13 24" aria-hidden="true"><path d="M0 0h13v24l-6.5-5.5L0 24z" fill="#2E4A3D"/></svg>');
+
+  // The sealed pages: a few leaves still folded together and wrapped in a band of bookcloth, the way a
+  // sealed edition is banded. The same drawing at the same size for every Loot Drop, so nothing hints at
+  // what is inside (D-10).
+  function uncut({ label = 'Pages wrapped in a sealed band' } = {}) {
+    return M.raw(`<svg class="uncut" viewBox="0 0 240 300" role="img" aria-label="${M.esc(label)}">
+      <path class="leaf-3" d="M50 38h160v250H50z"/><path class="line" d="M50 38h160v250H50z"/>
+      <path class="leaf-2" d="M42 30h160v250H42z"/><path class="line" d="M42 30h160v250H42z"/>
+      <path class="leaf-1" d="M34 22h160v250H34z"/><path class="line" d="M34 22h160v250H34z"/>
+      <path class="line" d="M34 31h160" opacity=".3"/>
+      <path class="ribbon" d="M24 142h196v50H24z"/><path class="line" d="M24 142h196v50H24z"/>
+      <g fill="none" stroke="#EEF2EE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="111" y="164" width="18" height="15" rx="2"/><path d="M114.5 164v-4a5.5 5.5 0 0 1 11 0v4"/>
+      </g>
+    </svg>`);
+  }
+
+  // ---------- Shell ----------
+  const NAV = [
+    { label: 'Journal', href: '#feed', icon: 'book', screens: ['feed', 'entry', 'loot'] },
+    { label: 'Eras', href: '#era', icon: 'layers', screens: ['era'] },
+    { label: 'Timeline', href: '#feed', icon: 'list', screens: [] },
+    { label: 'Templates', href: '#feed', icon: 'page', screens: [] },
+    { label: 'Tags', href: '#feed', icon: 'tag', screens: [] },
+  ];
+  function renderSide(screen) {
+    side.innerHTML = String(html`
+      <a class="mark" href="#feed">${ribbon}memoirist</a>
+      <p class="scope">Sam's journal</p>
+      <a class="btn btn--primary" href="#entry">${icon('pen', { size: 18 })} Write</a>
+      <ul class="nav">${NAV.map((n) => html`<li><a href="${n.href}" ${n.screens.includes(screen) ? M.raw('aria-current="page"') : ''}>${icon(n.icon, { size: 18 })}${n.label}</a></li>`)}</ul>
+      <div class="side-foot">
+        <ul class="nav">
+          <li><a href="#feed">${icon('trash', { size: 18 })}Recently deleted</a></li>
+          <li><a href="#feed">${icon('sliders', { size: 18 })}Settings</a></li>
+        </ul>
+        <div class="who"><span class="initial">S</span><span><b>Sam</b>Melbourne</span></div>
+      </div>`);
+  }
+
+  // The running head: a back link or the screen's title on the left, the date on the right.
+  function runhead({ title, back, right = '' }) {
+    return html`<header class="runhead">
+      ${back ? html`<a class="rh-back" href="${back.href}">${icon('arrowLeft', { size: 18 })}${back.label}</a>`
+        : html`<button class="icon-btn" aria-label="Menu">${icon('menu', { size: 20 })}</button><h1 class="rh-title">${title}</h1>`}
+      <div class="rh-right"><span class="rh-date">${right}</span>
+        <a class="icon-btn" href="#entry" aria-label="Write an entry">${icon('pen', { size: 20 })}</a></div>
+    </header>`;
+  }
+
+  // ---------- Pieces ----------
+  function plate(images) {
+    const first = images[0];
+    return html`<figure class="plate ${first.kind === 'PAGE_SCAN' ? 'plate--page' : ''}">
+      <img src="${M.src(first)}" alt="${first.alt}">
+      ${images.length > 1 ? html`<figcaption class="plate-count"><span class="dots" aria-hidden="true">${images.map((_, i) => html`<i class="${i === 0 ? 'on' : ''}"></i>`)}</span>1 of ${images.length}</figcaption>` : ''}
+    </figure>`;
+  }
+
+  function voice(v) {
+    const bars = M.waveform(v.id, 60);
+    return html`<div class="voice">
+      <button class="play" aria-label="Play voice note, ${M.duration(v.durationSeconds)}">${icon('play', { size: 16 })}</button>
+      <svg class="wave" viewBox="0 0 ${bars.length * 5} 28" preserveAspectRatio="none" aria-hidden="true">${M.raw(bars.map((b, i) => `<rect x="${i * 5}" y="${(14 - b * 13).toFixed(1)}" width="2.2" height="${(b * 26).toFixed(1)}"/>`).join(''))}</svg>
+      <span class="dur">${M.duration(v.durationSeconds)}</span>
+    </div>`;
+  }
+
+  function soundtrack(st) {
+    return html`<p class="sound">${icon('spotify', { size: 16 })}<span>Soundtrack: <cite>${st.title}</cite>, ${st.artist}</span><button class="btn btn--quiet">Play</button></p>`;
+  }
+
+  const tagLinks = (tags) => html`${M.raw(andList(tags.map((t) => String(html`<a href="#feed">${t.name}</a>`))))}`;
+
+  function vault(e) {
+    const u = M.opening(e);
+    return html`<a class="vault" href="#loot" aria-label="Sealed Loot Drop from ${date(e.entryDate, 'long')}. ${u.opens}">
+      ${uncut()}
+      <span><span class="vault-h" style="display:block">Sealed Loot Drop</span>
+        <span class="vault-when" style="display:block">${u.opens}</span>
+        ${u.countdown ? html`<span class="vault-count" style="display:block">${u.countdown}</span>` : ''}</span>
+    </a>`;
+  }
+
+  // ---------- Feed ----------
+  function weekFacts(s) {
+    const bits = [count(s.entryCount, 'entry', 'entries')];
+    if (s.photoCount) bits.push(`${count(s.photoCount, 'photo')}${s.pageCount ? ` (${words(s.pageCount)} a diary page)` : ''}`);
+    if (s.voiceNoteCount) bits.push(count(s.voiceNoteCount, 'voice note'));
+    return `${cap(andList(bits))}.${s.sealedCount ? ` ${cap(words(s.sealedCount))} more is sealed.` : ''}`;
+  }
+
+  function tocRow(e) {
+    const day = date(e.entryDate, 'weekdayShort');
+    if (M.isSealed(e)) {
+      return html`<li class="toc-row is-sealed"><span class="toc-day">${day}</span>
+        <a class="toc-title" href="#loot">${icon('lock', { size: 15 })}Sealed until ${M.instant(e.unlockDate, { day: 'numeric', month: 'short', year: 'numeric' })}</a><span></span></li>`;
+    }
+    const pics = M.images(e), voices = M.voiceNotes(e);
+    return html`<li class="toc-row"><span class="toc-day">${day}</span>
+      <a class="toc-title" href="#entry">${M.displayTitle(e)}</a>
+      <span class="toc-icons">${pics.some((m) => m.kind === 'PAGE_SCAN') ? icon('page', { size: 16, label: 'Diary page' }) : pics.length ? icon('image', { size: 16, label: `${pics.length} photos` }) : ''}${voices.length ? icon('mic', { size: 16, label: 'Voice note' }) : ''}</span></li>`;
+  }
+
+  function contents(w) {
+    const s = M.weekStats(w);
+    return html`<div class="contents">
+      <p class="facts">${weekFacts(s)}</p>
+      ${w.eras.length > 1 ? html`<p class="also">Also in ${w.eras.slice(1).map((er) => html`<a href="#era">${er.title}</a>`)}</p>` : ''}
+      ${s.thumbs.length ? html`<div class="thumbs">${s.thumbs.slice(0, 5).map((m) => html`<img src="${M.src(m)}" alt="">`)}</div>` : ''}
+      <ol class="toc">${w.entries.map(tocRow)}</ol>
+      ${s.tags.length ? html`<p class="filed">Filed under ${tagLinks(s.tags)}</p>` : ''}
+    </div>`;
+  }
+
+  function passage(e) {
+    if (M.isSealed(e)) {
+      return html`<article class="passage" aria-label="Sealed Loot Drop"><p class="dateline">${date(e.entryDate, 'dayLong')}</p>${vault(e)}</article>`;
+    }
+    const pics = M.images(e), voices = M.voiceNotes(e);
+    // An untitled entry with a caption is introduced by its first line already; don't print it twice.
+    const heading = e.title || (e.contentJson ? null : M.displayTitle(e));
+    return html`<article class="passage" aria-label="${M.displayTitle(e)}">
+      <p class="dateline">${date(e.entryDate, 'dayLong')}</p>
+      ${heading ? html`<h3 class="passage-title"><a href="#entry">${heading}</a></h3>` : ''}
+      ${pics.length ? plate(pics) : ''}
+      ${e.contentJson ? html`<div class="caption">${M.caption(e.contentJson, { headingTag: 'h4' })}</div>` : ''}
+      ${voices.map(voice)}
+      ${e.soundtrack ? soundtrack(e.soundtrack) : ''}
+      ${e.tags.length ? html`<p class="filed">Filed under ${tagLinks(e.tags)}</p>` : ''}
+    </article>`;
+  }
+
+  function titlePage(era) {
+    if (!era) return '';
+    return html`<header class="title-page on-cloth">
+      ${era.cover ? html`<img class="frontis" src="${M.cover(era)}" alt="">` : ''}
+      <div class="tp-text"><h2 class="tp-title"><a href="#era">${era.title}</a></h2>
+        <p class="tp-dates">${range(era.startDate, era.endDate)}</p></div>
+    </header>`;
+  }
+
+  function feed() {
+    const thisWeek = M.data.weeks[0];
+    return html`<div class="page">
+      ${runhead({ title: 'Journal', right: date(M.today(), 'long') })}
+      <div class="grid">
+        <aside class="feed-aside" aria-label="On this day and this week">
+          <section class="otd" aria-labelledby="otd-h">
+            <h2 class="aside-h" id="otd-h">On this day</h2>
+            ${M.data.onThisDay.map((e) => {
+              const pic = M.images(e)[0];
+              return html`<a class="epi" href="#entry"><img src="${M.src(pic)}" alt="${pic.alt}">
+                <span><span class="epi-title">${e.title}</span>
+                <span class="epi-quote">${firstSentence(M.previewLine(e))}</span>
+                <span class="epi-attr">${M.yearsAgo(e.entryDate)}, ${date(e.entryDate, 'medium')}</span></span></a>`;
+            })}
+          </section>
+          <section class="contents-block" aria-labelledby="wk-aside-h">
+            <h2 class="aside-h" id="wk-aside-h">${M.weekLabel(thisWeek)}</h2>
+            <p class="aside-sub">${range(thisWeek.startDate, thisWeek.endDate)}</p>
+            ${contents(thisWeek)}
+          </section>
+        </aside>
+        <div class="feed-main">
+          ${M.feedGroups().map((g) => html`<section class="chapter" aria-label="${g.era ? g.era.title : 'Weeks in no Era'}">
+            ${titlePage(g.era)}
+            ${g.weeks.map((w) => html`<section class="week" aria-labelledby="h-${w.id}">
+              <header class="week-head"><h2 id="h-${w.id}">${M.weekLabel(w)}</h2><p class="week-range">${range(w.startDate, w.endDate)}</p></header>
+              ${contents(w)}
+              ${w.entries.map(passage)}
+            </section>`)}
+          </section>`)}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ---------- Entry ----------
+  function entryScreen() {
+    const e = M.featured.entry();
+    const w = M.weekOf(e.id);
+    const pics = M.images(e);
+    const i = w.entries.indexOf(e);
+    const before = w.entries.slice(0, i).reverse().find((x) => !M.isSealed(x));
+    const after = w.entries.slice(i + 1).find((x) => !M.isSealed(x));
+    const turn = (x, which) => {
+      if (!x) return '';
+      const pic = M.images(x)[0];
+      return html`<a class="turn" href="#entry">${pic ? html`<img src="${M.src(pic)}" alt="">` : ''}
+        <span><span class="which">${which}, ${date(x.entryDate, 'weekday')}</span><span class="t">${M.displayTitle(x)}</span></span></a>`;
+    };
+    return html`<div class="page">
+      ${runhead({ back: { href: '#feed', label: M.weekLabel(w) }, right: w.eras[0].title })}
+      <article class="reading">
+        <p class="dateline r-dateline">${date(e.entryDate, 'long')}</p>
+        <h1 class="r-title">${e.title}</h1>
+        <figure class="plate r-hero">
+          <img src="${M.src(pics[0])}" alt="${pics[0].alt}">
+          <figcaption class="r-strip">${pics.map((m, n) => html`<img class="${n === 0 ? 'on' : ''}" src="${M.src(m)}" alt="">`)}<span class="plate-count">1 of ${pics.length}</span></figcaption>
+        </figure>
+        <div class="caption r-caption">${M.caption(e.contentJson)}</div>
+        ${M.voiceNotes(e).map(voice)}
+        ${e.soundtrack ? soundtrack(e.soundtrack) : ''}
+        <aside class="r-notes" aria-label="About this entry">
+          <p>In ${M.raw(andList(w.eras.map((er) => String(html`<a href="#era">${er.title}</a>`))))}</p>
+          <p>Written from the Trips template</p>
+          <p>Filed under ${tagLinks(e.tags)}</p>
+        </aside>
+        <nav class="r-turn" aria-label="Turn the page">${turn(before, 'Before')}${turn(after, 'After')}</nav>
+        <div class="r-actions">
+          <a class="btn" href="#entry">${icon('pen', { size: 18 })} Edit</a>
+          <a class="btn" href="#loot">${icon('lock', { size: 18 })} Seal as a Loot Drop</a>
+          <button class="btn btn--quiet">Delete</button>
+        </div>
+      </article>
+    </div>`;
+  }
+
+  // ---------- Era ----------
+  function eraScreen() {
+    const p = M.eraPage(M.data.featured.eraId);
+    const e = p.era;
+    const t = p.totals;
+    return html`<div class="page">
+      ${runhead({ back: { href: '#era', label: 'Eras' } })}
+      <header class="era-title-page on-cloth">
+        <img class="frontis" src="${M.cover(e)}" alt="Victorian terrace houses with iron lace verandahs, the cover of this Era">
+        <div class="tp-text">
+          <h1 class="tp-title">${e.title}</h1>
+          <p class="tp-dates">${range(e.startDate, e.endDate)}</p>
+          <p class="tp-span">${cap(p.span)} so far</p>
+          <p class="tp-desc">${e.description}</p>
+          ${e.soundtrack ? soundtrack(e.soundtrack) : ''}
+        </div>
+      </header>
+      <div class="grid">
+        <h2 class="contents-h era-label" id="contents-h">Contents</h2>
+        <section class="era-body" aria-labelledby="contents-h">
+          <ol class="leaders">${p.rows.map((r) => {
+            const span = range(r.startDate, r.endDate);
+            const notes = [r.title !== span && span, r.isCurrent && 'this week', r.sealedCount && `${words(r.sealedCount)} sealed`].filter(Boolean);
+            return html`<li>
+              <a href="#feed"><span class="l-title">${r.title}</span><span class="l-dots" aria-hidden="true"></span><span class="l-count">${count(r.entryCount, 'entry', 'entries')}</span></a>
+              ${notes.length ? html`<span class="l-range">${notes.join(', ')}</span>` : ''}
+            </li>`;
+          })}</ol>
+          <p class="more">${p.notListedWeeks} earlier weeks, back to ${date(e.startDate, 'plain')} <a href="#feed">Show every week</a></p>
+        </section>
+        <aside class="era-aside" aria-label="About this Era">
+          <section aria-labelledby="inside-h"><h2 class="aside-h" id="inside-h">Chapters inside this one</h2>
+            <ul class="inside">${p.chaptersInside.map((c) => html`<li><a href="#era">${c.title}</a><span>${range(c.startDate, c.endDate)}</span></li>`)}</ul></section>
+          <section class="colophon" aria-labelledby="col-h"><h2 class="aside-h" id="col-h">In this Era</h2>
+            <p class="figs">${t.weekCount} weeks, ${t.entryCount} entries, ${t.photoCount.toLocaleString('en-AU')} photos and ${t.voiceNoteCount} voice notes.</p></section>
+          <div><a class="btn" href="#era">${icon('calendar', { size: 18 })} Change dates or cover</a></div>
+        </aside>
+      </div>
+    </div>`;
+  }
+
+  // ---------- Loot Drop ----------
+  function lootScreen() {
+    const e = M.featured.lootDrop();
+    const w = M.weekOf(e.id);
+    const u = M.opening(e);
+    return html`<div class="page">
+      ${runhead({ back: { href: '#feed', label: M.weekLabel(w) }, right: w.eras[0].title })}
+      <div class="loot-stage">
+        <figure class="loot-art">${uncut()}</figure>
+        <div class="loot-text">
+          <h1>Sealed Loot Drop</h1>
+          <p class="loot-opens">${u.opens}</p>
+          ${u.countdown ? html`<p class="loot-count">${u.countdown}</p>` : ''}
+          <p class="loot-from">Dated ${date(e.entryDate, 'long')}</p>
+          <p class="loot-note">Nobody can open it or change it before then, you included. You can still extend the seal, or delete it.</p>
+          <div class="loot-actions">
+            <button class="btn">${icon('clock', { size: 18 })} Extend the seal</button>
+            <button class="btn btn--quiet">Delete</button>
+          </div>
+        </div>
+      </div>
+      <section class="lifecycle" aria-labelledby="life-h">
+        <h2 class="sr-only" id="life-h">What happens to it</h2>
+        <ol class="life">
+          <li><span class="life-what">Written</span><span class="life-when">${date(e.entryDate, 'long')}</span></li>
+          <li class="is-now"><span class="life-what">Sealed, today</span><span class="life-when">${u.countdown ? cap(u.countdown.replace(/^in /, '')) + ' to go' : date(M.today(), 'long')}</span></li>
+          <li><span class="life-what">Opens</span><span class="life-when">${u.opens.replace(/^Opens /, '')}</span></li>
+          <li><span class="life-what">Then</span><span class="life-when">It waits at the top of your journal until you read it, and you can write back to past you.</span></li>
+        </ol>
+      </section>
+    </div>`;
+  }
+
+  const SCREENS = { feed, entry: entryScreen, era: eraScreen, loot: lootScreen };
+  M.mount((screen) => {
+    renderSide(screen);
+    app.innerHTML = String(SCREENS[screen]());
+  });
+})();
+</script>
+</body>
+</html>

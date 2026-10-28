@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Golden Hour direction for memoirist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400..800;1,400..600&display=swap">
+<style>
+/* Golden Hour: the social feed people already know, made private. The stories row is your weeks: each ring has
+   seven arcs, one per day, filled on the days you wrote. Media is square-cornered, panels are soft, buttons are
+   pills; golden orange marks only the rings and the sealed Loot Drop. */
+:root {
+  --bg: #FFFFFF;
+  --surface: #F2F2F2;     /* panels: one neutral step off white; the orange carries the warmth */
+  --surface-2: #E6E6E6;
+  --line: #E3E3E3;
+  --ink: #141414;
+  --ink-2: #6A6762;       /* 5.4:1 on white */
+  --gold: #F2701D;        /* rings, the sealed panel */
+  --gold-ink: #A6430C;    /* orange text on white, 5.4:1 */
+  --gold-wash: #FDEEE3;
+  --font: 'Figtree', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --radius: 16px;
+  --gutter: 16px;
+  --dur: 150ms;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--font); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+h1.sr-only { font-size: 15px; }
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { text-wrap: balance; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 4px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.icon { flex: none; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- Shell ---------- */
+.side { display: none; }
+.topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 4px; height: 56px; padding: 0 6px 0 var(--gutter); background: var(--bg); border-bottom: 1px solid var(--line); }
+.topbar .tb-title { font-size: 17px; font-weight: 700; margin-right: auto; }
+.icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; }
+.icon-btn:hover { background: var(--surface); }
+.wordmark { font-weight: 800; font-size: 22px; letter-spacing: -.03em; display: inline-flex; align-items: center; gap: 8px; margin-right: auto; }
+.wordmark svg { width: 24px; height: 24px; }
+.tabbar { position: sticky; bottom: 0; z-index: 10; display: grid; grid-template-columns: repeat(5, 1fr); height: 60px; padding-bottom: env(safe-area-inset-bottom, 0px); background: var(--bg); border-top: 1px solid var(--line); }
+.tabbar a { display: grid; place-items: center; align-content: center; gap: 2px; font-size: 11px; font-weight: 600; color: var(--ink-2); }
+.tabbar a[aria-current="page"] { color: var(--ink); }
+.tabbar .new span { width: 42px; height: 30px; border-radius: 10px; background: var(--ink); color: var(--bg); display: grid; place-items: center; }
+@media (min-width: 1100px) {
+  .shell { display: grid; grid-template-columns: 244px minmax(0, 1fr); }
+  .side { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; padding: 28px 14px 20px; border-right: 1px solid var(--line); }
+  .side .wordmark { padding: 0 12px 26px; margin: 0; }
+  .side-nav a { display: flex; align-items: center; gap: 14px; height: 48px; padding: 0 12px; border-radius: 12px; font-size: 16px; }
+  .side-nav a:hover { background: var(--surface); }
+  .side-nav a[aria-current="page"] { font-weight: 700; }
+  .side .pill { margin: 14px 12px 0; justify-content: center; }
+  .side .pill--soft { margin-top: 8px; }
+  .side-foot { margin-top: auto; }
+  .topbar, .tabbar { display: none; }
+  .topbar.keep { display: flex; position: static; border: 0; height: 64px; padding: 0; }
+}
+
+.pill { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 650; font-size: 15px; transition: opacity var(--dur); }
+.pill:hover { opacity: .86; }
+.pill--soft { background: var(--surface); color: var(--ink); }
+.pill--soft:hover { background: var(--surface-2); opacity: 1; }
+.pill--ghost { background: none; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; padding: 0 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; background: var(--surface); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.chip--gold { background: var(--gold-wash); color: var(--gold-ink); }
+.avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex: none; }
+.initial { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--gold-wash); color: var(--gold-ink); font-weight: 700; flex: none; }
+
+/* ---------- Week rings ---------- */
+.rings { display: flex; gap: 14px; overflow-x: auto; padding: 14px var(--gutter) 12px; scrollbar-width: none; }
+.rings::-webkit-scrollbar { display: none; }
+.ring { display: grid; justify-items: center; gap: 6px; width: 74px; flex: none; font-size: 12px; text-align: center; }
+.ring span:last-child { width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--ink); }
+.ring-art { position: relative; width: 70px; height: 70px; }
+.ring-art svg { position: absolute; inset: 0; }
+.ring-art .face { position: absolute; inset: 7px; border-radius: 50%; object-fit: cover; width: 56px; height: 56px; }
+.ring-art .count { position: absolute; inset: 7px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); font-weight: 700; font-size: 17px; }
+.ring--otd .ring-art::after { content: ""; position: absolute; inset: 1px; border-radius: 50%; border: 2.5px dashed var(--gold); }
+
+/* ---------- Layout ---------- */
+.feed { max-width: 520px; margin: 0 auto; }
+.rail { display: none; }
+@media (min-width: 1100px) {
+  .main { display: grid; grid-template-columns: minmax(0, 520px) 320px; gap: 64px; justify-content: center; padding: 8px 32px 80px; }
+  .rail { display: grid; gap: 28px; align-content: start; position: sticky; top: 24px; padding-top: 30px; }
+  .rings { padding: 22px 0 18px; }
+  .feed .week-card--lead { display: none; }   /* the rail shows this week */
+}
+
+.section-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 var(--gutter); }
+.section-h h2 { font-size: 17px; font-weight: 700; }
+.section-h a { font-size: 14px; font-weight: 600; color: var(--gold-ink); }
+@media (min-width: 1100px) { .section-h { padding: 0; } }
+
+/* On this day */
+.otd { padding: 14px 0 6px; display: grid; gap: 12px; border-top: 1px solid var(--line); }
+.otd-row { display: flex; gap: 10px; overflow-x: auto; padding: 0 var(--gutter); scrollbar-width: none; }
+.otd-card { flex: none; width: 168px; display: grid; gap: 8px; }
+.otd-card .pic { position: relative; }
+.otd-card img { width: 168px; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 12px; }
+.otd-card .chip { position: absolute; left: 8px; top: 8px; background: var(--bg); height: 26px; font-size: 12px; }
+.otd-card b { font-size: 14px; line-height: 1.3; font-weight: 650; }
+.otd-card small { display: block; font-size: 13px; color: var(--ink-2); }
+@media (min-width: 1100px) { .otd { border: 0; padding: 0; } .otd-row { padding: 0; } }
+
+/* Era header: sticky, like a profile you are scrolling through */
+.era-bar { position: sticky; top: 56px; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 10px var(--gutter); background: var(--bg); border-bottom: 1px solid var(--line); margin-top: 18px; }
+.era-bar .avatar { width: 40px; height: 40px; outline: 2px solid var(--gold); outline-offset: 2px; }
+.era-bar b { display: block; font-weight: 700; font-size: 15px; }
+.era-bar small { display: block; font-size: 13px; color: var(--ink-2); }
+.era-bar .chev { margin-left: auto; color: var(--ink-2); }
+@media (min-width: 1100px) { .era-bar { top: 0; padding: 14px 0; margin-top: 28px; } }
+
+/* Week summary card (D-25) */
+.week-card { margin: 16px var(--gutter) 6px; padding: 18px; border-radius: var(--radius); background: var(--surface); display: grid; gap: 14px; }
+.wc-head { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; align-items: center; }
+.wc-head .ring-art { width: 56px; height: 56px; }
+.wc-head h3 { font-size: 18px; font-weight: 750; line-height: 1.2; }
+.wc-head p { font-size: 13px; color: var(--ink-2); }
+.stats { display: flex; flex-wrap: wrap; gap: 6px; }
+.stats .chip { background: var(--bg); }
+.wc-thumbs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.wc-thumbs img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; }
+.bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.bars a, .bars .bar-sealed { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: var(--bg); font-size: 14px; }
+.bars a:hover { background: var(--surface-2); }
+.bar-day { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.bar-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 550; }
+.bar-icons { display: flex; gap: 4px; color: var(--ink-2); }
+.bar-sealed { color: var(--gold-ink); }
+.bar-sealed .bar-title { display: flex; gap: 6px; align-items: center; font-weight: 600; }
+.wc-foot { font-size: 13px; color: var(--ink-2); }
+.wc-foot a { color: var(--ink); font-weight: 600; }
+@media (min-width: 1100px) { .week-card { margin: 18px 0 6px; } }
+
+/* Posts */
+.post { padding: 18px 0 8px; display: grid; gap: 10px; }
+.post-head { display: flex; align-items: center; gap: 10px; padding: 0 var(--gutter); }
+.daybadge { width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--surface); display: grid; place-items: center; align-content: center; line-height: 1; }
+.daybadge b { font-size: 16px; font-weight: 750; }
+.daybadge small { font-size: 10.5px; font-weight: 700; color: var(--ink-2); margin-top: 2px; text-transform: none; }
+.post-head .t { min-width: 0; }
+.post-head .t b { display: block; font-weight: 700; font-size: 15px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.post-head .t small { display: block; font-size: 13px; color: var(--ink-2); }
+.post-head .icon-btn { margin-left: auto; color: var(--ink-2); }
+.media { position: relative; }
+.media img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; background: var(--surface); }
+.media .count { position: absolute; right: 12px; top: 12px; height: 26px; padding: 0 10px; border-radius: 999px; background: rgba(20, 20, 20, .72); color: #fff; font-size: 12px; font-weight: 650; display: grid; place-items: center; }
+.dots { display: flex; justify-content: center; gap: 5px; padding-top: 2px; }
+.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--surface-2); }
+.dots i.on { background: var(--gold); }
+.post-body { padding: 0 var(--gutter); display: grid; gap: 10px; }
+.caption p + p, .caption ul + p, .caption p + ul { margin-top: .6em; }
+.caption h3, .caption h4 { font-size: 13px; font-weight: 750; color: var(--ink-2); margin: .9em 0 .1em; }
+.caption > :first-child { margin-top: 0; }
+.caption ul { margin: .3em 0 0; padding-left: 1.2em; }
+.caption .title { font-weight: 750; margin-right: 6px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.extras { display: flex; flex-wrap: wrap; gap: 8px; }
+.voice { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px 0 6px; border-radius: 999px; background: var(--surface); max-width: 100%; min-width: 0; }
+.voice .play { width: 34px; height: 34px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; flex: none; }
+.voice svg.wave { width: 120px; min-width: 0; height: 22px; fill: var(--ink); }
+.voice .dur { font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.sound { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px 0 12px; border-radius: 999px; background: var(--surface); font-size: 13px; font-weight: 600; min-width: 0; max-width: 100%; }
+.sound span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sound .spot { color: #1DB954; display: grid; }
+.text-post { margin: 0 var(--gutter); padding: 22px 20px; border-radius: var(--radius); background: var(--surface); font-size: 17px; line-height: 1.5; }
+.text-post .caption .title { display: block; font-size: 20px; margin-bottom: 6px; }
+@media (min-width: 1100px) {
+  .post-head, .post-body { padding: 0; }
+  .media img { border-radius: 8px; }
+  .text-post { margin: 0; }
+  .post { padding-top: 26px; }
+}
+
+/* The sealed post: the photo area becomes a golden panel of fixed size (D-10). */
+.sealed-panel { position: relative; aspect-ratio: 4 / 5; background: var(--gold); color: var(--ink); display: grid; align-content: center; justify-items: center; gap: 6px; text-align: center; padding: 24px; }
+.sealed-panel .lock { width: 64px; height: 64px; border-radius: 50%; background: var(--ink); color: var(--gold); display: grid; place-items: center; margin-bottom: 10px; }
+.sealed-panel .big { font-size: 96px; font-weight: 800; line-height: .9; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.sealed-panel .unit { font-size: 18px; font-weight: 700; }
+.sealed-panel .when { font-size: 14px; font-weight: 600; max-width: 26ch; margin-top: 10px; }
+@media (min-width: 1100px) { .sealed-panel { border-radius: 8px; } }
+
+/* Right rail */
+.me { display: flex; align-items: center; gap: 12px; }
+.me .initial { width: 48px; height: 48px; font-size: 20px; }
+.me b { display: block; font-size: 15px; }
+.me small { display: block; color: var(--ink-2); font-size: 13px; }
+.rail-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; }
+.rail-list a { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center; padding: 6px; margin: 0 -6px; border-radius: 12px; }
+.rail-list a:hover { background: var(--surface); }
+.rail-list img, .rail-list .ph { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; background: var(--surface); }
+.rail-list b { display: block; font-size: 14px; font-weight: 650; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.rail-list small { display: block; font-size: 13px; color: var(--ink-2); }
+.rail .week-card { margin: 10px 0 0; }
+
+/* ---------- Entry ---------- */
+.entry { max-width: 1040px; margin: 0 auto; }
+.entry-panel { display: grid; gap: 14px; padding: 16px 0 32px; }
+.entry-panel .post-head { padding: 0 var(--gutter); }
+.entry-panel h1 { font-size: 24px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; padding: 0 var(--gutter); }
+.entry-panel .post-body { gap: 16px; }
+.more-week { display: grid; gap: 10px; padding: 8px var(--gutter) 0; }
+.more-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; }
+.more-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (min-width: 1100px) {
+  .entry { display: grid; grid-template-columns: minmax(0, 600px) 400px; margin: 32px auto 80px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .entry .media img { border-radius: 0; aspect-ratio: auto; height: 100%; max-height: 780px; }
+  .entry .media { height: 100%; }
+  .entry .dots { position: absolute; bottom: 14px; left: 0; right: 0; }
+  .entry .dots i { background: rgba(255,255,255,.6); }
+  .entry .dots i.on { background: var(--gold); }
+  .entry-panel { padding: 22px 0 22px; align-content: start; max-height: 780px; overflow: auto; }
+  .entry-panel .post-head, .entry-panel h1, .entry-panel .post-body, .more-week { padding-left: 24px; padding-right: 24px; }
+}
+
+/* ---------- Era: a profile for a chapter of your life ---------- */
+.era-page { max-width: 935px; margin: 0 auto; }
+.era-cover img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.era-info { display: grid; gap: 12px; padding: 16px var(--gutter) 6px; }
+.era-info h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+.era-info .dates { color: var(--ink-2); font-size: 14px; }
+.era-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; text-align: center; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.era-stats b { display: block; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.era-stats small { font-size: 12px; color: var(--ink-2); }
+.highlights { display: flex; gap: 14px; padding: 6px var(--gutter) 4px; overflow-x: auto; }
+.tabs { display: flex; gap: 28px; justify-content: center; border-top: 1px solid var(--line); margin-top: 10px; }
+.tabs a { display: flex; align-items: center; gap: 6px; height: 48px; font-size: 13px; font-weight: 700; color: var(--ink-2); border-top: 2px solid transparent; margin-top: -1px; }
+.tabs a[aria-current="page"] { color: var(--ink); border-top-color: var(--ink); }
+.week-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; }
+.tile { position: relative; aspect-ratio: 4 / 5; background: var(--surface); overflow: hidden; display: block; }
+.tile img { width: 100%; height: 100%; object-fit: cover; }
+.tile .label { position: absolute; inset: auto 0 0 0; padding: 30px 14px 12px; color: #fff; font-size: 12px; font-weight: 700; line-height: 1.25; background: linear-gradient(transparent, rgba(0,0,0,.6)); } /* taste-skill-ignore: a neutral scrim under text on a photo */
+.tile.text { display: grid; align-content: space-between; padding: 14px; }
+.tile.text b { font-size: 14px; font-weight: 750; line-height: 1.25; }
+.tile.text small { font-size: 12px; color: var(--ink-2); }
+.tile.text .n { font-size: 30px; font-weight: 800; color: var(--gold-ink); line-height: 1; font-variant-numeric: tabular-nums; }
+.tile.more { background: var(--ink); color: var(--bg); }
+.tile.more .n { color: var(--gold); }
+.tile.more small { color: #C9C6C1; }
+@media (min-width: 1100px) {
+  .era-page { padding: 32px 0 80px; max-width: 1040px; }
+  .era-top { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 40px; align-items: center; }
+  .era-cover img { aspect-ratio: 1; border-radius: 50%; width: 260px; margin: 0 auto; outline: 3px solid var(--gold); outline-offset: 6px; }
+  .era-info { padding: 0; }
+  .era-info h1 { font-size: 30px; }
+  .era-stats { display: flex; gap: 36px; text-align: left; border: 0; padding: 4px 0; }
+  .era-stats div { display: flex; gap: 6px; align-items: baseline; }
+  .era-stats b { font-size: 16px; }
+  .era-stats small { font-size: 15px; color: var(--ink); }
+  .highlights { padding: 30px 0 4px 40px; gap: 28px; }
+  .week-grid { gap: 4px; }
+}
+
+/* ---------- Loot Drop ---------- */
+.loot { display: grid; }
+.loot-panel { background: var(--gold); color: var(--ink); min-height: calc(100vh - 56px); display: grid; align-content: center; justify-items: center; gap: 10px; text-align: center; padding: 32px 24px 40px; }
+.loot-panel .lock { width: 72px; height: 72px; border-radius: 50%; background: var(--ink); color: var(--gold); display: grid; place-items: center; margin-bottom: 12px; }
+.loot-panel h1 { font-size: 17px; font-weight: 700; }
+.loot-panel .big { font-size: 120px; font-weight: 800; line-height: .85; letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
+.loot-panel .unit { font-size: 20px; font-weight: 700; }
+.loot-panel .when { font-size: 16px; font-weight: 600; max-width: 28ch; margin-top: 8px; }
+.loot-panel .dated { font-size: 14px; font-weight: 600; opacity: .85; }
+.loot-panel .actions { justify-content: center; margin-top: 18px; }
+.loot-panel .pill--soft { background: rgba(255,255,255,.55); }
+.loot-panel .pill--ghost { color: var(--ink); }
+.loot-steps { display: none; }
+@media (min-width: 1100px) {
+  .loot { grid-template-columns: 420px 380px; gap: 56px; justify-content: center; align-items: center; min-height: 100vh; padding: 40px 0; }
+  .loot-panel { min-height: 0; height: 560px; border-radius: 16px; }
+  .loot-steps { display: grid; gap: 18px; }
+  .loot-steps h2 { font-size: 20px; font-weight: 800; }
+  .loot-steps ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .loot-steps li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px; border-radius: 12px; }
+  .loot-steps li.now { background: var(--gold-wash); }
+  .loot-steps .step-ic { width: 44px; height: 44px; display: grid; place-items: center; color: var(--ink-2); }
+  .loot-steps li.now .step-ic { color: var(--gold-ink); }
+  .loot-steps b { display: block; font-size: 15px; }
+  .loot-steps small { display: block; font-size: 13px; color: var(--ink-2); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="side" id="side" aria-label="memoirist"></nav>
+  <div id="app"></div>
+</div>
+<script src="../shared/content.js"></script>
+<script src="../shared/helpers.js"></script>
+<script>
+(() => {
+  const { html, icon, date, range } = M;
+  const side = document.getElementById('side');
+  const app = document.getElementById('app');
+  const plural = (n, one, many = `${one}s`) => `${n.toLocaleString('en-AU')} ${n === 1 ? one : many}`;
+  const daysLeft = (u) => (u.countdown.match(/\d+/) || [u.countdown])[0];
+
+  // A week ring: seven arcs, Monday at the top, filled gold on the days written.
+  function ringSvg(days, size = 70) {
+    const c = size / 2, r = size / 2 - 3, gap = 7, arc = 360 / 7;
+    const pt = (deg) => [c + r * Math.sin((deg * Math.PI) / 180), c - r * Math.cos((deg * Math.PI) / 180)];
+    const paths = days.map((on, i) => {
+      const [x1, y1] = pt(i * arc + gap / 2), [x2, y2] = pt((i + 1) * arc - gap / 2);
+      return `<path d="M${x1.toFixed(2)} ${y1.toFixed(2)}A${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" stroke="${on ? '#F2701D' : '#E3E3E3'}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+    }).join('');
+    return M.raw(`<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">${paths}</svg>`);
+  }
+  const mark = ringSvg([1, 1, 1, 0, 1, 1, 1], 24);
+
+  // Older weeks in the mock carry no days, so their rings use a stand-in pattern with one arc per entry, up to seven.
+  function standInDays(id, n) {
+    const rnd = M.seeded(id), days = Array(7).fill(false);
+    const order = [0, 1, 2, 3, 4, 5, 6].sort(() => rnd() - 0.5);
+    order.slice(0, Math.min(n, 7)).forEach((d) => { days[d] = true; });
+    return days;
+  }
+
+  function ring({ days, face, label, count, href = '#feed', otd = false, current = false }) {
+    return html`<a class="ring ${otd ? 'ring--otd' : ''}" href="${href}" ${current ? M.raw('aria-current="true"') : ''}>
+      <span class="ring-art">${otd ? '' : ringSvg(days)}${face ? html`<img class="face" src="${face}" alt="">` : html`<span class="count">${count}</span>`}</span>
+      <span>${label}</span></a>`;
+  }
+
+  function ringsRow() {
+    const page = M.eraPage('era-brunswick');
+    const otd = M.data.onThisDay[0];
+    const weekRings = M.data.weeks.map((w) => {
+      const s = M.weekStats(w);
+      return ring({ days: s.days, face: s.thumbs[0] ? M.src(s.thumbs[0]) : null, count: s.entryCount, label: M.weekLabel(w), current: M.isCurrentWeek(w) });
+    });
+    const older = page.rows.filter((r) => !M.data.weeks.some((w) => w.id === r.id))
+      .map((r) => ring({ days: standInDays(r.id, r.entryCount), count: r.entryCount, label: r.title }));
+    return html`<nav class="rings" aria-label="Your weeks">${ring({ otd: true, face: M.src(M.images(otd)[0]), label: 'On this day' })}${weekRings}${older}</nav>`;
+  }
+
+  const NAV = [
+    { label: 'Home', icon: 'home', href: '#feed', screens: ['feed', 'entry', 'loot'] },
+    { label: 'Timeline', icon: 'list', href: '#feed', screens: [] },
+    { label: 'Eras', icon: 'layers', href: '#era', screens: ['era'] },
+    { label: 'Templates', icon: 'page', href: '#feed', screens: [] },
+    { label: 'Tags', icon: 'tag', href: '#feed', screens: [] },
+  ];
+  function renderSide(screen) {
+    side.innerHTML = String(html`
+      <a class="wordmark" href="#feed">${mark}memoirist</a>
+      <div class="side-nav">${NAV.map((n) => html`<a href="${n.href}" ${n.screens.includes(screen) ? M.raw('aria-current="page"') : ''}>${icon(n.icon, { size: 24 })}${n.label}</a>`)}</div>
+      <a class="pill" href="#entry">${icon('plus', { size: 20, stroke: 2 })}New entry</a>
+      <a class="pill pill--soft" href="#feed">${icon('photos', { size: 20 })}Photo dump</a>
+      <div class="side-foot side-nav">
+        <a href="#feed">${icon('trash', { size: 24 })}Recently deleted</a>
+        <a href="#feed">${icon('sliders', { size: 24 })}Settings</a>
+      </div>`);
+  }
+  function topbar({ back, title } = {}) {
+    if (back) return html`<header class="topbar"><a class="icon-btn" href="${back.href}" aria-label="Back to ${back.label}">${icon('arrowLeft', { size: 22 })}</a><span class="tb-title">${title}</span></header>`;
+    return html`<header class="topbar"><a class="wordmark" href="#feed">${mark}memoirist</a>
+      <a class="icon-btn" href="#feed" aria-label="Photo dump">${icon('photos', { size: 22 })}</a>
+      <a class="icon-btn" href="#entry" aria-label="New entry">${icon('plus', { size: 24, stroke: 2 })}</a></header>`;
+  }
+  function tabbar(screen) {
+    const cur = (s) => (s.includes(screen) ? M.raw('aria-current="page"') : '');
+    return html`<nav class="tabbar" aria-label="Sections">
+      <a href="#feed" ${cur(['feed', 'entry', 'loot'])}>${icon('home', { size: 24 })}Home</a>
+      <a href="#feed">${icon('list', { size: 24 })}Timeline</a>
+      <a class="new" href="#entry" aria-label="New entry"><span>${icon('plus', { size: 22, stroke: 2.2 })}</span></a>
+      <a href="#era" ${cur(['era'])}>${icon('layers', { size: 24 })}Eras</a>
+      <a href="#feed">${icon('user', { size: 24 })}You</a></nav>`;
+  }
+
+  // ---------- Feed pieces ----------
+  function dayBadge(d) { return html`<span class="daybadge" aria-hidden="true"><b>${Number(d.slice(8))}</b><small>${date(d, 'weekdayShort')}</small></span>`; }
+
+  function voice(v, width = 120) {
+    const bars = M.waveform(v.id, 30);
+    return html`<span class="voice"><button class="play" aria-label="Play voice note, ${M.duration(v.durationSeconds)}">${icon('play', { size: 14 })}</button>
+      <svg class="wave" viewBox="0 0 ${bars.length * 4} 22" preserveAspectRatio="none" aria-hidden="true">${M.raw(bars.map((b, i) => `<rect x="${i * 4}" y="${(11 - b * 10).toFixed(1)}" width="2.2" rx="1.1" height="${(b * 20).toFixed(1)}"/>`).join(''))}</svg>
+      <span class="dur">${M.duration(v.durationSeconds)}</span></span>`;
+  }
+  const sound = (st) => html`<button class="sound"><span class="spot">${icon('spotify', { size: 18 })}</span><span>${st.title}, ${st.artist}</span></button>`;
+  const tagChips = (tags) => html`<div class="tags">${tags.map((t) => html`<a class="chip" href="#feed">${t.name}</a>`)}</div>`;
+
+  function weekCard(w, { lead = false } = {}) {
+    const s = M.weekStats(w);
+    const stats = [plural(s.entryCount, 'entry', 'entries'), s.photoCount && plural(s.photoCount, 'photo'), s.voiceNoteCount && plural(s.voiceNoteCount, 'voice note'), s.sealedCount && `${s.sealedCount} sealed`].filter(Boolean);
+    return html`<section class="week-card ${lead ? 'week-card--lead' : ''}" aria-label="Summary of ${M.weekLabel(w)}">
+      <div class="wc-head"><span class="ring-art">${ringSvg(s.days, 56)}</span><div><h3>${M.weekLabel(w)}</h3><p>${range(w.startDate, w.endDate)}</p></div></div>
+      <div class="stats">${stats.map((t) => html`<span class="chip">${t}</span>`)}</div>
+      ${s.thumbs.length > 2 ? html`<div class="wc-thumbs">${s.thumbs.slice(0, 6).map((m) => html`<img src="${M.src(m)}" alt="">`)}</div>` : ''}
+      <ul class="bars">${w.entries.map((e) => {
+        if (M.isSealed(e)) {
+          return html`<li><a class="bar-sealed" href="#loot"><span class="bar-day">${date(e.entryDate, 'weekdayShort')}</span><span class="bar-title">${icon('lock', { size: 15, stroke: 2 })}Loot Drop, opens ${M.instant(e.unlockDate, { day: 'numeric', month: 'short', year: 'numeric' })}</span><span></span></a></li>`;
+        }
+        const pics = M.images(e);
+        return html`<li><a href="#entry"><span class="bar-day">${date(e.entryDate, 'weekdayShort')}</span><span class="bar-title">${M.displayTitle(e)}</span>
+          <span class="bar-icons">${pics.length ? icon(pics[0].kind === 'PAGE_SCAN' ? 'page' : 'image', { size: 16 }) : ''}${M.voiceNotes(e).length ? icon('mic', { size: 16 }) : ''}</span></a></li>`;
+      })}</ul>
+      ${w.eras.length > 1 ? html`<p class="wc-foot">Also in ${w.eras.slice(1).map((er) => html`<a href="#era">${er.title}</a>`)}</p>` : ''}
+    </section>`;
+  }
+
+  function post(e) {
+    if (M.isSealed(e)) {
+      const u = M.opening(e);
+      return html`<article class="post" aria-label="Sealed Loot Drop">
+        <header class="post-head">${dayBadge(e.entryDate)}<span class="t"><b>Loot Drop</b><small>${date(e.entryDate, 'long')}</small></span></header>
+        <a class="sealed-panel" href="#loot"><span class="lock">${icon('lock', { size: 28, stroke: 2 })}</span>
+          <span class="big">${daysLeft(u)}</span><span class="unit">days to go</span><span class="when">${u.opens}</span></a>
+      </article>`;
+    }
+    const pics = M.images(e), voices = M.voiceNotes(e);
+    const meta = [date(e.entryDate, 'long'), e.media.some((m) => m.kind === 'PAGE_SCAN') && 'diary page'].filter(Boolean).join(', ');
+    if (!pics.length) {
+      return html`<article class="post">
+        <header class="post-head">${dayBadge(e.entryDate)}<span class="t"><b>${M.displayTitle(e)}</b><small>${meta}</small></span><button class="icon-btn" aria-label="More">${icon('more', { size: 22 })}</button></header>
+        <div class="text-post"><div class="caption">${e.title ? html`<span class="title">${e.title}</span>` : ''}${M.caption(e.contentJson)}</div></div>
+        <div class="post-body">${tagChips(e.tags)}</div></article>`;
+    }
+    return html`<article class="post">
+      <header class="post-head">${dayBadge(e.entryDate)}<span class="t"><b>${M.displayTitle(e)}</b><small>${meta}</small></span><button class="icon-btn" aria-label="More">${icon('more', { size: 22 })}</button></header>
+      <a class="media" href="#entry"><img src="${M.src(pics[0])}" alt="${pics[0].alt}">${pics.length > 1 ? html`<span class="count">1/${pics.length}</span>` : ''}</a>
+      ${pics.length > 1 ? html`<div class="dots" aria-hidden="true">${pics.map((_, i) => html`<i class="${i === 0 ? 'on' : ''}"></i>`)}</div>` : ''}
+      <div class="post-body">
+        ${voices.length || e.soundtrack ? html`<div class="extras">${voices.map((v) => voice(v))}${e.soundtrack ? sound(e.soundtrack) : ''}</div>` : ''}
+        ${e.contentJson ? html`<div class="caption">${M.caption(e.contentJson, { headingTag: 'h4' })}</div>` : ''}
+        ${e.tags.length ? tagChips(e.tags) : ''}
+      </div></article>`;
+  }
+
+  function otdRow() {
+    return html`<section class="otd" aria-labelledby="otd-h">
+      <div class="section-h"><h2 id="otd-h">On this day</h2><a href="#feed">See all</a></div>
+      <div class="otd-row">${M.data.onThisDay.map((e) => html`<a class="otd-card" href="#entry">
+        <span class="pic"><img src="${M.src(M.images(e)[0])}" alt="${M.images(e)[0].alt}"><span class="chip">${M.yearsAgo(e.entryDate)}</span></span>
+        <span><b>${e.title}</b><small>${date(e.entryDate, 'medium')}</small></span></a>`)}</div></section>`;
+  }
+
+  function feed() {
+    return html`${topbar()}
+      <main class="main"><h1 class="sr-only">Home</h1>
+        <div class="feed">
+          ${ringsRow()}
+          <div class="feed-otd">${otdRow()}</div>
+          ${M.feedGroups().map((g) => html`
+            ${g.era ? html`<a class="era-bar" href="#era"><img class="avatar" src="${M.cover(g.era)}" alt=""><span><b>${g.era.title}</b><small>${range(g.era.startDate, g.era.endDate)}</small></span><span class="chev">${icon('chevronRight', { size: 20 })}</span></a>` : ''}
+            ${g.weeks.map((w, i) => html`${weekCard(w, { lead: w === M.data.weeks[0] })}${w.entries.map(post)}`)}`)}
+        </div>
+        <aside class="rail" aria-label="You, on this day and this week">
+          <div class="me"><span class="initial">S</span><span><b>Sam</b><small>Your journal, private to you</small></span></div>
+          ${weekCard(M.data.weeks[0])}
+          <section aria-labelledby="eras-h"><div class="section-h"><h2 id="eras-h">Your Eras</h2><a href="#era">All</a></div>
+            <ul class="rail-list">${M.data.eras.map((er) => html`<li><a href="#era">${er.cover ? html`<img src="${M.cover(er)}" alt="">` : html`<span class="ph"></span>`}<span><b>${er.title}</b><small>${range(er.startDate, er.endDate)}</small></span></a></li>`)}</ul></section>
+        </aside>
+      </main>
+      ${tabbar('feed')}`;
+  }
+
+  // ---------- Entry ----------
+  function entryScreen() {
+    const e = M.featured.entry(), w = M.weekOf(e.id), pics = M.images(e);
+    const others = w.entries.filter((x) => x !== e && !M.isSealed(x)).flatMap(M.images).slice(0, 6);
+    return html`${topbar({ back: { href: '#feed', label: 'Home' }, title: M.weekLabel(w) })}
+      <main><article class="entry">
+        <div class="media"><img src="${M.src(pics[0])}" alt="${pics[0].alt}"><span class="count">1/${pics.length}</span>
+          <div class="dots" aria-hidden="true">${pics.map((_, i) => html`<i class="${i === 0 ? 'on' : ''}"></i>`)}</div></div>
+        <div class="entry-panel">
+          <header class="post-head">${dayBadge(e.entryDate)}<span class="t"><b>${date(e.entryDate, 'long')}</b><small>${w.eras.map((er) => er.title).join(' and ')}</small></span><button class="icon-btn" aria-label="More">${icon('more', { size: 22 })}</button></header>
+          <h1>${e.title}</h1>
+          <div class="post-body">
+            <div class="caption">${M.caption(e.contentJson, { headingTag: 'h4' })}</div>
+            <div class="extras">${M.voiceNotes(e).map((v) => voice(v))}${sound(e.soundtrack)}</div>
+            ${tagChips(e.tags)}
+            <p style="font-size:13px;color:var(--ink-2)">${date(e.entryDate, 'long')}, from the Trips template</p>
+            <div class="actions"><a class="pill pill--soft" href="#entry">${icon('pen', { size: 18 })}Edit</a><a class="pill pill--soft" href="#loot">${icon('lock', { size: 18 })}Seal as a Loot Drop</a><button class="pill pill--ghost">Delete</button></div>
+          </div>
+          <section class="more-week" aria-labelledby="more-h"><div class="section-h" style="padding:0"><h2 id="more-h">More from this week</h2></div>
+            <div class="more-grid">${others.map((m) => html`<img src="${M.src(m)}" alt="">`)}</div></section>
+        </div>
+      </article></main>
+      ${tabbar('entry')}`;
+  }
+
+  // ---------- Era ----------
+  function eraScreen() {
+    const p = M.eraPage(M.data.featured.eraId), e = p.era, t = p.totals;
+    const tiles = p.rows.map((r) => {
+      const pic = r.thumbs[0];
+      return pic
+        ? html`<a class="tile" href="#feed"><img src="${M.src(pic)}" alt=""><span class="label">${r.title}<br>${plural(r.entryCount, 'entry', 'entries')}</span></a>`
+        : html`<a class="tile text" href="#feed"><b>${r.title}</b><span><span class="n">${r.entryCount}</span><small> ${r.entryCount === 1 ? 'entry' : 'entries'}, ${range(r.startDate, r.endDate)}</small></span></a>`;
+    });
+    tiles.push(html`<a class="tile text more" href="#feed"><b>Earlier weeks</b><span><span class="n">${p.notListedWeeks}</span><small> more, back to ${date(e.startDate, 'medium')}</small></span></a>`);
+    return html`${topbar({ back: { href: '#feed', label: 'Home' }, title: 'Eras' })}
+      <main class="era-page">
+        <div class="era-top">
+          <div class="era-cover"><img src="${M.cover(e)}" alt="Victorian terrace houses with iron lace verandahs, the cover of this Era"></div>
+          <div class="era-info">
+            <h1>${e.title}</h1>
+            <p class="dates">${range(e.startDate, e.endDate)}, ${p.span} so far</p>
+            <div class="era-stats num">
+              <div><b>${t.weekCount}</b><small>weeks</small></div><div><b>${t.entryCount}</b><small>entries</small></div>
+              <div><b>${t.photoCount.toLocaleString('en-AU')}</b><small>photos</small></div><div><b>${t.voiceNoteCount}</b><small>voice notes</small></div>
+            </div>
+            <p>${e.description}</p>
+            <div class="extras">${sound(e.soundtrack)}<a class="pill pill--soft" href="#era">${icon('calendar', { size: 18 })}Edit Era</a></div>
+          </div>
+        </div>
+        <nav class="highlights" aria-label="Chapters inside this one">
+          ${p.chaptersInside.map((c) => ring({ days: [1, 1, 1, 1, 1, 1, 1], face: c.cover ? M.cover(c) : null, count: c.title.charAt(0), label: c.title, href: '#era' }))}
+        </nav>
+        <nav class="tabs" aria-label="Show"><a href="#era" aria-current="page">${icon('layers', { size: 16 })}Weeks</a><a href="#era">${icon('image', { size: 16 })}Photos</a><a href="#era">${icon('tag', { size: 16 })}Tags</a></nav>
+        <div class="week-grid">${tiles}</div>
+      </main>
+      ${tabbar('era')}`;
+  }
+
+  // ---------- Loot Drop ----------
+  function lootScreen() {
+    const e = M.featured.lootDrop(), w = M.weekOf(e.id), u = M.opening(e);
+    return html`${topbar({ back: { href: '#feed', label: 'Home' }, title: M.weekLabel(w) })}
+      <main class="loot">
+        <section class="loot-panel" aria-labelledby="loot-h">
+          <span class="lock">${icon('lock', { size: 30, stroke: 2 })}</span>
+          <h1 id="loot-h">Sealed Loot Drop</h1>
+          <span class="big">${daysLeft(u)}</span><span class="unit">days to go</span>
+          <p class="when">${u.opens}</p>
+          <p class="dated">Dated ${date(e.entryDate, 'long')}</p>
+          <div class="actions"><button class="pill">${icon('clock', { size: 18 })}Extend the seal</button><button class="pill pill--ghost">Delete</button></div>
+        </section>
+        <section class="loot-steps" aria-labelledby="steps-h">
+          <h2 id="steps-h">Nobody can open it before then, you included</h2>
+          <ol>
+            <li><span class="step-ic">${icon('pen', { size: 20 })}</span><span><b>Written</b><small>${date(e.entryDate, 'long')}</small></span></li>
+            <li class="now"><span class="step-ic">${icon('lock', { size: 20 })}</span><span><b>Sealed</b><small>Today, ${u.countdown} it opens</small></span></li>
+            <li><span class="step-ic">${icon('clock', { size: 20 })}</span><span><b>Opens</b><small>${u.opens.replace(/^Opens /, '')}</small></span></li>
+            <li><span class="step-ic">${icon('home', { size: 20 })}</span><span><b>Then</b><small>It waits at the top of Home until you read it, and you can reply to past you</small></span></li>
+          </ol>
+        </section>
+      </main>
+      ${tabbar('loot')}`;
+  }
+
+  const SCREENS = { feed, entry: entryScreen, era: eraScreen, loot: lootScreen };
+  M.mount((screen) => { renderSide(screen); app.innerHTML = String(SCREENS[screen]()); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contact Sheet direction for memoirist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Covered+By+Your+Grace&family=IBM+Plex+Sans+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
+<style>
+/* Contact Sheet: a photographer's lightbox. Each week is a strip of film whose frame numbers are the days; the
+   frames you kept are circled in red grease pencil; On this day arrives as 35mm slides in card mounts; a sealed
+   Loot Drop is a roll still in its canister, undeveloped until its date. IBM Plex Sans Condensed is the print;
+   Covered By Your Grace is the grease pencil, used only for marks you would make by hand. */
+:root {
+  --lightbox: #F3F4F4;
+  --sheet: #FFFFFF;
+  --film: #141414;
+  --film-2: #2A2A2A;
+  --grease: #D2262F;       /* 5.1:1 on the lightbox */
+  --amber: #E6A23C;        /* edge print, on film only */
+  --ink: #121212;
+  --ink-2: #5A5D5F;        /* 6.3:1 */
+  --mount: #ECE9E2;
+  --print: 'IBM Plex Sans Condensed', 'Arial Narrow', ui-sans-serif, system-ui, sans-serif;
+  --pencil: 'Covered By Your Grace', 'Segoe Print', cursive;
+  --gutter: 16px;
+  --dur: 140ms;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--lightbox); color: var(--ink); font: 400 16px/1.5 var(--print); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+h1, h2, h3, p { margin: 0; font-weight: 400; }
+h1, h2, h3 { text-wrap: balance; }
+:focus-visible { outline: 2px solid var(--grease); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.icon { flex: none; }
+.pencil { font-family: var(--pencil); color: var(--grease); font-weight: 400; }
+
+/* ---------- Shell ---------- */
+.topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 4px; height: 56px; padding: 0 6px 0 var(--gutter); background: var(--film); color: #FFFFFF; }
+.wordmark { font-weight: 700; font-size: 20px; letter-spacing: -.01em; margin-right: auto; display: inline-flex; align-items: center; gap: 10px; }
+.wordmark i { width: 18px; height: 14px; border: 2px solid var(--amber); border-radius: 2px; }
+.tb-title { margin-right: auto; font-weight: 600; font-size: 16px; }
+.icon-btn { width: 44px; height: 44px; display: grid; place-items: center; }
+.icon-btn:hover { background: var(--film-2); }
+.side { display: none; }
+.btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; background: var(--film); color: #FFFFFF; font-weight: 600; font-size: 15px; border-radius: 3px; }
+.btn:hover { background: var(--film-2); }
+.btn--line { background: var(--sheet); color: var(--ink); border: 1.5px solid var(--ink); }
+.btn--line:hover { background: var(--mount); }
+.btn--text { background: none; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; padding: 0 8px; }
+@media (min-width: 1100px) {
+  .shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); }
+  .side { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; padding: 24px 14px; background: var(--film); color: #FFFFFF; }
+  .side .wordmark { padding: 0 10px 22px; margin: 0; }
+  .side .btn { background: var(--amber); color: var(--film); margin: 0 6px 18px; justify-content: center; }
+  .side .btn:hover { background: #F0B45A; }
+  .side-nav a { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 10px; font-size: 15px; color: #C8C8C8; border-radius: 3px; }
+  .side-nav a:hover, .side-nav a[aria-current="page"] { color: #FFFFFF; background: var(--film-2); }
+  .side-foot { margin-top: auto; }
+  .topbar { display: none; }
+}
+
+/* ---------- Film ---------- */
+/* A strip: black film with sprocket holes along both edges (an svg tile, no gradient), frames in between. */
+.strip {
+  --hole: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='12'%3E%3Crect x='4' y='3' width='8' height='6' rx='1.5' fill='%23F3F4F4'/%3E%3C/svg%3E");
+  position: relative; display: flex; gap: 8px; padding: 20px 10px; background-color: var(--film);
+  background-image: var(--hole), var(--hole); background-repeat: repeat-x; background-position: 0 2px, 0 calc(100% - 2px);
+  overflow-x: auto; scrollbar-width: none;
+}
+.strip::-webkit-scrollbar { display: none; }
+.frame { position: relative; flex: none; width: 108px; display: grid; gap: 4px; }
+.frame .pic { position: relative; width: 108px; height: 76px; background: var(--film-2); overflow: hidden; }
+.frame img { width: 100%; height: 100%; object-fit: cover; }
+.frame .edge { font-size: 11px; font-weight: 600; color: var(--amber); letter-spacing: .02em; display: flex; justify-content: space-between; }
+.frame .note { position: absolute; inset: 0; display: grid; place-items: center; padding: 6px; text-align: center; font: 400 15px/1.1 var(--pencil); color: #F3F4F4; }
+.frame .wave { position: absolute; inset: 16px 8px; fill: var(--amber); }
+.frame.sealed .pic { background: #000000; display: grid; place-items: center; color: var(--amber); }
+.circle { position: absolute; inset: -9px -10px -6px -8px; pointer-events: none; }
+.circle path { fill: none; stroke: var(--grease); stroke-width: 3; stroke-linecap: round; }
+
+/* 35mm slides in card mounts: On this day */
+.slides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.slide { display: grid; gap: 8px; text-decoration: none; }
+.mount { position: relative; display: block; padding: 18px 16px 30px; background: var(--mount); border-radius: 6px; outline: 1px solid #D9D4C9; }
+.mount img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 2px; }
+.mount .yr { position: absolute; left: 14px; bottom: 4px; font: 400 18px/1.2 var(--pencil); color: var(--ink); }
+.slide b { font-weight: 600; font-size: 15px; line-height: 1.3; }
+.slide small { display: block; font-size: 13px; color: var(--ink-2); }
+
+/* ---------- Layout ---------- */
+.main { padding: 18px var(--gutter) 56px; display: grid; gap: 26px; }
+.h2 { font-weight: 700; font-size: 20px; line-height: 1.2; }
+.sub { font-size: 14px; color: var(--ink-2); }
+@media (min-width: 1100px) {
+  .main { grid-template-columns: minmax(0, 640px) 380px; gap: 32px 56px; justify-content: center; padding: 32px 40px 80px; align-items: start; }
+  .main > .lead { grid-column: 1; }
+  .main > .rail { grid-column: 2; grid-row: 1 / span 30; position: sticky; top: 32px; display: grid; gap: 28px; }
+  .feed .week-sheet--lead { display: none; }
+}
+@media (max-width: 1099px) { .feed > .rail .week-sheet { display: none; } .main > .rail { display: grid; gap: 26px; } .feed > .rail { order: -1; } }
+
+/* An Era: its roll label and cover print */
+.roll { display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 14px; align-items: center; padding: 14px; background: var(--film); color: #FFFFFF; border-radius: 4px; }
+.roll h2 { font-weight: 700; font-size: 26px; line-height: 1.1; }
+.roll p { font-size: 13px; color: var(--amber); margin-top: 4px; }
+.roll img { width: 120px; aspect-ratio: 4 / 3; object-fit: cover; border: 4px solid #FFFFFF; transform: rotate(2deg); }
+.roll .also { color: #C8C8C8; }
+
+/* The week's contact sheet (the week summary, D-25) */
+.week-sheet { display: grid; gap: 10px; }
+.ws-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ws-head h3 { font-weight: 700; font-size: 22px; }
+.ws-head span { font-size: 13px; color: var(--ink-2); }
+.tally { font: 400 22px/1.15 var(--pencil); color: var(--grease); }
+.frames-list { list-style: none; margin: 0; padding: 0; background: var(--sheet); border-radius: 4px; }
+.frames-list a { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 44px; padding: 0 12px; border-bottom: 1px solid #E5E6E6; font-size: 15px; }
+.frames-list li:last-child a { border-bottom: 0; }
+.frames-list a:hover .t { text-decoration: underline; }
+.frames-list .no { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.frames-list .t { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.frames-list .i { display: flex; gap: 4px; color: var(--ink-2); }
+.frames-list .sealed .t { color: var(--grease); font-weight: 600; display: flex; gap: 6px; align-items: center; }
+
+/* Entries as prints on the lightbox */
+.print-card { display: grid; gap: 10px; }
+.print-card .meta { font-size: 13px; color: var(--ink-2); display: flex; justify-content: space-between; gap: 10px; }
+.print-card h3 { font: 400 30px/1.05 var(--pencil); color: var(--ink); }
+.print-card h3 a:hover { color: var(--grease); }
+.photo { position: relative; display: block; background: var(--sheet); padding: 10px 10px 12px; border-radius: 2px; outline: 1px solid #DCDDDD; }
+.photo img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; }
+.photo.page img { aspect-ratio: 3 / 4; width: min(100%, 360px); margin: 0 auto; }
+.photo .count { position: absolute; right: 18px; top: 18px; padding: 2px 8px; background: var(--film); color: var(--amber); font-size: 12px; font-weight: 600; }
+.caption p + p, .caption ul + p, .caption p + ul { margin-top: .6em; }
+.caption h4, .caption h5 { font: 400 21px/1.2 var(--pencil); color: var(--grease); margin: .7em 0 .05em; }
+.caption > :first-child { margin-top: 0; }
+.caption ul { margin: .3em 0 0; padding-left: 1.2em; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; background: var(--sheet); border: 1px solid #C9CBCB; border-radius: 3px; font-size: 13px; font-weight: 600; }
+.extras { display: flex; flex-wrap: wrap; gap: 8px; }
+.voice, .sound { display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 14px 0 5px; background: var(--film); color: #FFFFFF; border-radius: 3px; min-width: 0; max-width: 100%; font-size: 14px; }
+.voice .play { width: 36px; height: 36px; display: grid; place-items: center; background: var(--amber); color: var(--film); border-radius: 2px; flex: none; }
+.voice svg { width: 130px; min-width: 0; height: 22px; fill: var(--amber); }
+.sound { padding-left: 12px; }
+.sound span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sound i { font-style: italic; }
+
+/* The sealed Loot Drop: a roll still in its canister, the same for every one (D-10). */
+.canister-card { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 16px; align-items: center; height: 150px; padding: 14px 16px; background: var(--sheet); border-radius: 4px; outline: 1px solid #DCDDDD; }
+.canister-card:hover { outline-color: var(--grease); }
+.canister-card b { display: block; font-weight: 700; font-size: 18px; }
+.canister-card .lab { font: 400 20px/1.15 var(--pencil); color: var(--grease); }
+.canister-card small { display: block; font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+
+/* ---------- Entry ---------- */
+.big-print { position: relative; background: var(--sheet); padding: 12px 12px 16px; outline: 1px solid #DCDDDD; }
+.big-print img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; }
+.crop { position: absolute; inset: 0; pointer-events: none; }
+.crop path { fill: none; stroke: var(--grease); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.loupe { display: none; }
+@media (min-width: 1100px) {
+  .loupe { display: grid; gap: 10px; justify-items: center; }
+  .loupe .lens { width: 260px; height: 260px; border-radius: 50%; overflow: hidden; border: 10px solid var(--film); background: var(--film); }
+  .loupe .lens img { width: 760px; max-width: none; height: auto; transform: translate(-150px, -170px); }
+  .loupe p { font: 400 20px var(--pencil); color: var(--grease); }
+}
+.side-notes { display: grid; gap: 12px; font-size: 14px; color: var(--ink-2); }
+.side-notes b { color: var(--ink); font-weight: 600; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- Era ---------- */
+.era-hero { display: grid; gap: 14px; }
+.era-hero .photo img { aspect-ratio: 16 / 10; }
+.era-hero h1 { font-weight: 700; font-size: 38px; line-height: 1.05; letter-spacing: -.01em; }
+.era-hero .lead { font: 400 24px/1.2 var(--pencil); color: var(--grease); }
+.edge-figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; background: var(--film); padding: 14px 12px; border-radius: 3px; }
+.edge-figs div { display: grid; }
+.edge-figs b { font-weight: 700; font-size: 24px; color: #FFFFFF; line-height: 1.1; }
+.edge-figs small { font-size: 12px; color: var(--amber); }
+.rolls { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.rolls a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 12px; background: var(--sheet); border-radius: 3px; outline: 1px solid #E1E2E2; }
+.rolls a:hover { outline-color: var(--ink); }
+.rolls .t { font-weight: 600; font-size: 16px; }
+.rolls .n { font-size: 14px; color: var(--ink-2); }
+.rolls .mini { grid-column: 1 / -1; display: flex; gap: 3px; padding: 6px; background: var(--film); width: max-content; max-width: 100%; overflow: hidden; }
+.rolls .mini span { width: 34px; height: 24px; background: var(--film-2); flex: none; }
+.rolls .mini img { width: 34px; height: 24px; object-fit: cover; flex: none; }
+@media (min-width: 1100px) {
+  .era-hero h1 { font-size: 52px; }
+}
+
+/* ---------- Loot Drop ---------- */
+.loot { display: grid; gap: 22px; padding: 26px var(--gutter) 56px; justify-items: start; }
+.loot .can { width: min(240px, 70%); justify-self: center; }
+.loot h1 { font-weight: 700; font-size: 32px; line-height: 1.1; }
+.loot .opens { font-size: 18px; line-height: 1.45; }
+.loot .days { font: 400 48px/1 var(--pencil); color: var(--grease); }
+.process { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; width: 100%; max-width: 560px; }
+.process li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center; min-height: 52px; border-top: 1px solid #DCDDDD; }
+.process .st { width: 34px; height: 24px; background: var(--film); color: var(--amber); display: grid; place-items: center; font-size: 12px; font-weight: 700; border-radius: 2px; }
+.process li.now .st { background: var(--grease); color: #FFFFFF; }
+.process b { font-weight: 600; }
+.process span span { color: var(--ink-2); }
+@media (min-width: 1100px) {
+  .loot { grid-template-columns: 320px minmax(0, 560px); column-gap: 72px; justify-content: center; align-items: center; padding: 64px 40px 80px; }
+  .loot .can { width: 100%; grid-row: 1 / span 6; }
+  .loot .from-roll { grid-column: 1 / -1; }
+}
+.from-roll { display: grid; gap: 8px; width: 100%; max-width: 952px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="side" id="side" aria-label="memoirist"></nav>
+  <div id="app"></div>
+</div>
+<script src="../shared/content.js"></script>
+<script src="../shared/helpers.js"></script>
+<script>
+(() => {
+  const { html, icon, date, range } = M;
+  const side = document.getElementById('side');
+  const app = document.getElementById('app');
+  const plural = (n, one, many = `${one}s`) => `${n.toLocaleString('en-AU')} ${n === 1 ? one : many}`;
+
+  // A grease-pencil ring, a little different for every frame it circles.
+  function ring(seed) {
+    const r = M.seeded(seed), j = () => (r() - 0.5) * 6;
+    return M.raw(`<svg class="circle" viewBox="0 0 130 100" preserveAspectRatio="none" aria-hidden="true"><path d="M${60 + j()} ${6 + j()}C${110 + j()} ${4 + j()} ${128 + j()} ${30 + j()} ${122 + j()} ${58 + j()}C${116 + j()} ${92 + j()} ${40 + j()} ${98 + j()} ${14 + j()} ${78 + j()}C${-4 + j()} ${60 + j()} ${6 + j()} ${14 + j()} ${66 + j()} ${10 + j()}"/></svg>`);
+  }
+  // A film canister: the same drawing for every sealed Loot Drop.
+  const canister = (label = true) => M.raw(`<svg class="can" viewBox="0 0 200 260" aria-hidden="true">
+    <rect x="84" y="6" width="32" height="22" rx="3" fill="#141414"/><rect x="40" y="26" width="120" height="16" rx="4" fill="#2A2A2A"/>
+    <rect x="34" y="40" width="132" height="190" rx="10" fill="#141414"/><rect x="40" y="226" width="120" height="16" rx="4" fill="#2A2A2A"/>
+    <rect x="166" y="92" width="26" height="62" rx="2" fill="#141414"/><path d="M166 100h26M166 146h26" stroke="#E6A23C" stroke-width="2"/>
+    ${label ? `<rect x="46" y="96" width="108" height="86" rx="2" fill="#F7F3E8" transform="rotate(-3 100 139)"/>
+    <text x="100" y="128" text-anchor="middle" font-family="Covered By Your Grace" font-size="21" fill="#D2262F" transform="rotate(-3 100 139)">Do not</text>
+    <text x="100" y="152" text-anchor="middle" font-family="Covered By Your Grace" font-size="21" fill="#D2262F" transform="rotate(-3 100 139)">develop</text>
+    <text x="100" y="172" text-anchor="middle" font-family="Covered By Your Grace" font-size="15" fill="#121212" transform="rotate(-3 100 139)">till Oct 2027</text>` : ''}
+  </svg>`);
+
+  const NAV = [
+    { label: 'Journal', icon: 'book', href: '#feed', screens: ['feed', 'entry', 'loot'] },
+    { label: 'Eras', icon: 'layers', href: '#era', screens: ['era'] },
+    { label: 'Timeline', icon: 'list', href: '#feed', screens: [] },
+    { label: 'Templates', icon: 'page', href: '#feed', screens: [] },
+    { label: 'Tags', icon: 'tag', href: '#feed', screens: [] },
+  ];
+  function renderSide(screen) {
+    side.innerHTML = String(html`<a class="wordmark" href="#feed"><i></i>memoirist</a>
+      <a class="btn" href="#entry">${icon('plus', { size: 18, stroke: 2 })}New entry</a>
+      <div class="side-nav">${NAV.map((n) => html`<a href="${n.href}" ${n.screens.includes(screen) ? M.raw('aria-current="page"') : ''}>${icon(n.icon, { size: 20 })}${n.label}</a>`)}</div>
+      <div class="side-nav side-foot"><a href="#feed">${icon('photos', { size: 20 })}Photo dump</a><a href="#feed">${icon('trash', { size: 20 })}Recently deleted</a><a href="#feed">${icon('sliders', { size: 20 })}Settings</a></div>`);
+  }
+  function topbar({ back, title } = {}) {
+    if (back) return html`<header class="topbar"><a class="icon-btn" href="${back}" aria-label="Back">${icon('arrowLeft', { size: 22 })}</a><span class="tb-title">${title}</span></header>`;
+    return html`<header class="topbar"><a class="wordmark" href="#feed"><i></i>memoirist</a><a class="icon-btn" href="#feed" aria-label="Photo dump">${icon('photos', { size: 22 })}</a><a class="icon-btn" href="#entry" aria-label="New entry">${icon('plus', { size: 24, stroke: 2 })}</a></header>`;
+  }
+
+  // A week as a strip of film: one frame per entry, its frame number the day of the month.
+  function strip(w) {
+    return html`<div class="strip" aria-hidden="true">${w.entries.map((e, i) => {
+      const day = Number(e.entryDate.slice(8));
+      const pic = M.images(e)[0];
+      let inside;
+      if (M.isSealed(e)) inside = icon('lock', { size: 22 });
+      else if (pic) inside = html`<img src="${M.src(pic)}" alt="">`;
+      else if (M.voiceNotes(e).length) { const b = M.waveform(e.id, 18); inside = M.raw(`<svg class="wave" viewBox="0 0 72 30" preserveAspectRatio="none">${b.map((v, k) => `<rect x="${k * 4}" y="${(15 - v * 14).toFixed(1)}" width="2.4" height="${(v * 28).toFixed(1)}"/>`).join('')}</svg>`); }
+      else inside = html`<span class="note">${M.displayTitle(e)}</span>`;
+      return html`<span class="frame ${M.isSealed(e) ? 'sealed' : ''}"><span class="pic">${inside}</span>${!M.isSealed(e) && e.title && i % 2 === 0 ? ring(e.id) : ''}<span class="edge"><span>${day}</span><span>${day}A</span></span></span>`;
+    })}</div>`;
+  }
+
+  function weekSheet(w, { lead = false } = {}) {
+    const s = M.weekStats(w);
+    const tally = [plural(s.entryCount, 'frame'), s.photoCount && plural(s.photoCount, 'photo'), s.voiceNoteCount && plural(s.voiceNoteCount, 'voice note')].filter(Boolean).join(', ');
+    return html`<section class="week-sheet ${lead ? 'week-sheet--lead' : ''}" aria-label="Contact sheet of ${M.weekLabel(w)}">
+      <div class="ws-head"><h3>${M.weekLabel(w)}</h3><span>${range(w.startDate, w.endDate)}</span></div>
+      ${strip(w)}
+      <p class="tally">${tally}${s.sealedCount ? ', one roll undeveloped' : ''}</p>
+      <ul class="frames-list">${w.entries.map((e) => {
+        const no = `No. ${Number(e.entryDate.slice(8))}`;
+        return M.isSealed(e)
+          ? html`<li><a class="sealed" href="#loot"><span class="no">${no}</span><span class="t">${icon('lock', { size: 15 })}Undeveloped until ${M.instant(e.unlockDate, { day: 'numeric', month: 'short', year: 'numeric' })}</span><span></span></a></li>`
+          : html`<li><a href="#entry"><span class="no">${no}</span><span class="t">${M.displayTitle(e)}</span><span class="i">${M.images(e).length ? icon(M.images(e)[0].kind === 'PAGE_SCAN' ? 'page' : 'image', { size: 16 }) : ''}${M.voiceNotes(e).length ? icon('mic', { size: 16 }) : ''}</span></a></li>`;
+      })}</ul>
+      ${w.eras.length > 1 ? html`<p class="sub">Also in ${w.eras.slice(1).map((er) => er.title)}</p>` : ''}
+    </section>`;
+  }
+
+  function voice(v) {
+    const bars = M.waveform(v.id, 32);
+    return html`<span class="voice"><button class="play" aria-label="Play voice note, ${M.duration(v.durationSeconds)}">${icon('play', { size: 14 })}</button>
+      <svg viewBox="0 0 ${bars.length * 4} 22" preserveAspectRatio="none" aria-hidden="true">${M.raw(bars.map((b, i) => `<rect x="${i * 4}" y="${(11 - b * 10).toFixed(1)}" width="2.4" height="${(b * 20).toFixed(1)}"/>`).join(''))}</svg>
+      <span>${M.duration(v.durationSeconds)}</span></span>`;
+  }
+  const sound = (st) => html`<button class="sound">${icon('spotify', { size: 18 })}<span><i>${st.title}</i>, ${st.artist}</span></button>`;
+  const tags = (ts) => html`<div class="tags">${ts.map((t) => html`<a class="tag" href="#feed">${t.name}</a>`)}</div>`;
+
+  function printCard(e) {
+    if (M.isSealed(e)) {
+      const u = M.opening(e);
+      return html`<article class="print-card" aria-label="Sealed Loot Drop"><p class="meta"><span>${date(e.entryDate, 'dayLong')}</span><span>No. ${Number(e.entryDate.slice(8))}</span></p>
+        <a class="canister-card" href="#loot">${canister(false)}<span><b>Undeveloped roll</b><span class="lab">${u.countdown}</span><small>${u.opens.replace(/^Opens/, 'Develops')}</small></span></a></article>`;
+    }
+    const pics = M.images(e);
+    const heading = e.title || (e.contentJson ? null : M.displayTitle(e));
+    return html`<article class="print-card" aria-label="${M.displayTitle(e)}">
+      <p class="meta"><span>${date(e.entryDate, 'dayLong')}</span><span>No. ${Number(e.entryDate.slice(8))}</span></p>
+      ${heading ? html`<h3><a href="#entry">${heading}</a></h3>` : ''}
+      ${pics.length ? html`<a class="photo ${pics[0].kind === 'PAGE_SCAN' ? 'page' : ''}" href="#entry"><img src="${M.src(pics[0])}" alt="${pics[0].alt}">${pics.length > 1 ? html`<span class="count">1 of ${pics.length}</span>` : ''}</a>` : ''}
+      ${e.contentJson ? html`<div class="caption">${M.caption(e.contentJson, { headingTag: 'h5' })}</div>` : ''}
+      ${M.voiceNotes(e).length || e.soundtrack ? html`<div class="extras">${M.voiceNotes(e).map(voice)}${e.soundtrack ? sound(e.soundtrack) : ''}</div>` : ''}
+      ${e.tags.length ? tags(e.tags) : ''}
+    </article>`;
+  }
+
+  // ---------- Feed ----------
+  function feed() {
+    const tw = M.data.weeks[0];
+    return html`${topbar()}
+      <main class="main feed">
+        <h1 class="sr-only">Journal</h1>
+        <aside class="rail" aria-label="On this day and this week">
+          <section aria-labelledby="otd-h" style="display:grid;gap:12px"><div class="ws-head"><h2 class="h2" id="otd-h">On this day</h2><span>Slides from other years</span></div>
+            <div class="slides">${M.data.onThisDay.map((e) => html`<a class="slide" href="#entry"><span class="mount"><img src="${M.src(M.images(e)[0])}" alt="${M.images(e)[0].alt}"><span class="yr">${e.entryDate.slice(0, 4)}</span></span><span><b>${e.title}</b><small>${M.yearsAgo(e.entryDate)}</small></span></a>`)}</div></section>
+          ${weekSheet(tw)}
+        </aside>
+        ${M.feedGroups().map((g) => html`
+          <a class="roll lead" href="#era"><span><h2>${g.era.title}</h2><p>${range(g.era.startDate, g.era.endDate)}</p>${g.weeks[0].eras.length > 1 ? html`<p class="also">Inside ${g.weeks[0].eras[1].title}</p>` : ''}</span>${M.cover(g.era) ? html`<img src="${M.cover(g.era)}" alt="">` : ''}</a>
+          ${g.weeks.map((w) => html`<div class="lead">${weekSheet(w, { lead: w === tw })}</div>${w.entries.map((e) => html`<div class="lead">${printCard(e)}</div>`)}`)}`)}
+      </main>`;
+  }
+
+  // ---------- Entry ----------
+  function entryScreen() {
+    const e = M.featured.entry(), w = M.weekOf(e.id), pics = M.images(e);
+    return html`${topbar({ back: '#feed', title: M.weekLabel(w) })}
+      <main class="main">
+        <article class="lead" style="display:grid;gap:14px">
+          <p class="sub">${date(e.entryDate, 'long')}, frame No. 24</p>
+          <h1 style="font:400 44px/1 var(--pencil)">${e.title}</h1>
+          <div class="big-print"><img src="${M.src(pics[0])}" alt="${pics[0].alt}">
+            <svg class="crop" viewBox="0 0 100 70" preserveAspectRatio="none" aria-hidden="true"><path d="M6 18V8h12M82 8h12v10M94 52v10H82M18 62H6V52"/></svg></div>
+          <div class="strip" aria-hidden="true">${pics.map((m, i) => html`<span class="frame"><span class="pic"><img src="${M.src(m)}" alt=""></span>${i === 0 ? ring('pick') : ''}<span class="edge"><span>24</span><span>${i + 1}A</span></span></span>`)}</div>
+          <div class="caption">${M.caption(e.contentJson, { headingTag: 'h4' })}</div>
+          <div class="extras">${M.voiceNotes(e).map(voice)}${sound(e.soundtrack)}</div>
+          ${tags(e.tags)}
+          <div class="actions"><a class="btn btn--line" href="#entry">${icon('pen', { size: 18 })}Edit</a><a class="btn btn--line" href="#loot">${icon('lock', { size: 18 })}Seal as a Loot Drop</a><button class="btn btn--text">Delete</button></div>
+        </article>
+        <aside class="rail">
+          <div class="loupe"><div class="lens"><img src="${M.src(pics[0])}" alt="A closer look at the cliff edge"></div><p>the cloud lifting, 6:41 am</p></div>
+          <div class="side-notes"><p><b>In</b> ${w.eras.map((er) => er.title).join(' and ')}</p><p><b>Week</b> ${M.weekLabel(w)}, ${range(w.startDate, w.endDate)}</p><p><b>Template</b> Trips</p></div>
+        </aside>
+      </main>`;
+  }
+
+  // ---------- Era ----------
+  function eraScreen() {
+    const p = M.eraPage(M.data.featured.eraId), e = p.era, t = p.totals;
+    return html`${topbar({ back: '#feed', title: 'Eras' })}
+      <main class="main">
+        <header class="era-hero lead">
+          <span class="photo"><img src="${M.cover(e)}" alt="Victorian terrace houses with iron lace verandahs, the cover of this Era"></span>
+          <h1>${e.title}</h1>
+          <p class="lead">${e.description}</p>
+          <p class="sub">${range(e.startDate, e.endDate)}, ${p.span} so far</p>
+          <div class="extras">${sound(e.soundtrack)}</div>
+        </header>
+        <div class="edge-figs lead"><div><b>${t.weekCount}</b><small>rolls (weeks)</small></div><div><b>${t.entryCount}</b><small>frames</small></div><div><b>${t.photoCount.toLocaleString('en-AU')}</b><small>photos</small></div><div><b>${t.voiceNoteCount}</b><small>voice notes</small></div></div>
+        <aside class="rail">
+          <section style="display:grid;gap:10px"><h2 class="h2">Rolls in this Era</h2>
+            <ul class="rolls">${p.rows.map((r) => html`<li><a href="#feed"><span class="t">${r.title}</span><span class="n">${plural(r.entryCount, 'frame')}</span>
+              <span class="mini">${r.thumbs.length ? r.thumbs.slice(0, 6).map((m) => html`<img src="${M.src(m)}" alt="">`) : Array.from({ length: Math.min(r.entryCount, 6) }, () => html`<span></span>`)}</span></a></li>`)}</ul>
+            <p class="sub">and ${p.notListedWeeks} earlier rolls, back to ${date(e.startDate, 'medium')}</p></section>
+          <section style="display:grid;gap:8px"><h2 class="h2">Shorter rolls inside this one</h2>${p.chaptersInside.map((c) => html`<a class="roll" href="#era" style="grid-template-columns:1fr"><span><h2 style="font-size:20px">${c.title}</h2><p>${range(c.startDate, c.endDate)}</p></span></a>`)}</section>
+          <a class="btn btn--line" href="#era" style="justify-self:start">${icon('calendar', { size: 18 })}Change dates or cover</a>
+        </aside>
+      </main>`;
+  }
+
+  // ---------- Loot Drop ----------
+  function lootScreen() {
+    const e = M.featured.lootDrop(), w = M.weekOf(e.id), u = M.opening(e);
+    return html`${topbar({ back: '#feed', title: M.weekLabel(w) })}
+      <main class="loot">
+        ${canister()}
+        <h1>Sealed Loot Drop</h1>
+        <p class="opens">${u.opens.replace(/^Opens/, 'Develops on')}</p>
+        <p class="days">${u.countdown}</p>
+        <p class="sub">Exposed ${date(e.entryDate, 'long')}. Nobody can see it or change it before then, you included.</p>
+        <ol class="process">
+          <li><span class="st">1</span><span><b>Exposed</b> <span>${date(e.entryDate, 'medium')}</span></span></li>
+          <li class="now"><span class="st">2</span><span><b>In the canister</b> <span>today</span></span></li>
+          <li><span class="st">3</span><span><b>Develops</b> <span>${M.instant(e.unlockDate, { day: 'numeric', month: 'short', year: 'numeric' })}, 9:00 am</span></span></li>
+          <li><span class="st">4</span><span><b>Prints</b> <span>at the top of your journal, ready for you to write back</span></span></li>
+        </ol>
+        <div class="actions"><button class="btn">${icon('clock', { size: 18 })}Extend the seal</button><button class="btn btn--text">Delete</button></div>
+        <section class="from-roll" aria-labelledby="roll-h"><h2 class="h2" id="roll-h">From the ${M.weekLabel(w)} roll</h2>${strip(w)}<p class="sub">The last frame stays dark until it develops.</p></section>
+      </main>`;
+  }
+
+  const SCREENS = { feed, entry: entryScreen, era: eraScreen, loot: lootScreen };
+  M.mount((screen) => { renderSide(screen); app.innerHTML = String(SCREENS[screen]()); });
+})();
+</script>
+</body>
+</html>
