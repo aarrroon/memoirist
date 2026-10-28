@@ -179,6 +179,7 @@ The app starts to look back with the user. Everything here is opt-in, appears as
 - Summaries of weeks the user hasn't closed: there is no automatic closing and no "close all weeks" action (D-28)
 - Linking people in the Cast of Characters to real group members (D-19)
 - Adding or removing single weeks from an Era by hand: an Era is its dates (D-22)
+- Choosing a different first day of the week: every week runs Monday to Sunday (D-08)
 - Third-party analytics, cookies or tracking scripts (D-38)
 
 ### Parked: ideas for much later

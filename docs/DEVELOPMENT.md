@@ -10,7 +10,7 @@
 |---|---|---|---|
 | Git (with Git Bash on Windows) | any recent | `git --version` | Run every command here in Git Bash |
 | Docker Desktop | recent | `docker info` | Must be **running** for Compose and for backend tests (Testcontainers) |
-| JDK | 21 | `java -version` | For example Eclipse Temurin 21. Make sure `java` is on `PATH` |
+| JDK | 25 | `java -version` | For example Eclipse Temurin 25 (`winget install EclipseAdoptium.Temurin.25.JDK`). Make sure `java` is on `PATH` |
 | Node.js | 22 or later | `node -v` | npm comes with it |
 | Editor | — | — | IntelliJ IDEA (backend) and/or VS Code |
 | Claude Code | latest | — | Optional, but the repo is set up for it (section 6) |

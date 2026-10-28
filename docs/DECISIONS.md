@@ -9,8 +9,8 @@ Settled choices for memoirist, and the questions still open.
 | ID | Decision | Decided | Updated |
 |---|---|---|---|
 | D-01 | Project name is **memoirist** | 2026-10-25 | |
-| D-02 | Spring Boot 4.x on Java 21 | 2026-10-25 | 2026-10-28 |
-| D-03 | SeaweedFS locally, Cloudflare R2 in production | 2026-10-25 | |
+| D-02 | Spring Boot 4.x on Java 25 | 2026-10-25 | 2026-10-28 |
+| D-03 | SeaweedFS locally, Cloudflare R2 in production | 2026-10-25 | 2026-10-29 |
 | D-04 | PostgreSQL 17 everywhere | 2026-10-25 | 2026-10-28 |
 | D-05 | Entry content is TipTap JSON plus derived plain text | 2026-10-25 | 2026-10-28 |
 | D-06 | Templates attach to entries, not weeks; starter templates | 2026-10-25 | 2026-10-28 |
@@ -55,8 +55,14 @@ Settled choices for memoirist, and the questions still open.
 - Storage bucket `memoirist-media`
 - Local dev user email `dev@memoirist.local`
 
-## D-02 Spring Boot 4.x on Java 21
-**Why:** open-source support for Spring Boot 3.5 ended on 2026-06-30.
+## D-02 Spring Boot 4.x on Java 25
+- **Spring Boot 4.x** for the backend.
+- **Java 25**, the current long-term-support (LTS) release, everywhere: on your machine (Eclipse Temurin 25), in the Gradle toolchain, in CI and in the Docker image. Gradle must be a version that runs and compiles Java 25.
+
+**Why:**
+- Open-source support for Spring Boot 3.5 ended on 2026-06-30.
+- Java 25 was chosen over 21 on 2026-10-28, before any code existed. It's the newest LTS, so it gets free updates for longer, and it's where companies are moving next. Everything written for Java 21 also runs on 25.
+
 **Consequences:** Boot 4 brings Spring Framework 7, Hibernate 7, Jackson 3 and the Boot-4 line of springdoc-openapi; Phase 4 uses the Spring AI line built for Boot 4. Many online examples (and much of Claude's training data) are Boot 3. Check current docs before copying a pattern.
 
 ## D-03 Object storage: SeaweedFS locally, Cloudflare R2 in production
@@ -66,6 +72,10 @@ Settled choices for memoirist, and the questions still open.
 - R2 has a permanent free tier (10 GB of storage, no egress fees) and speaks the S3 API.
 
 **Consequences:** one storage implementation (AWS SDK v2 `S3Client` + `S3Presigner`). Switching providers only changes endpoint, region, credentials and path-style settings. RustFS (MinIO-like, 1.0 in September 2026) is the fallback if SeaweedFS causes trouble.
+
+**Local credentials:** SeaweedFS's S3 gateway reads its one identity from environment variables. Compose maps `STORAGE_ACCESS_KEY` and `STORAGE_SECRET_KEY` from `.env` to `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. No identity file is committed, and nothing passes `-s3.config` or stores identities in the filer, because either makes SeaweedFS ignore the environment variables. The image tag is pinned.
+- **Why:** the keys have one home (`.env`), as Postgres's do, and the backend sees the same variables locally and on R2. A config file only pays off with several identities.
+- **Watch out:** when no credentials load, SeaweedFS allows every request unsigned. Task 1.3 checks that an unsigned request gets `403`.
 
 ## D-04 PostgreSQL 17 everywhere
 Locally the image is `pgvector/pgvector:pg17`; production is Neon on Postgres 17. One major version in both places avoids surprises. pgvector is installed in the image but only enabled in Phase 4.
@@ -98,16 +108,18 @@ Locally the image is `pgvector/pgvector:pg17`; production is Neon on Postgres 17
 - Creating an entry finds or creates the week containing its memory date. The database enforces uniqueness on `(user_id, start_date)`; the service inserts with `ON CONFLICT DO NOTHING` and then selects the row.
 - There is no "create week" step. Users can give a week a title, and close or reopen it; from Phase 4, closing a week writes its summary (D-28). A week belongs to every Era whose dates overlap it (D-22).
 - Weeks with no entries are hidden from the feed, and so are weeks whose only entries are in Recently deleted (D-30).
-- `WeekCalendar` takes the first day of the week as a parameter. It is Monday for everyone for now; whether users can start their week on Sunday is open question Q27.
+- **Every week starts on Monday, for every user.** There is no setting for a Sunday start. `WeekCalendar` holds Monday as one constant, so the rule lives in one place.
+
+**Why (week start, answers Q27):** one fixed week keeps weeks, Era overlaps, wrap-up cards and summaries simple and predictable, and V1 already checks that a week starts on a Monday. A per-user start would mean re-filing a user's weeks whenever they changed it.
 
 ## D-09 Entries have a memory date
 `entries.entry_date` defaults to today in the user's timezone and can be set to an earlier date (backdating). It can't be later than today, or earlier than 1900-01-01 (`400`), so a typo such as 0202 can't create a week in the year 202. `created_at` still records when the entry was actually written. Changing the date moves the entry into the matching week.
 
 ## D-10 Loot Drops use a strict seal
 An entry is **sealed** while `unlock_date > now`. While sealed:
-- every response hides `title`, `contentJson`, `contentText`, `templateId`, `tags` and `media`, and sets `isLocked: true`
+- every response hides `title`, `contentJson`, `contentText`, `templateId`, `tags`, `soundtrack`, `replyToEntryId`, `replyIds` and `media`, and sets `isLocked: true`
 - it never counts: tag filters, tag counts, search results and every other count or filter leave it out, so nothing hints at what it's about. Unfiltered lists (the feed, a week, the all-entries timeline) still show it as a locked row
-- its title, content, memory date, template, tags and media can't change (`409 entry-sealed`)
+- its title, content, memory date, template, tags, soundtrack, `replyToEntryId` and media can't change (`409 entry-sealed`)
 - it can't be analysed by AI and is left out of AI summaries
 - the unlock date can only move later; the entry can always be deleted, and it stays sealed in Recently deleted (D-30)
 
@@ -483,5 +495,4 @@ Decide each one before the sprint that needs it, then record it with `/record-de
 | Q24 | Voice notes: the biographer and search can't read them. Transcribe them? | Sprint 8 (with Q7) | Optional and on tap, through the same `TranscriptionProvider` as pages |
 | Q25 | Writing time and mood: patterns such as "flat on Sunday evenings" need when an entry was really written (`created_at` is wrong for backdated and offline entries) and a mood for each entry | Sprint 8 (mood: Sprint 9) | Offline entries send a client `capturedAt`; Phase 6 adds a per-entry mood as derived AI data, with the usual seal and staleness rules |
 | Q26 | Group Loot Drop dates: if the owner moves the date later, entries added earlier still unlock on the old date; an entry already sealed for longer opens later; and withdrawing doesn't unseal | Sprint 6 | Group views hide content until the later of the entry's and the group's dates; the withdraw dialog says the entry stays sealed |
-| Q27 | Week start: weeks run Monday to Sunday (D-08), and V1 checks that a week starts on a Monday. Should users be able to start their week on Sunday? Changing it for someone who already has entries means re-filing their weeks | Sprint 5 | Monday for everyone. `WeekCalendar` already takes the first day as a parameter (D-08) |
 | Q28 | Era summaries and partly covered weeks: an Era shows only the entries inside its dates (D-22), but a weekly summary covers the whole week. For a short Era, such as a weekend trip, should the Era summary read the entries inside its dates instead of whole-week summaries? | Sprint 7 | A week the Era covers only partly is read from its entries inside the Era's dates; a week it covers fully uses its weekly summary |

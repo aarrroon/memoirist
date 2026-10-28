@@ -31,31 +31,32 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 - [ ] **1.2 Machine prerequisites**
   - **Do:**
-    - Install JDK 21 (for example, Eclipse Temurin) and make sure `java` is on `PATH`.
+    - Install JDK 25 (for example, Eclipse Temurin 25) and make sure `java` is on `PATH`.
     - Confirm Docker Desktop is running and Node is 22 or later.
     - Copy `.env.example` to `.env`.
-    - Optional: install the context7 plugin for up-to-date library docs.
-  - **Done when:** `java -version` reports 21, `docker info` succeeds, `node -v` is 22 or later, and `.env` exists (and is gitignored).
+    - context7 (up-to-date library docs) is already set up in `.mcp.json`; nothing to install.
+  - **Done when:** `java -version` reports 25, `docker info` succeeds, `node -v` is 22 or later, and `.env` exists (and is gitignored).
 
 - [ ] **1.3 Docker Compose: Postgres and SeaweedFS**
   - **Read:** TECH_STACK §1, D-03, D-04.
   - **Do:**
     - Root `docker-compose.yml` with two services:
       - `pgvector/pgvector:pg17` on 5432.
-      - SeaweedFS on S3 port 8333 and filer UI port 8888. Don't publish its internal 8080.
+      - SeaweedFS on S3 port 8333 and filer UI port 8888, with a pinned image tag. Don't publish its internal 8080.
     - Named volumes, health checks, and credentials from `.env`.
-    - Commit any SeaweedFS S3 identity config needed for local credentials. It holds dev-only values.
+    - SeaweedFS's S3 credentials come from environment variables mapped from `.env` (D-03). Commit no identity file.
   - **Done when:**
     - `docker compose up -d` shows both services healthy.
     - `psql` (or `docker compose exec postgres psql`) connects to database `memoirist`.
     - An S3 call with the `.env` credentials (for example, the `amazon/aws-cli` container with `--endpoint-url`) can create and list a bucket.
+    - The same call without signing (`--no-sign-request`) is rejected with `403`.
 
 ### Sprint 2: Backend foundation
 
 - [ ] **2.1 Spring Boot 4 project**
   - **Read:** TECH_STACK §2 (Layout), D-02, D-15.
   - **Do:**
-    - `/backend` with the Gradle wrapper and Kotlin DSL, a Java 21 toolchain, and Spring Boot 4.x (latest patch).
+    - `/backend` with the Gradle wrapper and Kotlin DSL, a Java 25 toolchain (and a Gradle version that supports Java 25), and Spring Boot 4.x (latest patch).
     - Starters: web, data-jpa, validation, actuator.
     - Libraries: Flyway (+ `flyway-database-postgresql`), PostgreSQL driver, springdoc-openapi (the Boot-4-compatible line), AWS SDK v2 `s3`.
     - Test dependencies: spring-boot-starter-test and Testcontainers (postgresql, junit-jupiter).
@@ -75,7 +76,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 - [ ] **2.3 V1 migration and local seed**
   - **Read:** DATABASE_SCHEMA (Phase 1 tables, V1 SQL, seed).
-  - **Do:** `db/migration/V1__core_schema.sql` and `db/seed-local/R__seed_dev_user.sql`, exactly as specified, including `media.purpose` (D-20), `entries.unlock_seen_at` (D-10), `entries.deleted_at` (D-30) and the 1900 date check (D-09). There's no week–Era table: Eras are worked out from their dates (D-22).
+  - **Do:** `db/migration/V1__core_schema.sql` and `db/seed-local/R__seed_dev_user.sql`, exactly as specified, including `users.birthday` and `entries.reply_to_entry_id` (D-33), `soundtrack` on `entries`, `weekly_logs` and `eras` (D-35), `eras.cover_media_id` (D-36), `media.purpose` (D-20), `entries.unlock_seen_at` (D-10), `entries.deleted_at` (D-30) and the 1900 date check (D-09). There's no week–Era table: Eras are worked out from their dates (D-22).
   - **Done when:** a Testcontainers test applies the migrations to an empty database and finds the dev user; local boot shows V1 in `flyway_schema_history`.
 
 - [ ] **2.4 Entities and repositories**
@@ -103,7 +104,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Done when:** tests cover `400` with `fieldErrors`, `404`, `409`, `413` and `500`.
 
 - [ ] **2.7 CI: backend**
-  - **Do:** `.github/workflows/ci.yml` with a backend job that runs `./gradlew build` on JDK 21 with Testcontainers.
+  - **Do:** `.github/workflows/ci.yml` with a backend job that runs `./gradlew build` on JDK 25 with Testcontainers.
   - **Done when:** the workflow passes on GitHub. If no remote exists yet, the YAML validates and the job's commands pass locally.
 
 ### Sprint 3: Phase 1 API
@@ -135,7 +136,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 - [ ] **3.5 Entries: create, read, update, delete, seal, redaction**
   - **Read:** D-05, D-08, D-09, D-10, D-12, D-30, API_CONTRACT §Entries.
-  - **Do:** `WeekCalendar` (the first day of the week is a parameter, D-08), `EntryContentValidator`, `ContentTextExtractor`, `EntryMapper` (the only Entry→DTO path), and `EntryService` seal rules.
+  - **Do:** `WeekCalendar` (weeks always start on Monday, D-08), `EntryContentValidator`, `ContentTextExtractor`, `EntryMapper` (the only Entry→DTO path), and `EntryService` seal rules.
   - **Done when:** tests prove:
     - an optional title is saved, and a blank title is `400`
     - the first entry of a week creates the week, and the second reuses it
@@ -364,7 +365,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 ## Phase 2: Online, with accounts
 
 ### Sprint 5
-**Decide first:** Q2 (auth details and the email service), Q3 (account export and deletion), Q4 (PDF library), Q5 (cold starts and background jobs), Q19 (share-link privacy), Q20 (storage and backups), Q21 (devices and sessions), Q22 (encryption wording) and Q27 (week start). Record each in DECISIONS.md.
+**Decide first:** Q2 (auth details and the email service), Q3 (account export and deletion), Q4 (PDF library), Q5 (cold starts and background jobs), Q19 (share-link privacy), Q20 (storage and backups), Q21 (devices and sessions) and Q22 (encryption wording). Record each in DECISIONS.md.
 
 - [ ] **5.1 Auth migration and JWT provider.** Apply the V{n} auth migration and add a JWT `CurrentUserProvider` for `prod`. **Done when:** controllers are unchanged; tests prove an unauthenticated request returns `401` and the dev header is ignored in `prod`.
 - [ ] **5.2 Register and login screens.**

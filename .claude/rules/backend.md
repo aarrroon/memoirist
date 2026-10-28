@@ -3,10 +3,10 @@ paths:
   - "backend/**"
 ---
 
-# Backend rules (Spring Boot 4, Java 21)
+# Backend rules (Spring Boot 4, Java 25)
 
 ## Structure
-- Organise by feature under `com.memoirist`: `common`, `user`, `era`, `template`, `tag`, `week`, `entry`, `media`, `storage`, and `dev` (sample content for the `local` profile only).
+- Organise by feature under `com.memoirist`: `common`, `user`, `era`, `template`, `tag`, `music`, `week`, `entry`, `media`, `storage`, and `dev` (sample content for the `local` profile only).
 - Each feature has `XController` (HTTP only), `XService` (transactions, ownership, rules), `XRepository`, entity `X`, `XMapper` and `dto/` records.
 - Controllers stay thin: no repository calls and no business rules.
 - Services are `@Transactional`; read paths use `@Transactional(readOnly = true)`.

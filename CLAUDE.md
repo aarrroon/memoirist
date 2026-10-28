@@ -21,7 +21,7 @@ A private journaling PWA: an Instagram-style feed of your own entries that files
 ## Repo layout
 | Path | What | Created in |
 |---|---|---|
-| `backend/` | Spring Boot 4 API, Java 21, Gradle Kotlin DSL, package `com.memoirist` | Sprint 2 |
+| `backend/` | Spring Boot 4 API, Java 25, Gradle Kotlin DSL, package `com.memoirist` | Sprint 2 |
 | `frontend/` | React 19 + Vite + TypeScript + Tailwind v4 | Sprint 4 |
 | `docker-compose.yml` | Postgres 17 (pgvector image) on :5432; SeaweedFS S3 on :8333 (filer UI :8888) | Sprint 1 (task 1.3) |
 | `docs/` | Specs (see doc map below) | — |

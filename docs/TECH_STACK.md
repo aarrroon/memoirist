@@ -6,7 +6,7 @@
 
 | Phase | Backend | Frontend | Infrastructure |
 |---|---|---|---|
-| 1. The core journal (local MVP) | Java 21, Spring Boot 4.x, Spring Web/Data JPA/Validation, Flyway, springdoc-openapi, AWS SDK v2 (S3), Actuator; Spotify's Web API for soundtrack search (D-35) | React 19, Vite, TypeScript, Tailwind v4, Motion, TipTap, TanStack Query, Zustand, React Router, Embla, openapi-fetch, shadcn/ui (Radix), Sonner, dnd-kit, Vaul, react-day-picker, browser-image-compression, yet-another-react-lightbox, react-error-boundary; `exifr` for photo dates once approved (D-34) | Docker Compose: Postgres 17 (pgvector image) and SeaweedFS |
+| 1. The core journal (local MVP) | Java 25, Spring Boot 4.x, Spring Web/Data JPA/Validation, Flyway, springdoc-openapi, AWS SDK v2 (S3), Actuator; Spotify's Web API for soundtrack search (D-35) | React 19, Vite, TypeScript, Tailwind v4, Motion, TipTap, TanStack Query, Zustand, React Router, Embla, openapi-fetch, shadcn/ui (Radix), Sonner, dnd-kit, Vaul, react-day-picker, browser-image-compression, yet-another-react-lightbox, react-error-boundary; `exifr` for photo dates once approved (D-34) | Docker Compose: Postgres 17 (pgvector image) and SeaweedFS |
 | 2. Online, with accounts | Spring Security (JWT), share links, unlock and yearly-letter emails, the app lock, product events | Auth screens, share view, `vite-plugin-pwa` (installable app), the lock screen | Vercel, Render, Neon (Postgres 17), Cloudflare R2, GitHub Actions |
 | 3. Memories with friends | A `group` package: membership check, invites, contributions. Reuses `EntryMapper` and the seal rules | Group screens, group feed | — |
 | 4. The AI biographer | Spring AI, pgvector (HNSW), Postgres full-text search, Spring events + `@Async`; one shared AI layer (D-21); a `TranscriptionProvider` for reading handwriting (7c); the shared trip story and the weekly email | Help me think, tag suggestions, Wrap up card, Era summaries and the closing ritual, Cast of Characters with friend profiles, friendship map, search, read-a-page review, shared story | AI providers (decided at Phase 4) |
@@ -18,7 +18,7 @@
 **Machine prerequisites**
 - Windows with Git Bash
 - Docker Desktop
-- JDK 21 (for example, Eclipse Temurin)
+- JDK 25 (for example, Eclipse Temurin 25)
 - Node 22 or later (Node 24 is installed)
 - IntelliJ IDEA or VS Code
 
@@ -32,7 +32,7 @@
 | Backend (Spring Boot) | 8080 | Swagger UI at `/swagger-ui.html`, OpenAPI at `/v3/api-docs`, health at `/actuator/health` |
 | Frontend (Vite) | 5173 | Proxies `/api` to `:8080`, so there's no CORS in development |
 
-Don't publish SeaweedFS's internal volume-server port to the host. It defaults to 8080 and clashes with the backend. Confirm the exact SeaweedFS flags for S3 credentials against the docs for the version you pin.
+Don't publish SeaweedFS's internal volume-server port to the host. It defaults to 8080 and clashes with the backend. SeaweedFS takes its S3 credentials from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, which Compose maps from `.env` (D-03). Pin the image tag, and confirm this against the docs for that version.
 
 ## 2. Backend (`/backend`)
 
@@ -75,7 +75,7 @@ Each feature folder contains:
   - `TimeZone.setDefault(UTC)` in `main`.
   - `spring.jpa.properties.hibernate.jdbc.time_zone=UTC`.
   - A `java.time.Clock` bean is injected wherever "now" or "today" matters, so seals and dates are testable.
-  - `WeekCalendar` converts a memory date into the first day of its week in the user's zone. The first day is a parameter, Monday for now (D-08, Q27).
+  - `WeekCalendar` converts a memory date into the first day of its week in the user's zone. The first day is always Monday, held as one constant (D-08).
 - **Schema:** Flyway only, with `ddl-auto=validate`. JSONB columns are mapped with `@JdbcTypeCode(SqlTypes.JSON)`. Entities with client-assignable IDs implement `Persistable<UUID>`.
 - **Current user:** `CurrentUserProvider.currentUserId()`.
   - Phase 1 implementation: `DevHeaderCurrentUserProvider` (`@Profile({"local","test"})`). It reads `X-Dev-User-Id` and defaults to `00000000-0000-0000-0000-000000000001`.

@@ -238,7 +238,7 @@ Status is **Proposed** until it's decided. Then it becomes **Accepted (D-xx)**, 
 | R-02 | An Era shows only the entries inside its dates | Q10, F-10, tasks 3.3, 8.5 | Accepted (D-22) |
 | R-03 | Recently deleted: a deleted entry can be restored for 30 days | D-10, F-09, V1, tasks 3.5, 3.6 | Accepted (D-30) |
 | R-04 | Keyword search over titles and captions | F-16, tasks 3.9, 4.11 | Deferred to Phase 3 (D-29) |
-| R-05 | Decide whether users can start their week on Sunday | D-08, task 3.5 | Deferred (Q27) |
+| R-05 | Decide whether users can start their week on Sunday | D-08, task 3.5 | Rejected: weeks always start on Monday (D-08) |
 
 ### Launch (Phase 2)
 | ID | Recommendation | Touches | Status |
@@ -330,5 +330,6 @@ Status is **Idea** until someone picks one up. Sizes run from S (small) to L (la
 
 ## Changelog
 - 2026-10-27 Review written.
+- 2026-10-28 R-05 rejected: Q27 answered, weeks always start on Monday (D-08).
 - 2026-10-28 Statuses set from the user's answers to the seven open problems and the new features (D-31 to D-39, and updates to D-06, D-17 and D-28). Day One import parked.
 - 2026-10-27 Statuses set from the README sync (D-10, D-19, D-28, D-29 and Q2–Q26) and the user's answers: Eras by dates only (D-22), Recently deleted (D-30), word search staying in Phase 3, and week start as Q27.
