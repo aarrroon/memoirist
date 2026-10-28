@@ -8,10 +8,15 @@
 <!-- TODO(human): replace the four example lines below with your own answers. -->
 
 
-- **Day job:** _e.g. backend engineer at …_
-- **Languages and tools I use at work:** _e.g. Java, Spring, SQL, AWS…_
-- **I want to get better at:** _e.g. reviewing pull requests, writing tests, database design, React…_
-- **Already comfortable with:** _so Claude doesn't over-explain_
+- **Day job:** Associate Software Engineer at National Australia Bank, focusing on full-stack development. Currently building an AI agent for a new project.
+- **Languages and tools I use at work:** Java (Spring Boot), React, TypeScript, PostgreSQL, Cursor AI, Docker, and Git. Currently adopting Python and Model Context Protocol (MCP) for the new agent project.
+- **I want to get better at:** 
+  - Raw syntax retention in Java, Python, and React/TypeScript (reducing reliance on AI tools like Cursor)
+  - Solution architecture and technical planning from the ground up
+  - Understanding the underlying "why" behind technical trade-offs and enterprise design decisions
+  - Reviewing pull requests effectively
+  - AI agent architecture and MCP integration
+- **Already comfortable with:** High-level React/TypeScript paradigms, standard full-stack development workflows, and AI-assisted coding.
 
 ## Skills tracker
 *Updated by `/log-learning`. Level: Seen (read or explained) → Tried (wrote it with help) → Can do (wrote it alone, or caught it in review).*
