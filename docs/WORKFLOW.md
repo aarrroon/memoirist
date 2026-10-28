@@ -138,7 +138,35 @@ There is **one living file per topic**, not a copy per phase.
 | `n.n` | Sprint task | SPRINT_PLAN.md |
 | `R-xx` | Recommendation from the feature review | product/FEATURE_REVIEW.md |
 
-## 5. Commits and milestones
+## 5. Overnight runs
+Several sprints can be built unattended, each as a stacked PR you review in the morning. The prompt is [prompts/overnight-phase-1.md](prompts/overnight-phase-1.md).
+
+**Checklist before you start it:**
+| # | Check |
+|---|---|
+| 1 | Working tree clean and pushed on `main` |
+| 2 | `java -version` reports 25 and `JAVA_HOME` points to JDK 25 (reopen the terminal and Claude Code after installing) |
+| 3 | Docker Desktop running, and set to start when you sign in |
+| 4 | `.env` exists |
+| 5 | GitHub CLI installed and logged in: `gh auth status` |
+| 6 | `/sprint-ready` run for each sprint in scope, with every question answered, so the run uses your answers rather than the defaults |
+| 7 | Windows sleep set to *Never* while plugged in |
+| 8 | In Claude Code: auto mode on, *continue when the usage limit resets* on, and `/output-style learn-later` |
+
+**How it behaves:**
+- One fresh agent per task, with the same gates as by hand: checks pass, `spec-reviewer` clean, docs synced, then a commit and push.
+- Branches: `phase-1` from `main`, then `phase-1/sprint-1`, `phase-1/sprint-2`… each from the one before. Each sprint's PR targets the previous sprint's branch, so its diff is only that sprint.
+- It never stops for a question or a failure (only for a failed preflight check). It uses the documented defaults, marks failing work `[needs-attention]` and opens that sprint's PR as a draft, and lists everything in `docs/OVERNIGHT_REPORT.md` and in its final message.
+- It never merges, never pushes to `main` and never force-pushes. Project settings allow pushes only to `phase-1*` branches.
+
+**In the morning:**
+1. Read the report: assumptions, needs-attention items, practice blocks.
+2. Review each sprint PR in order, ideally with `/review-with-me <branch>` and then `/log-learning`.
+3. Merge sprint 1 into `phase-1`, retarget sprint 2's PR to `phase-1` (`gh pr edit <n> --base phase-1`), and so on. When the phase is reviewed, open a PR from `phase-1` to `main`.
+4. Settle each assumption you disagree with using `/record-decision`, and ask Claude to apply it on the right branch.
+5. Switch back to the Learning style for daytime work: `/output-style learning`.
+
+## 6. Commits and milestones
 - Spec changes: `Spec P1-04: …`
 - One commit per task: `Sprint 3.5: …`
 - When a phase is finished: tag it (`phase-1-done`), and check that every spec section for that phase says **Built**.

@@ -23,6 +23,7 @@ The style lives in `.claude/settings.local.json` as `"outputStyle": "Learning"`.
 | `"Proactive"` | Starts work straight away and makes reasonable assumptions instead of asking | Routine work you'll correct if needed |
 | `"Explanatory"` | Does the task and adds short `★ Insight` blocks explaining *why* | You want the reasoning but not exercises today |
 | **`"Learning"`** *(current)* | Insights **plus** `TODO(human)` pieces: at real design decisions (error handling, data structures, business logic) it leaves a few lines for you, explains what to write and waits | Hands-on practice while the task still gets done |
+| `"learn-later"` *(this project's own style)* | **Never waits.** Writes complete, working code and marks one or two pieces per task as practice blocks: a `TODO(human) PRACTICE` question and hint, with the answer in a marked block (section 1b) | Overnight runs, or busy days when you want to practise afterwards |
 
 **Notes:**
 - Values are **case-sensitive** in the settings file: `"Learning"` works, `"learning"` silently falls back to the default.
@@ -36,6 +37,28 @@ The style lives in `.claude/settings.local.json` as `"outputStyle": "Learning"`.
 3. Claude reviews it in an `Insight`, fixes anything it must with your agreement, and carries on.
 
 If you decline the hands-on offer at the start of a task, Claude keeps the `TODO(human)` pieces to an occasional small one (rule in CLAUDE.md).
+
+### 1b. Practice blocks (learn-later)
+With `/output-style learn-later` (defined in `.claude/output-styles/learn-later.md`), Claude doesn't wait. It writes the real code and wraps the parts worth practising like this:
+
+```java
+// TODO(human) PRACTICE: Reject a memory date after today in the user's timezone.
+// Hint: "today" comes from the injected Clock in the user's zone, not the server's (D-07, D-09).
+// ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+LocalDate today = LocalDate.now(clock.withZone(zone));
+if (entryDate.isAfter(today)) {
+    throw new ValidationException("entryDate", "must not be after today");
+}
+// └── END ANSWER ▲ ──
+```
+
+**How to practise one:**
+1. Find them: `git grep -n "TODO(human) PRACTICE"`, or the list in each task summary and PR description.
+2. Fold or delete the lines between `┌── ANSWER ▼` and `└── END ANSWER ▲` (or cover them in your editor), and write your own version.
+3. Run the tests, then compare with the answer (`git diff` shows the difference if you deleted it).
+4. Restore the answer if yours was worse (`git checkout -- <file>`), or keep yours if the tests pass and it's better. Then `/log-learning`.
+
+The code always works with the answers in place, so nothing is blocked while you haven't practised yet. Once you've done a block, you can delete its marker lines and keep the code.
 
 ## 2. Choosing what to practise
 The hands-on offer picks from the task in front of you, guided by the **About me** section of [LEARNING_LOG.md](LEARNING_LOG.md). Fill that in once: your job, the languages and tools you use there, and what you want to get better at. Claude reads it to suggest pieces that transfer to your work, and reads past entries to avoid repeating topics and to revisit gaps.

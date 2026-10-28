@@ -98,6 +98,16 @@ Paste these into a new session. They live in [prompts/](prompts/).
 | Prompt | What it does | Start in |
 |---|---|---|
 | [split-into-features.md](prompts/split-into-features.md) | Checks the phases are in a buildable order, proposes features (`Pn-xx`), then writes the feature index and Phase 1 briefs after you approve | Plan mode |
+| [overnight-phase-1.md](prompts/overnight-phase-1.md) | Builds Sprints 1–3 unattended as a workflow (one fresh agent per task), one stacked PR per sprint, never stopping: it uses documented defaults and reports assumptions and problems at the end. Checklist in [WORKFLOW.md §5](WORKFLOW.md#5-overnight-runs) | Auto mode, `learn-later` style |
+
+## Output styles
+How much Claude teaches as it works. Switch with `/output-style <name>`; the values are explained in [LEARNING.md](LEARNING.md).
+
+| Style | Where it's defined | Use it for |
+|---|---|---|
+| `Learning` | Built in | Daytime work: Claude leaves `TODO(human)` pieces and waits for you |
+| `learn-later` | [.claude/output-styles/learn-later.md](../.claude/output-styles/learn-later.md) | Overnight or busy days: never waits; leaves practice blocks with the answer in a marked block |
+| `Explanatory`, `default` | Built in | Reasoning only, or no extra teaching |
 
 ## Useful built-in commands
 These come with Claude Code.

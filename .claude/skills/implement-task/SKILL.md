@@ -19,6 +19,7 @@ Task: **$ARGUMENTS**. If that is empty, use the first unchecked `- [ ]` task in 
 The user is building this project to grow as an engineer (`docs/LEARNING.md`).
 - Read the **About me** section and the newest entries of `docs/LEARNING_LOG.md`.
 - If the task has no code worth learning from (installs, config only), say so in one line and skip to step 3.
+- **Unattended (learn-later):** if the output style is `learn-later`, or the task runs in a workflow or the user said not to wait, don't ask. Pick one or two pieces yourself by the same criteria, write the real code, and mark it as a practice block (`TODO(human) PRACTICE` with the answer in a marked block) as `.claude/output-styles/learn-later.md` describes. Then go on to step 3 without waiting.
 - Otherwise ask with AskUserQuestion: *"Do you want to write part of this task yourself?"* Offer two pieces from **this** task plus *"Not this time"*:
   - one that **transfers to their job** (match the About me section), and
   - one that's a **pattern, idea or syntax they haven't seen** (check the log's skills tracker so you don't repeat one at *Can do*).

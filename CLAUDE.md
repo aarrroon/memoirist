@@ -82,6 +82,7 @@ The user wants to grow as an engineer while building this: better solution choic
 - When choosing between approaches, name the alternatives and why one wins, in a sentence or two.
 - The first time a pattern appears (records, `@Transactional`, TanStack Query…), explain it in one sentence.
 - After a task, suggest `/review-with-me`, then `/log-learning`.
+- **Unattended or `learn-later` style:** never wait for the user. Leave practice blocks (`TODO(human) PRACTICE` + the answer in a marked block) as `.claude/output-styles/learn-later.md` describes.
 
 ## Project tools
 The full toolkit, with when to use each, is in `docs/CURRENT_SKILLS.md`. When you add, remove or rename a skill, subagent, hook, rule or prompt, update that file in the same change.
