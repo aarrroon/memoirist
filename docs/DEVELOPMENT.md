@@ -115,5 +115,6 @@ Personal, uncommitted settings go in `.claude/settings.local.json` or `CLAUDE.lo
 | Backend fails "schema-validation: missing column" | Entity and migrations disagree. Add a migration; don't change `ddl-auto` |
 | Photos don't load after the tab sat open a while | Presigned links expire after 60 minutes; refocusing the tab refetches them. If they still fail, check SeaweedFS is running |
 | `./gradlew: Permission denied` or `bad interpreter` | Line endings: run `git add --renormalize .` (`.gitattributes` keeps `gradlew` as LF) |
+| `./gradlew` says `JAVA_HOME is set to an invalid directory`, or `./gradlew --version` shows a JVM other than 25 | The wrapper starts Gradle with `$JAVA_HOME/bin/java`; it uses `java` on `PATH` only when `JAVA_HOME` is unset. Point `JAVA_HOME` at the JDK 25 folder, then restart the terminal, your IDE and Claude Code, because a running program keeps the environment it started with. `echo $JAVA_HOME` should show the JDK 25 folder |
 | Tests hang or fail to start containers | Docker isn't running, or it's low on memory. Give Docker Desktop at least 4 GB |
 | Frontend types out of date | Start the backend, then `npm run gen:api` |

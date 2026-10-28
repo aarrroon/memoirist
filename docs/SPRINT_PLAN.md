@@ -29,7 +29,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 - [x] **1.1 Claude Code setup and specs in Markdown**
   - CLAUDE.md, `.claude/` (settings, rules, skills, migration-guard hook), `docs/*.md` converted from the Gemini drafts with D-01…D-18 applied, `.gitignore`, `.env.example`.
 
-- [ ] **1.2 Machine prerequisites**
+- [x] **1.2 Machine prerequisites**
   - **Do:**
     - Install JDK 25 (for example, Eclipse Temurin 25) and make sure `java` is on `PATH`.
     - Confirm Docker Desktop is running and Node is 22 or later.
