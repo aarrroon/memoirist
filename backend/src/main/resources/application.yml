@@ -1,0 +1,5 @@
+# Settings for every profile. Task 2.1 keeps this to the minimum;
+# task 2.2 adds the rest (docs/SPRINT_PLAN.md, docs/TECH_STACK.md §2 Profiles).
+spring:
+  application:
+    name: memoirist

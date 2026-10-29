@@ -14,7 +14,7 @@ A private journaling PWA: an Instagram-style feed of your own entries that files
 - If they disagree, stop and ask the user. Record the answer with `/record-decision`, and edit the README only with the user's approval.
 
 ## Current focus
-**Phase 1, Sprint 2. Next task: 2.1** (Spring Boot 4 project).
+**Phase 1, Sprint 2. Next task: 2.2** (Configuration and profiles).
 - Progress is tracked by the checkboxes in `docs/SPRINT_PLAN.md`. Update this line when a task is ticked; a Stop hook checks it.
 - Build only what the current phase needs. Don't add tables, endpoints or libraries from later phases.
 

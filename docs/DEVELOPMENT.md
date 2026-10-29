@@ -2,7 +2,7 @@
 
 > Setup and day-to-day commands for working on memoirist. For what the app is, see the [README](../README.md). For how it's built, see [TECH_STACK.md](TECH_STACK.md).
 >
-> **Status:** `docker-compose.yml` exists (task 1.3). The backend (`backend/`) and frontend (`frontend/`) don't exist yet. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
+> **Status:** `docker-compose.yml` (task 1.3) and the backend project (`backend/`, task 2.1) exist. The backend starts and answers its health check, but it has no API endpoints or tables yet. The frontend (`frontend/`) doesn't exist yet. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
 
 ## 1. Prerequisites
 
@@ -15,7 +15,7 @@
 | Editor | — | — | IntelliJ IDEA (backend) and/or VS Code |
 | Claude Code | latest | — | Optional, but the repo is set up for it (section 6) |
 
-You don't need to install Gradle: the project ships the Gradle wrapper (`./gradlew`).
+You don't need to install Gradle: the project ships the Gradle wrapper (`backend/gradlew`). The first `./gradlew` command downloads Gradle itself, checks it against the SHA-256 in `gradle/wrapper/gradle-wrapper.properties`, and then downloads the dependencies, so allow a few minutes. Gradle compiles and tests on JDK 25 (a Gradle toolchain), but the wrapper itself starts with `$JAVA_HOME`, or with `java` on `PATH` when `JAVA_HOME` isn't set (section 7).
 
 ## 2. First-time setup
 
@@ -77,6 +77,10 @@ cd backend
 ./gradlew build                                             # compile, format check, test
 ```
 
+- `bootRun` with the `local` profile reads `../.env`, so run it from `backend/`. It's ready when the log says `Started MemoiristApplication` (about 30 seconds); then http://localhost:8080/actuator/health says `UP`. Stop it with Ctrl+C.
+- `./gradlew build` fails when a Java file isn't formatted (`spotlessCheck`); `./gradlew spotlessApply` fixes it. The formatter is palantir-java-format: 4-space indents, 120 columns.
+- Tests print each result as `PASSED` or `FAILED`; the full report is `build/reports/tests/test/index.html`. Each test run starts its own Postgres container (`pgvector/pgvector:pg17`) and leaves the Compose database alone.
+
 ### Frontend (task 4.1)
 ```bash
 cd frontend
@@ -118,6 +122,8 @@ Personal, uncommitted settings go in `.claude/settings.local.json` or `CLAUDE.lo
 |---|---|
 | `failed to connect to the docker API` | Docker Desktop isn't running. Start it and wait until it says it's running |
 | Port 5432, 8333, 8888, 8080 or 5173 already in use | Another Postgres, app or Compose project (check `docker ps`) is using it. Stop it, or find it with `netstat -ano \| findstr :5432` |
+| Port 8080 still answers after you closed the terminal that ran `./gradlew bootRun` | The app runs in its own Java process, started by the Gradle daemon, so closing or killing the terminal can leave it running. Find its PID with `netstat -ano \| findstr :8080`, then `taskkill //PID <pid> //F` in Git Bash (`taskkill /PID <pid> /F` in cmd). Next time, stop it with Ctrl+C in that terminal |
+| The backend fails to start with `'url' must start with "jdbc"` (`local` profile) | `.env` wasn't loaded. The `local` profile reads `../.env` relative to the working directory, so start it from `backend/` (an IDE run configuration needs `backend/` as its working directory), and check that `.env` has `DB_URL`. Spring Boot leaves a placeholder it can't resolve, such as `${DB_URL}`, as literal text, so the error names the URL rather than the missing variable |
 | `docker compose` says `required variable POSTGRES_PASSWORD is missing a value` (or another variable) | `.env` is missing, or it lacks that variable or leaves it empty. Copy `.env.example` to `.env`, or add the line. Compose requires all five variables it uses, so that SeaweedFS never starts without its keys (D-03) |
 | `password authentication failed`, or a role or database that `does not exist`, after you changed `POSTGRES_USER`, `POSTGRES_PASSWORD` or `POSTGRES_DB` in `.env` | Postgres applies them only when its volume is first created. Put the old values back, or change the database to match (for a new password: `docker compose exec postgres psql`, then `\password <user>`), or start again with `docker compose down -v`, which deletes all local data |
 | `docker compose exec postgres psql` says `the input device is not a TTY` | Git Bash's own window (mintty) isn't a Windows console. Prefix the command with `winpty`, or use Windows Terminal. For a one-off query, `docker compose exec -T postgres psql -c 'select 1'` needs no terminal |
@@ -125,7 +131,9 @@ Personal, uncommitted settings go in `.claude/settings.local.json` or `CLAUDE.lo
 | Backend fails with a Flyway checksum error | A committed migration was changed. Revert it and add a new migration instead. Last resort for local data only: `docker compose down -v` |
 | Backend fails "schema-validation: missing column" | Entity and migrations disagree. Add a migration; don't change `ddl-auto` |
 | Photos don't load after the tab sat open a while | Presigned links expire after 60 minutes; refocusing the tab refetches them. If they still fail, check SeaweedFS is running |
-| `./gradlew: Permission denied` or `bad interpreter` | Line endings: run `git add --renormalize .` (`.gitattributes` keeps `gradlew` as LF) |
+| `./gradlew: Permission denied` | `gradlew` lost its executable bit (Git on Windows doesn't track it unless told to). Run `chmod +x gradlew` locally; to fix it for everyone, `git update-index --chmod=+x backend/gradlew` and commit |
+| `./gradlew: /bin/sh^M: bad interpreter` | Line endings: run `git add --renormalize .` (`.gitattributes` keeps `gradlew` as LF) |
+| `spotlessCheck` fails, and its diff shows every line changing from `\n` to `\r\n` | Spotless follows git's line-ending rules. With `core.autocrlf=true` (Git for Windows' default) git checks text files out with CRLF, so Spotless expects CRLF too, and a file saved with LF fails. Run `./gradlew spotlessApply`; git still stores the file with LF |
 | `./gradlew` says `JAVA_HOME is set to an invalid directory`, or `./gradlew --version` shows a JVM other than 25 | The wrapper starts Gradle with `$JAVA_HOME/bin/java`; it uses `java` on `PATH` only when `JAVA_HOME` is unset. Point `JAVA_HOME` at the JDK 25 folder, then restart the terminal, your IDE and Claude Code, because a running program keeps the environment it started with. `echo $JAVA_HOME` should show the JDK 25 folder |
 | Tests hang or fail to start containers | Docker isn't running, or it's low on memory. Give Docker Desktop at least 4 GB |
 | Frontend types out of date | Start the backend, then `npm run gen:api` |

@@ -21,7 +21,7 @@ Settled choices for memoirist, and the questions still open.
 | D-11 | Ownership checks and local-only dev user | 2026-10-25 | |
 | D-12 | Clients may generate entity UUIDs | 2026-10-25 | 2026-10-29 |
 | D-13 | Frontend library set | 2026-10-25 | 2026-10-28 |
-| D-14 | Testing and CI approach | 2026-10-25 | |
+| D-14 | Testing and CI approach | 2026-10-25 | 2026-10-29 |
 | D-15 | Backend code style | 2026-10-25 | |
 | D-16 | Flyway migration rules | 2026-10-25 | |
 | D-17 | Media types and limits | 2026-10-25 | 2026-10-28 |
@@ -183,7 +183,7 @@ React 19, Vite, TypeScript, Tailwind CSS v4, Motion (`motion` package), TipTap, 
 These were chosen during setup as sensible defaults. Change them freely, but record the change here. Pin exact versions when scaffolding (task 4.1) and check current docs, since several have had recent major releases.
 
 ## D-14 Testing and CI
-- **Backend:** JUnit 5 + Testcontainers against real Postgres (`pgvector/pgvector:pg17`) and SeaweedFS. No H2, because it can't emulate JSONB, `TIMESTAMPTZ` behaviour or deferrable constraints.
+- **Backend:** JUnit (Jupiter 6, the version Spring Boot 4 manages) + Testcontainers against real Postgres (`pgvector/pgvector:pg17`) and SeaweedFS. No H2, because it can't emulate JSONB, `TIMESTAMPTZ` behaviour or deferrable constraints.
 - **Frontend:** Vitest + React Testing Library + MSW. Playwright covers a few end-to-end flows from Sprint 4.
 - **CI:** GitHub Actions runs backend tests from Sprint 2 and frontend checks from Sprint 4.
 - Tests are written with each task, not saved for the end of a sprint.

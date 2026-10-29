@@ -53,7 +53,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 ### Sprint 2: Backend foundation
 
-- [ ] **2.1 Spring Boot 4 project**
+- [x] **2.1 Spring Boot 4 project**
   - **Read:** TECH_STACK §2 (Layout), D-02, D-15.
   - **Do:**
     - `/backend` with the Gradle wrapper and Kotlin DSL, a Java 25 toolchain (and a Gradle version that supports Java 25), and Spring Boot 4.x (latest patch).

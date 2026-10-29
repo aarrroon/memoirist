@@ -67,6 +67,15 @@ Each feature folder contains:
 - `XMapper`.
 - `dto/`: Java records.
 
+### Build (task 2.1)
+Exact versions are pinned in `backend/build.gradle.kts`, and Gradle's own in `backend/gradle/wrapper/gradle-wrapper.properties`. What's there, and why:
+- **Gradle wrapper** 9.x (Java 25 needs Gradle 9.1.0 or later), with `distributionSha256Sum`, so the wrapper checks the Gradle zip it downloads. A Java toolchain compiles and runs the tests on JDK 25, whichever JDK starts Gradle (D-02).
+- **Spring Boot 4** with the `io.spring.dependency-management` plugin, which applies Boot's BOM. Boot 4 has one starter per technology: `spring-boot-starter-webmvc` (Boot 3's `-web`), `-data-jpa`, `-validation`, `-actuator` and `-flyway`, plus `flyway-database-postgresql`. Flyway runs only with `spring-boot-starter-flyway`: `flyway-core` on its own no longer turns on its auto-configuration.
+- **springdoc-openapi 3.x**, the line for Boot 4. **AWS SDK v2** `s3`, versioned by the SDK's own BOM, because Boot doesn't manage it.
+- **Tests:** one `spring-boot-starter-<technology>-test` per starter; each brings `spring-boot-starter-test` (JUnit 6, AssertJ, Mockito) and that technology's test support (`@WebMvcTest`, `@DataJpaTest`, `RestTestClient`, …). Testcontainers 2 (`testcontainers-postgresql`, `testcontainers-junit-jupiter`): its `org.testcontainers.postgresql.PostgreSQLContainer` accepts `pgvector/pgvector` images as they are. Mockito is loaded as a Java agent when the test JVM starts, because since Java 21 the JDK warns when a library attaches one itself, and a future release will refuse it (JEP 451).
+- **Spotless** with a pinned palantir-java-format: `./gradlew build` runs `spotlessCheck`, and `./gradlew spotlessApply` fixes the formatting.
+- **Two Jacksons:** springdoc's swagger-core puts Jackson 2 (`com.fasterxml.jackson.databind`) on the classpath. The app's JSON is Jackson 3 (`tools.jackson.databind`; the annotations stay in `com.fasterxml.jackson.annotation`), so import Jackson 3 types.
+
 ### Profiles
 | Profile | Used for | Notable settings |
 |---|---|---|
