@@ -13,7 +13,7 @@
 
 | Sprint | Overview | Tasks |
 |---|---|---|
-| 1. Setup and local infrastructure | *(written during the build)* | |
+| 1. Setup and local infrastructure | [Overview](sprint-1/README.md) | [1.2 Machine prerequisites](sprint-1/1.2-machine-prerequisites.md), [1.3 Docker Compose: Postgres and SeaweedFS](sprint-1/1.3-docker-compose.md) (1.1 came before the journal) |
 | 2. Backend foundation | | |
 | 3. Phase 1 API | | |
 

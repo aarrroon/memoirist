@@ -2,7 +2,7 @@
 
 > Setup and day-to-day commands for working on memoirist. For what the app is, see the [README](../README.md). For how it's built, see [TECH_STACK.md](TECH_STACK.md).
 >
-> **Status:** the backend (`backend/`), frontend (`frontend/`) and `docker-compose.yml` don't exist yet. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
+> **Status:** `docker-compose.yml` exists (task 1.3). The backend (`backend/`) and frontend (`frontend/`) don't exist yet. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
 
 ## 1. Prerequisites
 
@@ -45,20 +45,27 @@ Open http://localhost:5173. In Phase 1 there's no login; you're the seeded dev u
 | Swagger UI | http://localhost:8080/swagger-ui.html | Try every endpoint in the browser |
 | OpenAPI JSON | http://localhost:8080/v3/api-docs | Source for `npm run gen:api` |
 | Health | http://localhost:8080/actuator/health | Should say `UP` |
-| Postgres | `localhost:5432`, database `memoirist` | Credentials in `.env` |
-| SeaweedFS S3 | http://localhost:8333 | Bucket `memoirist-media`, created at backend startup |
-| SeaweedFS file browser | http://localhost:8888 | See uploaded files |
+| Postgres | `localhost:5432`, database `memoirist` | Credentials in `.env`. `docker compose exec postgres psql` opens a SQL shell |
+| SeaweedFS S3 | http://localhost:8333 | Bucket `memoirist-media`, created at backend startup. Requests must be signed with the `.env` keys; unsigned ones get `403` |
+| SeaweedFS file browser | http://localhost:8888 | See uploaded files. It has **no login**: anyone who can reach it can read, add and delete files |
+
+Compose publishes Postgres and SeaweedFS on `127.0.0.1` only, so other machines on your network can't reach them. That matters most for the file browser.
 
 ## 4. Everyday commands
 
 ### Data services (task 1.3)
 ```bash
-docker compose up -d          # start
+docker compose up -d          # start; both are "healthy" in docker compose ps within about 10 seconds
 docker compose ps             # status
+docker compose exec postgres psql   # SQL shell in the memoirist database (\q to quit)
 docker compose logs -f        # follow logs (Ctrl+C to stop following)
-docker compose stop           # stop, keeping data
+docker compose stop           # stop, keeping data (SeaweedFS takes about 17 seconds to stop cleanly)
 docker compose down -v        # DELETE all local data (database and uploads)
 ```
+
+- Data lives in two named volumes, `memoirist_postgres-data` and `memoirist_seaweedfs-data`, so it survives `stop`, restarts and recreated containers. Only `down -v` deletes it.
+- The services don't restart on their own (no restart policy): after a reboot or a Docker Desktop restart, run `docker compose up -d` again.
+- SeaweedFS's image tag is pinned; [DECISIONS.md D-03](DECISIONS.md#d-03-object-storage-seaweedfs-locally-cloudflare-r2-in-production) (Version) names it and says why. When it starts, its log prints the S3 access key ID, never the secret key; trim that line before you share its logs.
 
 ### Backend (task 2.1)
 ```bash
@@ -110,10 +117,15 @@ Personal, uncommitted settings go in `.claude/settings.local.json` or `CLAUDE.lo
 | Problem | Likely cause and fix |
 |---|---|
 | `failed to connect to the docker API` | Docker Desktop isn't running. Start it and wait until it says it's running |
-| Port 5432, 8080 or 5173 already in use | Another Postgres or app is running. Stop it, or find it with `netstat -ano \| findstr :5432` |
+| Port 5432, 8333, 8888, 8080 or 5173 already in use | Another Postgres, app or Compose project (check `docker ps`) is using it. Stop it, or find it with `netstat -ano \| findstr :5432` |
+| `docker compose` says `required variable POSTGRES_PASSWORD is missing a value` (or another variable) | `.env` is missing, or it lacks that variable or leaves it empty. Copy `.env.example` to `.env`, or add the line. Compose requires all five variables it uses, so that SeaweedFS never starts without its keys (D-03) |
+| `password authentication failed`, or a role or database that `does not exist`, after you changed `POSTGRES_USER`, `POSTGRES_PASSWORD` or `POSTGRES_DB` in `.env` | Postgres applies them only when its volume is first created. Put the old values back, or change the database to match (for a new password: `docker compose exec postgres psql`, then `\password <user>`), or start again with `docker compose down -v`, which deletes all local data |
+| `docker compose exec postgres psql` says `the input device is not a TTY` | Git Bash's own window (mintty) isn't a Windows console. Prefix the command with `winpty`, or use Windows Terminal. For a one-off query, `docker compose exec -T postgres psql -c 'select 1'` needs no terminal |
+| S3 calls fail with `InvalidAccessKeyId` or `SignatureDoesNotMatch` | The client's keys differ from SeaweedFS's. SeaweedFS reads them from `.env` when its container is created: after editing `.env`, run `docker compose up -d`, which recreates it with the new keys (the old ones stop working), and restart the backend if it's running, so both sides use the new keys |
 | Backend fails with a Flyway checksum error | A committed migration was changed. Revert it and add a new migration instead. Last resort for local data only: `docker compose down -v` |
 | Backend fails "schema-validation: missing column" | Entity and migrations disagree. Add a migration; don't change `ddl-auto` |
 | Photos don't load after the tab sat open a while | Presigned links expire after 60 minutes; refocusing the tab refetches them. If they still fail, check SeaweedFS is running |
 | `./gradlew: Permission denied` or `bad interpreter` | Line endings: run `git add --renormalize .` (`.gitattributes` keeps `gradlew` as LF) |
+| `./gradlew` says `JAVA_HOME is set to an invalid directory`, or `./gradlew --version` shows a JVM other than 25 | The wrapper starts Gradle with `$JAVA_HOME/bin/java`; it uses `java` on `PATH` only when `JAVA_HOME` is unset. Point `JAVA_HOME` at the JDK 25 folder, then restart the terminal, your IDE and Claude Code, because a running program keeps the environment it started with. `echo $JAVA_HOME` should show the JDK 25 folder |
 | Tests hang or fail to start containers | Docker isn't running, or it's low on memory. Give Docker Desktop at least 4 GB |
 | Frontend types out of date | Start the backend, then `npm run gen:api` |
