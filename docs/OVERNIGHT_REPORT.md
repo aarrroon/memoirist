@@ -48,7 +48,7 @@
 ## Pull requests
 | Sprint | Branch | Base | PR | State |
 |---|---|---|---|---|
-| 1. Setup and local infrastructure | `phase-1-sprint-1` | `phase-1` | | |
+| 1. Setup and local infrastructure | `phase-1-sprint-1` | `phase-1` | [#1](https://github.com/aarrroon/memoirist/pull/1) | Ready for review (not a draft). Its GitGuardian check fails on a false positive, see *Needs attention* |
 | 2. Backend foundation | `phase-1-sprint-2` | `phase-1-sprint-1` | | |
 | 3. Phase 1 API | `phase-1-sprint-3` | `phase-1-sprint-2` | | |
 
@@ -69,6 +69,7 @@ Made instead of asking, each from a documented default or the doc that wins (D-2
 | 10 | 1.3 | DATABASE_SCHEMA.md Conventions; SPRINT_PLAN 2.3; the run brief (SQL edits only on failure) | V1's two inline `UNIQUE` constraints keep Postgres's default names (`users_email_key`, `media_object_key_key`), not `uq_<table>_<cols>`. Task 2.3 copies V1 as written, so once it's committed a rename needs a V2 migration |
 
 ## Needs attention
+- **GitGuardian fails on PR #1, a false positive** (Sprint 1 close-out). Its *Security Checks* flag `docker-compose.yml` line 15 (commit `3447288`) as a "Generic Password", but the line is `POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}`, a Compose placeholder that reads the value from `.env`. No password is in the repo, and `.env` was never committed. **Fix:** in GitGuardian's dashboard, resolve incident 39228980 as a false positive, then re-run the check. Later PRs may be flagged the same way wherever a password is read from `.env` by name; GitGuardian's ignore settings can stop that, which is your call.
 - **`JAVA_HOME` is stale in Claude Code, not wrong in Windows** (task 1.2, [journal §8](build-journal/sprint-1/1.2-machine-prerequisites.md#8-what-went-wrong)). This session inherited `JAVA_HOME` = `C:\Users\<you>\…\jdk-22`, a folder that no longer exists, so `./gradlew` would stop with `JAVA_HOME is set to an invalid directory`. Windows' saved (Machine) value is already `C:\Program Files\Eclipse Adoptium\jdk-25.0.5.8-hotspot\`; Claude Code was started before it changed and kept the old copy. **Fix:** quit Claude Code completely, reopen it and check `echo $JAVA_HOME`; if it's still old, sign out of Windows and back in. No variable needs changing. Until then the run sets `JAVA_HOME` to JDK 25 in each Gradle command, and WORKFLOW.md §5 check 2 doesn't pass.
 - **Leftover `PATH` entry** (task 1.2): the machine `PATH` still lists the missing `jdk-22\bin` folder. Harmless (it sits after JDK 25's), but you could remove it in System variables → Path.
 - **For task 2.1** (task 1.2, via context7): Java 25 needs Gradle 9.1.0 or later, both to run Gradle and as a toolchain. Use the Testcontainers version Spring Boot manages; the Docker engine accepts API 1.40 or newer. A Java toolchain (and possibly Daemon JVM criteria) lets the build pick its own JDK instead of relying on `JAVA_HOME`, although the wrapper still needs a valid `JAVA_HOME` (or `java` on `PATH`) to start; `./gradlew -q javaToolchains` lists the JDKs Gradle finds.
