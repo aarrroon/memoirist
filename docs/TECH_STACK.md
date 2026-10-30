@@ -83,13 +83,20 @@ Exact versions are pinned in `backend/build.gradle.kts`, and Gradle's own in `ba
 | `test` | Testcontainers integration tests | Same Flyway locations as `local`; dev-header provider |
 | `prod` | Phase 2 deployment | Flyway `db/migration` only; JWT provider; R2 settings from the environment |
 
+**Where a setting lives (task 2.2):**
+- `application.yml` holds what is true in every profile (JPA, multipart, the Flyway schema location), and names the environment variables the app reads (`DB_URL`, `POSTGRES_USER`, `POSTGRES_PASSWORD` and the `STORAGE_*` set). Each is written `${VAR:}`, with an empty default: a missing variable then fails at startup with the property's name. Without the `:`, Spring Boot keeps the text `${VAR}` as the value, and it passes a not-blank check.
+- `application-local.yml` says where those variables come from on your machine (`../.env`, via `optional:file:../.env[.properties]`) and adds `db/seed-local` to Flyway.
+- `src/test/resources/application-test.yml` holds the test values. It stays out of the app's jar. The database comes from Testcontainers, so it sets no datasource.
+- `prod` (Phase 2) then needs no mapping: its environment provides the same variable names.
+- **Precedence**, highest first: command-line arguments, Java system properties (`-D`), the OS environment, `.env`, the profile file, `application.yml`. A list such as `spring.flyway.locations` is replaced by the profile's, never merged with the shorter list below it.
+
 ### Cross-cutting rules (details in `.claude/rules/`)
 - **Time:**
-  - `TimeZone.setDefault(UTC)` in `main`.
+  - `TimeZone.setDefault(UTC)` is the first line of `main`. The Gradle test JVM starts in UTC too (`-Duser.timezone=UTC`), so tests run as production does, on any machine. `MemoiristApplicationTest` checks `main` itself from another zone.
   - `spring.jpa.properties.hibernate.jdbc.time_zone=UTC`.
-  - A `java.time.Clock` bean is injected wherever "now" or "today" matters, so seals and dates are testable.
+  - A `java.time.Clock` bean (`common/ClockConfig`, `Clock.systemUTC()`) is injected wherever "now" or "today" matters, so seals and dates are testable. Its zone is UTC, not the JVM's; "today" for a user is `LocalDate.now(clock.withZone(userZone))`.
   - `WeekCalendar` converts a memory date into the first day of its week in the user's zone. The first day is always Monday, held as one constant (D-08).
-- **Schema:** Flyway only, with `ddl-auto=validate`. JSONB columns are mapped with `@JdbcTypeCode(SqlTypes.JSON)`. Entities with client-assignable IDs implement `Persistable<UUID>`.
+- **Schema:** Flyway only, with `ddl-auto=validate` in every profile (D-16). JSONB columns are mapped with `@JdbcTypeCode(SqlTypes.JSON)`. Entities with client-assignable IDs implement `Persistable<UUID>`.
 - **Current user:** `CurrentUserProvider.currentUserId()`.
   - Phase 1 implementation: `DevHeaderCurrentUserProvider` (`@Profile({"local","test"})`). It reads `X-Dev-User-Id` and defaults to `00000000-0000-0000-0000-000000000001`.
   - Phase 2 adds a JWT-backed implementation for `prod`.
@@ -97,6 +104,8 @@ Exact versions are pinned in `backend/build.gradle.kts`, and Gradle's own in `ba
 - **Errors:** one `@RestControllerAdvice` returns RFC 9457 `ProblemDetail` (the successor to RFC 7807) with the types in API_CONTRACT.md.
 - **OpenAPI:** springdoc, with tags per resource ("Entries", "Eras", …).
 - **Multipart limits:** `spring.servlet.multipart.max-file-size=25MB`, `max-request-size=30MB`. Spring's default of 1 MB would reject phone photos.
+- **Open session in view is off** (`spring.jpa.open-in-view=false`). Spring Boot leaves it on by default, which keeps a database connection open until the response is written and lets a controller trigger lazy-loading queries. With it off, an entity is read only inside its service's transaction, and the service maps it to a DTO there (`EntryMapper` for entries, so a sealed Loot Drop never reaches the controller as an entity); a lazy field touched outside the transaction fails loudly instead of running another query.
+- **Configuration is typed and checked at startup:** settings with several values are `@ConfigurationProperties` records (not `@Value`), scanned by `@ConfigurationPropertiesScan` on `MemoiristApplication` and annotated `@Validated`, so a missing or wrong value stops the app with a message naming the property, its value and where it came from. `StorageProperties` (below) is the first.
 
 ### Entries, content and Loot Drops
 - **Content:** `EntryContentValidator` checks the TipTap JSON against an allow-list and the 200 KB cap. `ContentTextExtractor` walks the JSON and produces `content_text` and `preview_line` (the first non-empty line that isn't a heading, or the first heading if there's nothing else, D-24).
@@ -128,6 +137,7 @@ Exact versions are pinned in `backend/build.gradle.kts`, and Gradle's own in `ba
 - **Path-style access:** on for SeaweedFS (`forcePathStyle(true)`). R2 uses `https://<account-id>.r2.cloudflarestorage.com` with region `auto`.
 - **Database:** stores only `object_key = users/{userId}/entries/{entryId}/{mediaId}.{ext}`. Never a URL or host.
 - **Presigned GET URLs:** last 60 minutes and are generated when mapping media. The frontend refetches before they expire.
+- **`StorageProperties`** (`storage.*`, task 2.2) is a validated record: `endpoint` and `publicEndpoint` (URIs), `region`, `bucket` (S3's naming rules), `accessKey`, `secretKey`, `pathStyle` and `presignTtl` (an ISO-8601 duration, 1 to 60 minutes, so a typo such as `PT60H` stops the app). All eight are required. Its `toString()` masks the secret key. The local and test values come from `.env` and `application-test.yml`. Validation checks that `publicEndpoint` parses as a URI, not that it has a scheme: `localhost:8333` passes.
 - **Upload flow:**
   1. Validate type and size.
   2. Put the object.

@@ -2,7 +2,7 @@
 
 > Setup and day-to-day commands for working on memoirist. For what the app is, see the [README](../README.md). For how it's built, see [TECH_STACK.md](TECH_STACK.md).
 >
-> **Status:** `docker-compose.yml` (task 1.3) and the backend project (`backend/`, task 2.1) exist. The backend starts and answers its health check, but it has no API endpoints or tables yet. The frontend (`frontend/`) doesn't exist yet. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
+> **Status:** `docker-compose.yml` (task 1.3) and the backend project (`backend/`, tasks 2.1 and 2.2) exist. The backend reads its configuration (`local` and `test` profiles) and answers its health check, but it has no API endpoints or tables yet. The frontend (`frontend/`) doesn't exist yet. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
 
 ## 1. Prerequisites
 
@@ -67,7 +67,7 @@ docker compose down -v        # DELETE all local data (database and uploads)
 - The services don't restart on their own (no restart policy): after a reboot or a Docker Desktop restart, run `docker compose up -d` again.
 - SeaweedFS's image tag is pinned; [DECISIONS.md D-03](DECISIONS.md#d-03-object-storage-seaweedfs-locally-cloudflare-r2-in-production) (Version) names it and says why. When it starts, its log prints the S3 access key ID, never the secret key; trim that line before you share its logs.
 
-### Backend (task 2.1)
+### Backend (tasks 2.1 and 2.2)
 ```bash
 cd backend
 ./gradlew bootRun --args='--spring.profiles.active=local'   # run the API
@@ -77,9 +77,11 @@ cd backend
 ./gradlew build                                             # compile, format check, test
 ```
 
-- `bootRun` with the `local` profile reads `../.env`, so run it from `backend/`. It's ready when the log says `Started MemoiristApplication` (about 30 seconds); then http://localhost:8080/actuator/health says `UP`. Stop it with Ctrl+C.
+- `bootRun` with the `local` profile reads `../.env`, so run it from `backend/`. It's ready when the log says `Started MemoiristApplication` (about 20 seconds); then http://localhost:8080/actuator/health says `UP`. Stop it with Ctrl+C.
+- Settings come from several places. From highest to lowest: command-line arguments, Java system properties (`-D`), the OS environment, `.env`, then the profile file (`application-local.yml`) and `application.yml`. So `STORAGE_PRESIGN_TTL=PT30M ./gradlew bootRun ...` overrides `.env` for one run without editing it. [TECH_STACK §2](TECH_STACK.md#profiles) says which file holds what.
+- The app and the tests run in UTC. Log lines end in `Z` whatever your machine's zone is; add 10 hours (11 in daylight saving time) for Melbourne time.
 - `./gradlew build` fails when a Java file isn't formatted (`spotlessCheck`); `./gradlew spotlessApply` fixes it. The formatter is palantir-java-format: 4-space indents, 120 columns.
-- Tests print each result as `PASSED` or `FAILED`; the full report is `build/reports/tests/test/index.html`. Each test run starts its own Postgres container (`pgvector/pgvector:pg17`) and leaves the Compose database alone.
+- Tests print each result as `PASSED` or `FAILED`; the full report is `build/reports/tests/test/index.html`. Each test run starts its own Postgres container (`pgvector/pgvector:pg17`) and leaves the Compose database alone. Integration tests use the `@IntegrationTest` annotation, which gives them the `test` profile and one shared app and container per run, so each extra test class costs milliseconds, not another 30-second start.
 
 ### Frontend (task 4.1)
 ```bash
@@ -123,7 +125,8 @@ Personal, uncommitted settings go in `.claude/settings.local.json` or `CLAUDE.lo
 | `failed to connect to the docker API` | Docker Desktop isn't running. Start it and wait until it says it's running |
 | Port 5432, 8333, 8888, 8080 or 5173 already in use | Another Postgres, app or Compose project (check `docker ps`) is using it. Stop it, or find it with `netstat -ano \| findstr :5432` |
 | Port 8080 still answers after you closed the terminal that ran `./gradlew bootRun` | The app runs in its own Java process, started by the Gradle daemon, so closing or killing the terminal can leave it running. Find its PID with `netstat -ano \| findstr :8080`, then `taskkill //PID <pid> //F` in Git Bash (`taskkill /PID <pid> /F` in cmd). Next time, stop it with Ctrl+C in that terminal |
-| The backend fails to start with `'url' must start with "jdbc"` (`local` profile) | `.env` wasn't loaded. The `local` profile reads `../.env` relative to the working directory, so start it from `backend/` (an IDE run configuration needs `backend/` as its working directory), and check that `.env` has `DB_URL`. Spring Boot leaves a placeholder it can't resolve, such as `${DB_URL}`, as literal text, so the error names the URL rather than the missing variable |
+| The backend fails to start with `Failed to configure a DataSource: 'url' attribute is not specified` (`local` profile) | `.env` wasn't loaded. The `local` profile reads `../.env` relative to the working directory, so start it from `backend/` (an IDE run configuration needs `backend/` as its working directory), and check that `.env` has `DB_URL`. A missing `.env` is skipped without a warning (`optional:`, TECH_STACK §1), so the first sign is the first missing setting. `application.yml` gives an unset variable an empty value (`${DB_URL:}`), which is why the message names the datasource rather than showing a literal `${DB_URL}` |
+| The backend stops with `Binding to target com.memoirist.storage.StorageProperties failed` | One of the `STORAGE_*` values in `.env` is missing, empty or invalid. The message lists each bad property with its value and where it came from (for example `System Environment Property "STORAGE_PRESIGN_TTL"`) and the reason. Fix that line, or unset the OS environment variable that overrides it. The presign TTL must be 1 to 60 minutes (`PT60M`), and the bucket name must follow S3's rules |
 | `docker compose` says `required variable POSTGRES_PASSWORD is missing a value` (or another variable) | `.env` is missing, or it lacks that variable or leaves it empty. Copy `.env.example` to `.env`, or add the line. Compose requires all five variables it uses, so that SeaweedFS never starts without its keys (D-03) |
 | `password authentication failed`, or a role or database that `does not exist`, after you changed `POSTGRES_USER`, `POSTGRES_PASSWORD` or `POSTGRES_DB` in `.env` | Postgres applies them only when its volume is first created. Put the old values back, or change the database to match (for a new password: `docker compose exec postgres psql`, then `\password <user>`), or start again with `docker compose down -v`, which deletes all local data |
 | `docker compose exec postgres psql` says `the input device is not a TTY` | Git Bash's own window (mintty) isn't a Windows console. Prefix the command with `winpty`, or use Windows Terminal. For a one-off query, `docker compose exec -T postgres psql -c 'select 1'` needs no terminal |

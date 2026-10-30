@@ -62,6 +62,9 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // The app runs in UTC (MemoiristApplication.main), so the tests do too, on every machine and from the first test,
+    // whatever the host's zone. MemoiristApplicationTest checks main() itself, starting from another zone.
+    systemProperty("user.timezone", "UTC")
     // Since Java 21 the JDK warns when a library attaches an agent to its own JVM, as Mockito does for
     // inline mocks, and a future release will refuse it (JEP 451). Loading Mockito at startup avoids both.
     // The provider resolves the jar when the tests run, not while Gradle reads this file.

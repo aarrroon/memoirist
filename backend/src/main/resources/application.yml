@@ -1,5 +1,49 @@
-# Settings for every profile. Task 2.1 keeps this to the minimum;
-# task 2.2 adds the rest (docs/SPRINT_PLAN.md, docs/TECH_STACK.md §2 Profiles).
+# Settings for every profile (docs/TECH_STACK.md §2). A profile file (application-<profile>.yml) adds to these
+# or overrides them: `local` reads the variables below from ../.env, and `test` sets its own values.
 spring:
   application:
     name: memoirist
+
+  # Which environment variables the app reads. `${VAR:}` means "empty if VAR isn't set", so a missing variable
+  # fails at startup with the property's name. Without the `:`, Spring Boot keeps the text `${VAR}` as the value.
+  datasource:
+    url: ${DB_URL:}
+    username: ${POSTGRES_USER:}
+    password: ${POSTGRES_PASSWORD:}
+
+  jpa:
+    # Flyway owns the schema; Hibernate only checks that the entities match it (D-16, every profile).
+    hibernate:
+      ddl-auto: validate
+    # No database access after the service's transaction ends: lazy loading in a controller fails loudly instead
+    # of quietly running extra queries. Services map entities to DTOs inside their transactions.
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          # Read and write timestamps in UTC whatever zone the JVM runs in (D-07).
+          time_zone: UTC
+
+  flyway:
+    # The schema only. `local` and `test` add db/seed-local, the dev user (D-11). A profile's list replaces this
+    # one; lists are never merged.
+    locations:
+      - classpath:db/migration
+
+  servlet:
+    multipart:
+      # Spring's defaults (1MB per file, 10MB per request) would reject phone photos. D-17 allows 25 MB per file;
+      # the request limit leaves room for the form's other fields. Spring's MB is 1024 x 1024 bytes.
+      max-file-size: 25MB
+      max-request-size: 30MB
+
+# Object storage, bound to StorageProperties and checked at startup (TECH_STACK §2 Storage).
+storage:
+  endpoint: ${STORAGE_ENDPOINT:}
+  public-endpoint: ${STORAGE_PUBLIC_ENDPOINT:}
+  region: ${STORAGE_REGION:}
+  bucket: ${STORAGE_BUCKET:}
+  access-key: ${STORAGE_ACCESS_KEY:}
+  secret-key: ${STORAGE_SECRET_KEY:}
+  path-style: ${STORAGE_PATH_STYLE:}
+  presign-ttl: ${STORAGE_PRESIGN_TTL:}

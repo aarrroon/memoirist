@@ -63,7 +63,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - Spotless.
   - **Done when:** `./gradlew build` passes; the app starts with `--spring.profiles.active=local`; `/actuator/health` is `UP`; `/swagger-ui.html` loads.
 
-- [ ] **2.2 Configuration and profiles**
+- [x] **2.2 Configuration and profiles**
   - **Read:** TECH_STACK §2 (Profiles, Cross-cutting rules), D-07.
   - **Do:**
     - `application.yml`, `application-local.yml` and `application-test.yml`.

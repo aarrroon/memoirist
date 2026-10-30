@@ -1,12 +1,13 @@
 # The `local` profile: run on your machine against Docker Compose (docs/DEVELOPMENT.md).
-# Task 2.1 sets only what the app needs to start against the Compose database;
-# task 2.2 adds the rest of this profile (Flyway locations, storage, the dev user and so on).
 spring:
   config:
     # .env sits in the repo root, one level above backend/ (the working directory for ./gradlew bootRun).
-    # Spring reads it as a .properties file, so its KEY=value lines become properties for the placeholders below.
+    # Spring reads it as a .properties file, so its KEY=value lines fill the ${...} placeholders in application.yml.
+    # `optional:` skips a missing file; the variables can then come from the environment instead (TECH_STACK §1).
     import: optional:file:../.env[.properties]
-  datasource:
-    url: ${DB_URL}
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
+
+  flyway:
+    # The schema, then the dev user (D-11). Only `local` and `test` load db/seed-local.
+    locations:
+      - classpath:db/migration
+      - classpath:db/seed-local

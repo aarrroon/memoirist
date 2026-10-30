@@ -4,10 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
@@ -15,14 +11,10 @@ import org.springframework.test.web.servlet.client.RestTestClient;
  * Starts the whole app on a random port, against Postgres in Docker, and calls it over real HTTP: the
  * health endpoint, the OpenAPI document and Swagger UI (task 2.1's Done-when list).
  *
- * <p>{@code show-components} makes the health response name each check (database, disk space and so on)
- * without showing their details. It's set for this test only; the app's own settings belong to task 2.2.
+ * <p>The {@code test} profile turns on {@code show-components} (application-test.yml), which makes the health
+ * response name each check (database, disk space and so on) without showing their details.
  */
-@SpringBootTest(
-        webEnvironment = WebEnvironment.RANDOM_PORT,
-        properties = "management.endpoint.health.show-components=always")
-@AutoConfigureRestTestClient
-@Import(TestcontainersConfiguration.class)
+@IntegrationTest
 class ApplicationSmokeTest {
 
     @Autowired
@@ -33,7 +25,7 @@ class ApplicationSmokeTest {
         // TODO(human) PRACTICE: Prove that the app reports UP *and* that Postgres is one of the checks behind that
         //   UP. Write the request and its assertions with RestTestClient.
         // Hint: by default /actuator/health is just {"groups":[...],"status":"UP"}; /actuator/health/db is a 404.
-        //   This class turns show-components on. Which status code and JSON paths prove the database was checked?
+        //   The test profile turns show-components on. Which status code and JSON paths prove the database was checked?
         // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
         client.get()
                 .uri("/actuator/health")
