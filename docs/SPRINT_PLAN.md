@@ -124,7 +124,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Also decide:** what a well-formed `X-Dev-User-Id` naming a user who isn't there does when a create inserts a row (foreign key error or `404`); see API_CONTRACT (Who is the current user?).
   - **Done when:** tests prove GET and PATCH work; an unknown timezone returns `400`; a `displayName` that is blank or over 100 characters returns `400`. (`birthday` is task 3.13.)
 
-- [ ] **3.3 Eras CRUD** (`/new-endpoint`)
+- [x] **3.3 Eras CRUD** (`/new-endpoint`)
   - **Read:** D-22, API_CONTRACT §Eras.
   - **Done when:** every row of API_CONTRACT §Eras works and is tested (soundtracks are tested in 3.14 and covers in 3.15), including:
     - another user's era returns `404`
@@ -167,7 +167,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - the feed returns only non-empty weeks, newest first, with their Eras and redacted entries; entries in Recently deleted don't count, so a week whose entries are all deleted is left out (D-30)
     - the query count for a page doesn't grow with the number of entries or media (assert with Hibernate statistics)
     - PUT (the title), close and reopen work
-    - a week's `eras` are every Era whose dates overlap it, latest start first, and change as soon as an Era's dates change (D-22)
+    - a week's `eras` are every Era whose dates overlap it, pinned first and then latest start, via `WeekEras.of` (built in 3.3), and change as soon as an Era's dates change (D-22)
 
 - [ ] **3.8 Tags** (`/new-endpoint`)
   - **Read:** D-10, D-26, API_CONTRACT §Tags and §Entries.

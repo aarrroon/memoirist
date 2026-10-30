@@ -46,13 +46,13 @@ Gradle Kotlin DSL, base package `com.memoirist`, organised by feature:
 ```
 com.memoirist
 ├── MemoiristApplication.java   # sets JVM default timezone to UTC before SpringApplication.run
-├── common/        # errors (ProblemDetail), PageResponse, Clock bean, BaseEntity and TimestampedEntity (D-12), config
+├── common/        # errors (ProblemDetail), PageResponse, Clock bean, BaseEntity and TimestampedEntity (D-12), CreateResult (create with a client id, D-12), config
 ├── user/          # User, CurrentUserProvider, DevHeaderCurrentUserProvider (local/test), UserService (currentUser()), /users/me, the @IanaTimeZone constraint
-├── era/           # Era, covers (D-36)
+├── era/           # Era, EraService (/eras, task 3.3), the @ValidEraDates rule, covers (D-36)
 ├── template/
 ├── tag/           # Tag, entry tags (D-26)
 ├── music/         # Spotify search for soundtracks: SpotifyProperties, MusicSearchService (D-35)
-├── week/          # WeeklyLog, WeekCalendar (date → first day of its week in user tz), a week's Eras from their dates (D-22), feed endpoint
+├── week/          # WeeklyLog, WeekCalendar (date → first day of its week in user tz), WeekEras (a week's Eras from their dates, D-22), feed endpoint
 ├── entry/         # Entry, EntryMapper (the ONLY Entry→DTO path), content validation + text extraction, seal rules, opened Loot Drops, Recently deleted and its sweep (D-30), On this day and Loot Drop replies (D-32, D-33)
 ├── media/
 ├── storage/       # StorageService, StorageProperties, local bucket bootstrap
@@ -108,6 +108,7 @@ Exact versions are pinned in `backend/build.gradle.kts`, and Gradle's own in `ba
 - **Schema:** Flyway only, with `ddl-auto=validate` in every profile (D-16). JSONB columns are mapped with `@JdbcTypeCode(SqlTypes.JSON)`. Entities with client-assignable IDs implement `Persistable<UUID>`.
 - **Entities (task 2.4):** see [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md#entity-classes-task-24) for the class behind each table.
   - **Base classes (D-12):** `BaseEntity` holds the id, which is set in the constructor, and `Persistable<UUID>`, so `save()` of a new entity is one INSERT and no SELECT. `TimestampedEntity` adds `createdAt` and `updatedAt`. `equals` and `hashCode` use the id.
+  - **Creating with a client `id` (D-12, task 3.3):** a create service starts with `UserService.currentUser()`. With an `id`, it looks the Era up by `findByIdAndUserId` (found: answer the stored one, nothing applied), then by `existsById` (found: `ConflictException`, so someone else has it), and only then inserts. It returns `CreateResult<T>(resource, created)`, and the controller sends `201` or `200` from `created`. `saveAndFlush` writes the row before the response is built, because Hibernate fills `createdAt` and `updatedAt` while it writes. Two requests with the same new `id` at the same instant can both pass the lookups; the loser's insert fails on the primary key and falls to the catch-all (`500`, not covered by a test), and its retry finds the Era and answers `200`. Left as it is until a client can send the same create twice at once (for example Phase 5's offline queue): the fix would be to catch the key violation outside the failed transaction and answer with the stored Era.
   - **JSON libraries:** `spring.jpa.properties.hibernate.type.json_format_mapper` names `Jackson3JsonFormatMapper`. Left alone, Hibernate 7.4 picks Jackson 2 (springdoc brings it in), which can't read the Jackson 3 `JsonNode` that `Entry.contentJson` is.
   - **Foreign keys are plain ids** (`userId`, `weeklyLogId`, `templateId`, `replyToEntryId`, `coverMediaId`), not associations, because no code walks them: services compare ids and look the other side up through its own user-scoped repository. The associations are the ones read together with their owner: `Entry.media` (`@OneToMany`, ordered, batched, no cascade) with `Media.entry` (`LAZY`), and `Entry.tags` (`@ManyToMany` through `entry_tags`).
   - **`entry_tags.source`:** the join table is mapped without an entity, so `source` and `created_at` take their column defaults (`'USER'`, `NOW()`). Phase 4 needs an `EntryTag` entity to record `'AI'`.
@@ -158,6 +159,9 @@ Exact versions are pinned in `backend/build.gradle.kts`, and Gradle's own in `ba
   3. `INSERT … ON CONFLICT (user_id, start_date) DO NOTHING`, then select the week.
   4. Insert the entry.
 - **A week's Eras (D-22)** are worked out from dates, never stored: an Era holds a week if it starts on or before the week's Sunday and has no end date or ends on or after its Monday. An Era's page counts only the entries whose memory date is inside its dates. Creating an Era or changing its dates needs no other writes.
+  - **Two directions, one rule (task 3.3).** `WeekEras.holds(era, week)` and `WeekEras.of(week, eras)` (plain Java in `week/`) find the Eras of a week and put them in `WeekEras.FEED_ORDER`: pinned first, then `Era.LATEST_START_FIRST` (latest start, then newest created, then id). `WeeklyLogRepository.findOverlapping(userId, from, to)` finds the weeks of an Era in SQL. `EraWeekAgreementTest` asks both the same 462 questions and fails if they differ.
+  - **An Era's count** is `EntryRepository.countOpenEntriesByWeek(userId, from, to, now)`: one grouped query served by `idx_entries_user_date`. It leaves out sealed entries in the query itself (`unlock_date` null or not after `now`, D-10) and relies on `@SQLRestriction` for Recently deleted (D-30). `GET /eras/{id}` costs three SELECTs (the Era, its weeks, the counts) whatever the number of weeks or entries (`EraWeeksTest` counts them).
+  - **A nullable date parameter is cast in the query:** `cast(:to as LocalDate) is null or …`. Without the cast, Hibernate sends the null for `:to is null` untyped and Postgres refuses it (`could not determine data type of parameter`).
 - **Feed:** `GET /feed` loads a page of non-empty weeks (newest first; entries in Recently deleted don't count, D-30), then their entries in one query, then their media in batched queries (`@BatchSize(50)` / `IN (…)`). Two collections are never fetch-joined at once (avoids `MultipleBagFetchException` and N+1 queries). The weeks' Eras come from one more query for the user's Eras, matched to each week by date (D-22).
 
 ### Storage

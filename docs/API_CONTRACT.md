@@ -218,6 +218,20 @@ How `/users/me` behaves (task 3.2):
 
 Era shape: `{ "id", "title", "description", "startDate", "endDate", "soundtrack", "cover", "pinnedInFeed", "createdAt", "updatedAt" }`. `pinnedInFeed` makes the Era win in the feed for weeks it shares (D-22). `cover` is a presigned `Media`, or `null` when there's none or its entry is sealed or in Recently deleted (D-36). `soundtrack` is a Spotify URI or `null` (D-35).
 
+How `/eras` behaves (task 3.3):
+- **`soundtrack` and `cover` arrive in tasks 3.14 and 3.15.** Until then the Era has the other eight fields, and a `soundtrack` or `coverMediaId` in the body is ignored like any other field the endpoint doesn't know. Nothing can set either yet, so they are always empty. After 3.14 and 3.15, a `PUT` that leaves one out clears it (a `PUT` is a full replace).
+- **The body.**
+  - `title` is stripped of spaces at both ends, then must be 1 to 150 characters (`fieldErrors.title`: `must not be null` when missing, `size must be between 1 and 150` when empty or too long).
+  - `description` is optional, up to 5000 characters (`size must be between 0 and 5000`). It is stripped, and one that is empty afterwards is saved as none (`null`).
+  - `startDate` is required. Both dates must fall between 1900-01-01 and 9999-12-31 (`must be between 1900-01-01 and 9999-12-31`), and `endDate` must not be before `startDate` (`fieldErrors.endDate`: `must not be before startDate`). A one-day Era has the same start and end. A missing `endDate` means the Era is ongoing.
+  - `pinnedInFeed` missing or `null` means `false`. On `PUT`, every optional field that is left out is reset (no description, ongoing, not pinned).
+  - Every wrong field is named in one `400`. An `id` in a `PUT` body is ignored: the path names the Era.
+- **`POST` and the `id`.** `201` for a new Era, `200` with the stored Era (body not re-applied) when the user already has one with that `id`, `409 conflict` when someone else has it (D-12). A user who isn't there is `404` before anything else (see *Who is the current user?*). `GET /eras` for such a user is an empty list.
+- **Order.** `GET /eras` lists the latest `startDate` first; Eras that start on the same day come newest-created first. A week's `eras` (task 3.7) use the same order after the pinned ones: pinned Eras first, then latest start, then newest-created (D-22).
+- **`GET /eras/{eraId}` lists every week row its dates overlap**, newest first, including a week with `entryCount: 0` (all its entries are outside the Era's dates, sealed or in Recently deleted). `entryCount` counts the entries whose memory date is inside the Era's dates, both ends included, that are not sealed (an opened Loot Drop counts) and not in Recently deleted (D-10, D-30).
+- **`DELETE`** removes the Era row and nothing else: no week, entry or other Era changes. Another user's Era, and one that was already deleted, is `404`.
+- **`404 not-found`** for an Era that doesn't exist or isn't the user's. `415` when the body is not `application/json`. A path id that isn't a UUID is `400 malformed-request`.
+
 ### Templates (tag: Templates)
 | Method and path | Body | Success |
 |---|---|---|

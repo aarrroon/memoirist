@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.UUID;
 
 /**
@@ -14,6 +15,16 @@ import java.util.UUID;
 @Entity
 @Table(name = "eras")
 public class Era extends TimestampedEntity {
+
+    /**
+     * The order Eras are listed in: the latest start first. Eras that start on the same day come newest-created first,
+     * and then by id, so a list never depends on the order the database happened to return rows in (a sort in Java is
+     * stable, but the rows it starts from are not).
+     */
+    public static final Comparator<Era> LATEST_START_FIRST = Comparator.comparing(Era::getStartDate)
+            .reversed()
+            .thenComparing(Era::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(Era::getId);
 
     @Column(name = "user_id", nullable = false, updatable = false)
     private UUID userId;

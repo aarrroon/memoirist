@@ -1,6 +1,7 @@
 package com.memoirist;
 
 import com.memoirist.entry.Entry;
+import com.memoirist.era.Era;
 import com.memoirist.media.Media;
 import com.memoirist.tag.Tag;
 import com.memoirist.user.User;
@@ -39,6 +40,18 @@ public final class Fixtures {
     /** An entry dated on the Monday of its week. */
     public static Entry entry(UUID userId, WeeklyLog week) {
         return new Entry(UUID.randomUUID(), userId, week.getId(), week.getStartDate());
+    }
+
+    /** An ongoing Era (no end date, not pinned) that starts on {@code start}. */
+    public static Era era(UUID userId, LocalDate start) {
+        return new Era(UUID.randomUUID(), userId, "Era from " + start, start);
+    }
+
+    /** An Era from {@code start} to {@code end}, both days included. */
+    public static Era era(UUID userId, LocalDate start, LocalDate end) {
+        Era era = era(userId, start);
+        era.setEndDate(end);
+        return era;
     }
 
     public static Tag tag(UUID userId, String name) {
