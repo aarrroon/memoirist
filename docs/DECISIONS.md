@@ -21,7 +21,7 @@ Settled choices for memoirist, and the questions still open.
 | D-11 | Ownership checks and local-only dev user | 2026-10-25 | |
 | D-12 | Clients may generate entity UUIDs | 2026-10-25 | 2026-10-29 |
 | D-13 | Frontend library set | 2026-10-25 | 2026-10-28 |
-| D-14 | Testing and CI approach | 2026-10-25 | |
+| D-14 | Testing and CI approach | 2026-10-25 | 2026-10-30 |
 | D-15 | Backend code style | 2026-10-25 | |
 | D-16 | Flyway migration rules | 2026-10-25 | |
 | D-17 | Media types and limits | 2026-10-25 | 2026-10-28 |
@@ -183,9 +183,9 @@ React 19, Vite, TypeScript, Tailwind CSS v4, Motion (`motion` package), TipTap, 
 These were chosen during setup as sensible defaults. Change them freely, but record the change here. Pin exact versions when scaffolding (task 4.1) and check current docs, since several have had recent major releases.
 
 ## D-14 Testing and CI
-- **Backend:** JUnit 5 + Testcontainers against real Postgres (`pgvector/pgvector:pg17`) and SeaweedFS. No H2, because it can't emulate JSONB, `TIMESTAMPTZ` behaviour or deferrable constraints.
+- **Backend:** JUnit (Jupiter 6, the version Spring Boot 4 manages) + Testcontainers against real Postgres (`pgvector/pgvector:pg17`) and SeaweedFS. No H2, because it can't emulate JSONB, `TIMESTAMPTZ` behaviour or deferrable constraints.
 - **Frontend:** Vitest + React Testing Library + MSW. Playwright covers a few end-to-end flows from Sprint 4.
-- **CI:** GitHub Actions runs backend tests from Sprint 2 and frontend checks from Sprint 4.
+- **CI:** GitHub Actions runs backend tests from Sprint 2 (`.github/workflows/ci.yml`, task 2.7) and frontend checks from Sprint 4. The job installs Temurin 25, caches Gradle with `actions/setup-java` and pins every action to a commit SHA. It doesn't use `gradle/actions/setup-gradle` v6, because from v6 its caching is a proprietary component that needs Gradle's Terms of Use accepted. Details: [TECH_STACK §2](TECH_STACK.md#ci-task-27).
 - Tests are written with each task, not saved for the end of a sprint.
 
 ## D-15 Backend code style

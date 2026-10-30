@@ -1,0 +1,78 @@
+# Continuous integration (D-14, task 2.7). The backend job builds and tests the Spring Boot app exactly as
+# `cd backend && ./gradlew build` does on a developer's machine. The frontend job arrives with task 4.17.
+#
+# Every `uses:` is pinned to a full commit SHA, with the release it stands for in the comment after it, because a
+# tag such as v7 can be moved to different code after the fact. Update the SHA and the comment together.
+name: CI
+
+on:
+  # Branches in this repo are stacked (phase-1 -> phase-1-sprint-1 -> phase-1-sprint-2 ...), and a pull request
+  # targets the branch below it rather than main, so pull requests are not limited to any base branch.
+  push:
+    branches: [main, "phase-*"]
+  pull_request:
+  # The "Run workflow" button and `gh workflow run`. They work once this file is on the default branch.
+  workflow_dispatch:
+
+# The token can read the repository and do nothing else. This is a public repository, so pull requests from forks
+# also run this workflow; they get a read-only token and no secrets whatever is written here.
+permissions:
+  contents: read
+
+# A newer push to the same branch or pull request makes the older, still-running build pointless, so it is cancelled.
+# Runs on main are never cancelled, so every commit that lands there gets its own result.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  backend:
+    name: Backend (build and test)
+    runs-on: ubuntu-latest
+    # A normal run takes a few minutes. This stops a hung container pull from using up six hours of runner time.
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Nothing later pushes to the repository, so the token doesn't need to stay in .git/config.
+          persist-credentials: false
+
+      # build.gradle.kts asks Gradle for a Java 25 toolchain and has no resolver that downloads one, so the job must
+      # provide JDK 25 itself. setup-java installs Eclipse Temurin 25 and points JAVA_HOME at it, which is also the
+      # JDK that starts the Gradle wrapper. `cache: gradle` saves ~/.gradle/caches (the dependency jars) and
+      # ~/.gradle/wrapper (the Gradle distribution) under a key made from the hash of the files listed below, so
+      # a change to the dependencies or to the Gradle version starts from an empty cache.
+      - name: Set up JDK 25 and the Gradle cache
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
+          cache-dependency-path: |
+            backend/*.gradle*
+            backend/gradle/wrapper/gradle-wrapper.properties
+
+      # `build` compiles, checks the formatting (spotlessCheck), runs every test and packages the jar. The tests start
+      # their own Postgres containers with Testcontainers, which uses the Docker that ubuntu-latest already has.
+      # No .env file and no Compose services are needed: the `test` profile carries its own settings.
+      # --no-daemon makes Gradle's background process exit with the build, so it isn't still holding files in
+      # ~/.gradle when the cache is saved.
+      - name: Build and test
+        run: ./gradlew build --no-daemon
+
+      # The test log already shows the failures; the HTML report and the XML results (which include what each test
+      # wrote to its output, such as a container's startup log) are for the harder cases.
+      - name: Keep the test reports when the build fails
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-test-reports
+          path: |
+            backend/build/reports/tests/
+            backend/build/test-results/
+          retention-days: 7

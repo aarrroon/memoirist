@@ -53,7 +53,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 ### Sprint 2: Backend foundation
 
-- [ ] **2.1 Spring Boot 4 project**
+- [x] **2.1 Spring Boot 4 project**
   - **Read:** TECH_STACK §2 (Layout), D-02, D-15.
   - **Do:**
     - `/backend` with the Gradle wrapper and Kotlin DSL, a Java 25 toolchain (and a Gradle version that supports Java 25), and Spring Boot 4.x (latest patch).
@@ -63,7 +63,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - Spotless.
   - **Done when:** `./gradlew build` passes; the app starts with `--spring.profiles.active=local`; `/actuator/health` is `UP`; `/swagger-ui.html` loads.
 
-- [ ] **2.2 Configuration and profiles**
+- [x] **2.2 Configuration and profiles**
   - **Read:** TECH_STACK §2 (Profiles, Cross-cutting rules), D-07.
   - **Do:**
     - `application.yml`, `application-local.yml` and `application-test.yml`.
@@ -74,12 +74,12 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - The `local` profile imports `../.env`.
   - **Done when:** a test asserts the JVM default zone is UTC and the `Clock` bean exists; the app boots locally against Compose.
 
-- [ ] **2.3 V1 migration and local seed**
+- [x] **2.3 V1 migration and local seed**
   - **Read:** DATABASE_SCHEMA (Phase 1 tables, V1 SQL, seed).
   - **Do:** `db/migration/V1__core_schema.sql` and `db/seed-local/R__seed_dev_user.sql`, exactly as specified, including `users.birthday` and `entries.reply_to_entry_id` (D-33), `soundtrack` on `entries`, `weekly_logs` and `eras` (D-35), `eras.cover_media_id` (D-36), `media.purpose` (D-20), `entries.unlock_seen_at` (D-10), `entries.deleted_at` (D-30), `entries.version` (D-23), `entries.date_unknown` (D-34) and the 1900 date check (D-09). There's no week–Era table: Eras are worked out from their dates (D-22).
   - **Done when:** a Testcontainers test applies the migrations to an empty database and finds the dev user; local boot shows V1 in `flyway_schema_history`.
 
-- [ ] **2.4 Entities and repositories**
+- [x] **2.4 Entities and repositories**
   - **Read:** `.claude/rules/backend.md`, DATABASE_SCHEMA, D-12.
   - **Do:**
     - Entities: `User`, `Era`, `Template`, `WeeklyLog`, `Entry`, `Media`, `Tag` (with `entry_tags` as the link). There's no week–Era entity (D-22).
@@ -90,7 +90,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - Repositories with user-scoped finders (`findByIdAndUserId`, …). Entry finders leave out entries in Recently deleted (D-30).
   - **Done when:** the context loads with `validate`; a repository test proves a user-scoped finder doesn't return another user's row; saving an entity with a preset ID issues an INSERT with no SELECT first; and the entry finders skip entries in Recently deleted.
 
-- [ ] **2.5 Current user resolution**
+- [x] **2.5 Current user resolution**
   - **Read:** D-11, `.claude/rules/security.md`.
   - **Do:** a `CurrentUserProvider` interface and `DevHeaderCurrentUserProvider` (`@Profile({"local","test"})`).
   - **Done when:** tests prove that:
@@ -99,12 +99,12 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - a malformed header returns `400 malformed-request`
     - in a non-local profile, the dev provider bean doesn't exist
 
-- [ ] **2.6 Global error handling**
+- [x] **2.6 Global error handling**
   - **Read:** API_CONTRACT (Errors).
-  - **Do:** a `@RestControllerAdvice` mapping exceptions to the `ProblemDetail` types listed in API_CONTRACT (`timestamp`, `fieldErrors`), with no stack traces in responses.
+  - **Do:** extend the existing `common/GlobalExceptionHandler` (task 2.5 created it and it already maps `malformed-request`; do not add a second advice) so it maps the remaining exceptions to the `ProblemDetail` types listed in API_CONTRACT (`timestamp`, `fieldErrors`), with no stack traces in responses.
   - **Done when:** tests cover `400` with `fieldErrors`, `404`, `409`, `409 entry-stale` (from an optimistic-locking failure), `413` and `500`.
 
-- [ ] **2.7 CI: backend**
+- [x] **2.7 CI: backend**
   - **Do:** `.github/workflows/ci.yml` with a backend job that runs `./gradlew build` on JDK 25 with Testcontainers.
   - **Done when:** the workflow passes on GitHub. If no remote exists yet, the YAML validates and the job's commands pass locally.
 
@@ -121,6 +121,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 - [ ] **3.2 `/users/me`**
   - **Read:** D-07, API_CONTRACT §Users.
+  - **Also decide:** what a well-formed `X-Dev-User-Id` naming a user who isn't there does when a create inserts a row (foreign key error or `404`); see API_CONTRACT (Who is the current user?).
   - **Done when:** tests prove GET and PATCH work; an unknown timezone returns `400`; a `displayName` that is blank or over 100 characters returns `400`. (`birthday` is task 3.13.)
 
 - [ ] **3.3 Eras CRUD** (`/new-endpoint`)

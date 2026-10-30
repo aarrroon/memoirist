@@ -7,7 +7,7 @@
 - **Instants:** `TIMESTAMPTZ`, stored in UTC. `created_at` and `updated_at` are `NOT NULL DEFAULT NOW()`. `updated_at` is maintained by Hibernate (`@UpdateTimestamp`).
 - **Calendar dates:** `DATE` (memory dates, week and era boundaries), interpreted in the user's timezone.
 - **Text:** use `VARCHAR`, never `CHAR`, because Hibernate's validator rejects `bpchar`. Documents use `JSONB`, not `JSON`.
-- **Naming:** tables are plural snake_case. Constraints are named `uq_<table>_<cols>`, `chk_<table>_<rule>` and `idx_<table>_<cols>`.
+- **Naming:** tables are plural snake_case. Constraints are named `uq_<table>_<cols>`, `chk_<table>_<rule>` and `idx_<table>_<cols>`. Two V1 constraints are the exception: `users.email` and `media.object_key` are declared `UNIQUE` inline, so Postgres named them `users_email_key` and `media_object_key_key`. Foreign keys keep Postgres's default names too (`<table>_<column>_fkey`). V1 is committed, so renaming them takes a new migration; name every constraint in new migrations. Code that maps a database error to a response by constraint name uses the real names (`SchemaConstraintsTest` lists them).
 - **Foreign keys:** every foreign key states its `ON DELETE` behaviour.
 - **No URLs:** the database never stores a URL or storage host, only object keys.
 - **Ownership:** every user-owned table has `user_id` directly, except tables that hang off another owned table: `media` is owned through `entries`, `media_transcriptions` through `media`, and `entry_tags` through `entries`.
@@ -16,8 +16,8 @@
 
 | Version | File | Phase | Status |
 |---|---|---|---|
-| V1 | `V1__core_schema.sql` | 1 | Planned (Sprint 2, task 2.3) |
-| R | `db/seed-local/R__seed_dev_user.sql` | 1 | Planned (Sprint 2, task 2.3); `local` and `test` profiles only |
+| V1 | `V1__core_schema.sql` | 1 | Applied (Sprint 2, task 2.3); a copy of the SQL below |
+| R | `db/seed-local/R__seed_dev_user.sql` | 1 | Applied (Sprint 2, task 2.3); `local` and `test` profiles only |
 | next | `V{n}__auth_and_sharing.sql` | 2 | Draft below |
 | next | `V{n}__yearly_letter.sql` | 2 | Draft below (D-32) |
 | next | `V{n}__product_events.sql` | 2 | Draft below (D-38) |
@@ -148,6 +148,7 @@ Links entries to tags. Owned through `entries`; the service checks the tag belon
 The primary key is `(entry_id, tag_id)`.
 
 ### V1 SQL: `V1__core_schema.sql`
+Task 2.3 copied this block unchanged to `backend/src/main/resources/db/migration/V1__core_schema.sql`. From the first commit of that file, the file is the source of truth (D-16): if the two ever differ, fix this block. `SchemaTest` and `SchemaConstraintsTest` check the result against this document.
 
 ```sql
 -- V1__core_schema.sql  (Phase 1)
@@ -292,13 +293,33 @@ CREATE INDEX idx_entry_tags_tag ON entry_tags (tag_id);
 ```
 
 ### Local and test seed: `db/seed-local/R__seed_dev_user.sql`
-This is loaded only by the `local` and `test` profiles (D-11), so it never runs in production.
+This is loaded only by the `local` and `test` profiles (D-11), so it never runs in production (`MigrationsTest` runs Flyway with the `prod` location alone and finds no users).
+
+It is a repeatable migration (`R__`): Flyway runs it after the versioned migrations, and again whenever the file's checksum changes. `ON CONFLICT (id) DO NOTHING` makes a re-run safe, and it also means that editing the values here never changes the dev user a database already has. To change the dev user in an existing local database, update the row with SQL, or reset the data with `docker compose down -v` (which deletes everything).
 
 ```sql
 INSERT INTO users (id, email, display_name, timezone)
 VALUES ('00000000-0000-0000-0000-000000000001', 'dev@memoirist.local', 'Dev User', 'Australia/Melbourne')
 ON CONFLICT (id) DO NOTHING;
 ```
+
+### Entity classes (task 2.4)
+Each Phase 1 table has one JPA entity, in the feature package named in [TECH_STACK.md §2](TECH_STACK.md#layout). `ddl-auto=validate` makes the application refuse to start if an entity maps a table or column that V1 doesn't have, and `EntityMappingTest` saves every column and reads it back.
+
+| Table | Entity | Extends | Mapping notes |
+|---|---|---|---|
+| `users` | `User` | `TimestampedEntity` | |
+| `eras` | `Era` | `TimestampedEntity` | `cover_media_id` is a plain `UUID` |
+| `templates` | `Template` | `TimestampedEntity` | `subheadings` is a `List<String>` with `@JdbcTypeCode(SqlTypes.JSON)` |
+| `weekly_logs` | `WeeklyLog` | `TimestampedEntity` | `is_closed` is the field `closed`; `start_date` and `end_date` are never updated |
+| `entries` | `Entry` | `TimestampedEntity` | `content_json` is a Jackson 3 `JsonNode` (`@JdbcTypeCode(SqlTypes.JSON)`); `version` is `@Version` (D-23); `@SQLRestriction("deleted_at IS NULL")` hides Recently deleted entries (D-30); `media` and `tags` below |
+| `media` | `Media` | `BaseEntity` | No `created_at` or `updated_at` (D-12); `uploaded_at` is `@CreationTimestamp`; `entry` is a `LAZY` `@ManyToOne`; `purpose` and `media_type` are strings checked in the service |
+| `tags` | `Tag` | `TimestampedEntity` | |
+| `entry_tags` | no entity | | `Entry.tags` is a `@ManyToMany` through this table. Hibernate writes only `entry_id` and `tag_id`, so `source` (`'USER'`) and `created_at` come from their column defaults. Phase 4 needs an `EntryTag` entity to record `'AI'` |
+
+- `user_id`, `weekly_log_id`, `template_id`, `reply_to_entry_id` and `cover_media_id` are plain `UUID` fields, not associations. The only associations are `Entry.media` (`@OneToMany`, `@OrderBy("displayOrder ASC")`, `@BatchSize(50)`, no cascade), `Media.entry` and `Entry.tags` (`@BatchSize(50)`).
+- Deleting an entry (the sweep, or erase) deletes one `entries` row and leaves its `media` rows to the foreign key's `ON DELETE CASCADE` (a test shows Hibernate never touches `media`). Its `entry_tags` rows go by cascade or by a Hibernate `delete from entry_tags` (not asserted by a test; the result is the same).
+- A text column that the schema constrains in length (`VARCHAR(150)` for a title) is only checked by the database and the service; the entity records the length for readers but Hibernate doesn't enforce it.
 
 ---
 

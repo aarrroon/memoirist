@@ -84,7 +84,7 @@ None of this exists yet. It's the plan in [D-14](../../DECISIONS.md#d-14-testing
 
 | Kind | What it covers | How it runs | Why this kind |
 |---|---|---|---|
-| Unit tests | Pure logic: `WeekCalendar`, `EntryContentValidator`, `ContentTextExtractor`, `EntryMapper` | Plain JUnit 5 with a fixed `Clock`, no Docker | Fast, and a fixed clock makes "today" and week boundaries repeatable |
+| Unit tests | Pure logic: `WeekCalendar`, `EntryContentValidator`, `ContentTextExtractor`, `EntryMapper` | Plain JUnit (Jupiter 6) with a fixed `Clock`, no Docker | Fast, and a fixed clock makes "today" and week boundaries repeatable |
 | Integration tests | Anything that touches the database or storage, and every endpoint: the happy path, `400`, `404` for another user's resource, and `409 entry-sealed` | `@SpringBootTest` with Testcontainers: `pgvector/pgvector:pg17` wired by `@ServiceConnection`, and SeaweedFS as a `GenericContainer` on the D-03 tag, shared across test classes through one base class or config | No H2: it can't emulate JSONB, `TIMESTAMPTZ` behaviour or deferrable constraints (D-14). 1.3's V1 check used one: swapping two media positions works only because `uq_media_entry_order` waits until commit |
 
 The tests won't use the Compose containers:

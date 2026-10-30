@@ -16,6 +16,9 @@
 ### Who is the current user?
 - **Never** send a user ID in a body, query string or path.
 - **Phase 1 (`local` and `test` profiles only):** an optional `X-Dev-User-Id: <uuid>` header. Without it the server uses the seeded dev user `00000000-0000-0000-0000-000000000001`.
+  - The value must be a UUID in its usual form (8-4-4-4-12 hexadecimal digits, capitals allowed), and the header must be sent once. Anything else, including an empty value, is `400 malformed-request`, never a fall-back to the dev user.
+  - Reading the header doesn't check that the user exists. A read for a user who isn't there is `404`, like any resource that isn't found. What a create does for such a user (a foreign key error or a `404`) is settled in task 3.2.
+  - In any other profile there is no provider that reads the header, so it is ignored.
 - **Phase 2:** `Authorization: Bearer <jwt>` (or a cookie; see open question Q2). Controller signatures do not change.
 - A resource that belongs to someone else behaves exactly like one that doesn't exist: `404`.
 
@@ -35,16 +38,29 @@
 | `type` suffix | Status | When |
 |---|---|---|
 | `validation-failed` | 400 | Bean validation or a business rule on input; `fieldErrors` when field-specific |
-| `malformed-request` | 400 | Unreadable JSON, bad UUID, bad `X-Dev-User-Id` |
-| `not-found` | 404 | Missing **or not owned** |
+| `malformed-request` | 400 | Unreadable JSON, bad UUID in a path or query, a required parameter missing, bad `X-Dev-User-Id` (not a UUID, empty, or sent twice) |
+| `not-found` | 404 | Missing **or not owned**; also a path that doesn't exist |
+| `method-not-allowed` | 405 | The path exists but not for this HTTP method; the `Allow` header lists the right ones |
+| `not-acceptable` | 406 | The `Accept` header names no format the API can send |
 | `entry-sealed` | 409 | Changing a sealed entry's content, date, template or media; or moving its unlock date earlier |
 | `entry-stale` | 409 | `PUT /entries/{id}` sent a `version` older than the stored one: the entry changed elsewhere (D-23) |
 | `conflict` | 409 | Client-supplied `id` already used by another user, or by an entry in Recently deleted (D-30) |
-| `payload-too-large` | 413 | File over 25 MB, content over 200 KB |
-| `unsupported-media-type` | 415 | File type not in the allowed list |
+| `payload-too-large` | 413 | File over 25 MB (reliably up to about 2 MB over; see the last note below), content over 200 KB |
+| `unsupported-media-type` | 415 | File type not in the allowed list; or a request body sent with a `Content-Type` the endpoint doesn't read |
 | `storage-unavailable` | 503 | Object storage failed |
 | `music-search-unavailable` | 503 | Spotify search isn't set up, or Spotify refused the request (D-35) |
 | `internal-error` | 500 | Anything unexpected (no stack traces in the body) |
+
+What every error response promises (task 2.6, `common/GlobalExceptionHandler`):
+- **Same fields everywhere:** `type`, `title`, `status`, `detail`, `instance` (the request path) and `timestamp`, as `application/problem+json`. `fieldErrors` appears only on `validation-failed`. The `type` suffix and `title` are fixed for each row above; `detail` is a sentence for the caller.
+- **`fieldErrors`** is a flat object, `field name: message`. A nested field uses its path (`tags[1].name`). A field that failed several rules gets its messages joined with `; `, in alphabetical order. A rule that isn't about one field (such as one that compares two) appears in `detail` only. The field order is stable.
+- **Messages are English** whatever the browser's `Accept-Language` says, so a client can match on them.
+- **Nothing the client sent comes back.** `detail` and `fieldErrors` never repeat a rejected value, a header, a path variable or a file name. They name the field or parameter (our own identifiers) and say what is wrong.
+- **Nothing from the server's insides comes out.** No stack trace, class name, SQL, constraint name, storage host or message from a system exception (Spring, Hibernate, JDBC, the AWS SDK) in any response. A `500` and a `storage-unavailable` always have the same `detail`; the other types' `detail` is a sentence our own code wrote for the caller (so `music-search-unavailable` says which of its two causes it was, and `entry-sealed` may say the entry is sealed). This holds for Spring's own errors (an unknown path, a wrong method) as well, which get a fixed `detail` per status.
+- **Nothing the user wrote goes to the log either.** The server logs a failed request with the exception classes (the causes too), the SQLState of a database error and the stack frames, but never an exception's message, because a database message can hold a whole row of an entry (D-10). Hibernate's own SQL-error logger is switched off for the same reason (`logging.level.org.hibernate.orm.jdbc.error`).
+- **Spring's own errors keep their status.** An unknown path is `404 not-found`, a wrong method `405 method-not-allowed`, never `500`. A status that isn't in the table (none is expected) keeps Spring's `about:blank` type, which RFC 9457 defines for "no more to say than the status".
+- **`entry-stale` has two causes with one answer:** the service saw an older `version` than the stored one, or the versions matched but another request committed first and the database refused the update.
+- **A file far over 25 MB may end in a dropped connection instead of a `413`.** The server rejects the upload as soon as the limit is passed, but it won't read more than about 2 MB of a rejected body just to answer politely (`server.tomcat.max-swallow-size`). A file a little over the limit gets the `413`. Clients check the size first (`.claude/rules/frontend.md`), so this is only a safety net.
 
 ### Pagination
 Every paged endpoint takes `?page=0&size=10` (`size` max 50, unless the endpoint says otherwise) and returns:

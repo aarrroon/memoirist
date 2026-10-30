@@ -1,0 +1,26 @@
+# The `test` profile: integration tests (@IntegrationTest). It lives in src/test/resources, so it never ships in
+# the app's jar. The database comes from Testcontainers (@ServiceConnection), not from these settings.
+spring:
+  flyway:
+    # The same locations as `local` (TECH_STACK §2 Profiles), so tests find the dev user.
+    locations:
+      - classpath:db/migration
+      - classpath:db/seed-local
+
+# Test values. The host is reserved and never resolves (RFC 2606), so a test that forgets to start its own storage
+# fails everywhere instead of quietly using the SeaweedFS that Compose runs on a developer's machine.
+storage:
+  endpoint: http://storage.invalid:8333
+  public-endpoint: http://storage.invalid:8333
+  region: us-east-1
+  bucket: memoirist-media
+  access-key: test-access-key
+  secret-key: test-secret-key
+  path-style: true
+  presign-ttl: PT60M
+
+management:
+  endpoint:
+    health:
+      # Name each health check (db, diskSpace, …) in /actuator/health, so a test can see the database was checked.
+      show-components: always
