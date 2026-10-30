@@ -99,7 +99,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - a malformed header returns `400 malformed-request`
     - in a non-local profile, the dev provider bean doesn't exist
 
-- [ ] **2.6 Global error handling**
+- [x] **2.6 Global error handling**
   - **Read:** API_CONTRACT (Errors).
   - **Do:** extend the existing `common/GlobalExceptionHandler` (task 2.5 created it and it already maps `malformed-request`; do not add a second advice) so it maps the remaining exceptions to the `ProblemDetail` types listed in API_CONTRACT (`timestamp`, `fieldErrors`), with no stack traces in responses.
   - **Done when:** tests cover `400` with `fieldErrors`, `404`, `409`, `409 entry-stale` (from an optimistic-locking failure), `413` and `500`.

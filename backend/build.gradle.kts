@@ -60,8 +60,16 @@ dependencies {
     mockitoAgent("org.mockito:mockito-core") { isTransitive = false }
 }
 
+// The API contract, which ProblemKindTest compares the error types with. Gradle passes its absolute path to the tests,
+// so they don't depend on the folder they start in, and lists it as an input, so editing the contract re-runs them.
+val apiContract = rootProject.projectDir.resolve("../docs/API_CONTRACT.md").canonicalFile
+
 tasks.withType<Test> {
     useJUnitPlatform()
+    systemProperty("memoirist.apiContract", apiContract.path)
+    if (apiContract.exists()) {
+        inputs.file(apiContract).withPropertyName("apiContract")
+    }
     // The app runs in UTC (MemoiristApplication.main), so the tests do too, on every machine and from the first test,
     // whatever the host's zone. MemoiristApplicationTest checks main() itself, starting from another zone.
     systemProperty("user.timezone", "UTC")

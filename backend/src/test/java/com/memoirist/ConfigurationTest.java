@@ -18,6 +18,9 @@ import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.Location;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.web.ErrorProperties;
+import org.springframework.boot.autoconfigure.web.ErrorProperties.IncludeAttribute;
+import org.springframework.boot.autoconfigure.web.WebProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.orm.jpa.support.OpenEntityManagerInViewInterceptor;
 import org.springframework.util.unit.DataSize;
@@ -49,6 +52,9 @@ class ConfigurationTest {
     @Autowired
     StorageProperties storage;
 
+    @Autowired
+    WebProperties web;
+
     @Test
     void jvmRunsInUtcAndTheClockBeanIsTheSystemClockInUtc() {
         assertThat(TimeZone.getDefault().getID()).isEqualTo("UTC");
@@ -79,6 +85,18 @@ class ConfigurationTest {
                 .isEqualTo(DataSize.ofMegabytes(25).toBytes());
         assertThat(multipartConfig.getMaxRequestSize())
                 .isEqualTo(DataSize.ofMegabytes(30).toBytes());
+    }
+
+    @Test
+    void theFallbackErrorPageNeverShowsTracesMessagesOrBindingDetails() {
+        // /error answers what the advice can't reach, such as a failure inside a servlet filter. These are Boot's
+        // defaults, written into application.yml so that nobody changes them without this test failing.
+        ErrorProperties error = web.getError();
+
+        assertThat(error.getIncludeStacktrace()).isEqualTo(IncludeAttribute.NEVER);
+        assertThat(error.getIncludeMessage()).isEqualTo(IncludeAttribute.NEVER);
+        assertThat(error.getIncludeBindingErrors()).isEqualTo(IncludeAttribute.NEVER);
+        assertThat(error.isIncludeException()).isFalse();
     }
 
     @Test

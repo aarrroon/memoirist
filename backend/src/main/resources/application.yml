@@ -1,5 +1,17 @@
 # Settings for every profile (docs/TECH_STACK.md §2). A profile file (application-<profile>.yml) adds to these
 # or overrides them: `local` reads the variables below from ../.env, and `test` sets its own values.
+logging:
+  level:
+    # Hibernate writes every failed SQL statement to the log (this logger, at WARN) with PostgreSQL's whole message.
+    # For a CHECK or NOT NULL failure that message ends with "Failing row contains (...)", and the row is the entry:
+    # its title and text, a sealed Loot Drop's too. A unique-key failure names the value (a tag's name). Entry content
+    # must never reach a log (.claude/rules/security.md, D-10), so this logger is off. GlobalExceptionHandler still logs
+    # a failed request: the exception classes (with the SQLState) and the stack frames, never the message.
+    # Quoted, because YAML reads an unquoted `off` as the boolean false. ErrorHandlingIntegrationTest keeps this honest.
+    # To see the SQL messages while debugging on your own machine, run with
+    # `--logging.level.org.hibernate.orm.jdbc.error=warn`, and only against throwaway data.
+    org.hibernate.orm.jdbc.error: "off"
+
 spring:
   application:
     name: memoirist
@@ -34,6 +46,24 @@ spring:
     # one; lists are never merged.
     locations:
       - classpath:db/migration
+
+  web:
+    # Error messages are English whatever the browser's Accept-Language says. Hibernate Validator ships French, German
+    # and other translations, so by default "must not be blank" reaches a French browser as "ne doit pas être vide",
+    # and the strings in API_CONTRACT (fieldErrors) would depend on who is asking.
+    locale-resolver: fixed
+    locale: en
+
+    # Spring Boot's fallback error page (/error) answers what GlobalExceptionHandler can't reach, such as a failure in
+    # a servlet filter. These are Boot's defaults, written down so that nobody turns a trace or a message on "just to
+    # debug" and ships it: no stack trace, exception name, message or binding detail ever reaches a client.
+    # ConfigurationTest keeps them there. In Spring Boot 4 the keys live under spring.web.error; the old
+    # server.error.* names are silently ignored (a test with them set to "always" still saw "never").
+    error:
+      include-stacktrace: never
+      include-exception: false
+      include-message: never
+      include-binding-errors: never
 
   servlet:
     multipart:
