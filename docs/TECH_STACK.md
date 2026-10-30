@@ -76,6 +76,15 @@ Exact versions are pinned in `backend/build.gradle.kts`, and Gradle's own in `ba
 - **Spotless** with a pinned palantir-java-format: `./gradlew build` runs `spotlessCheck`, and `./gradlew spotlessApply` fixes the formatting.
 - **Two Jacksons:** springdoc's swagger-core puts Jackson 2 (`com.fasterxml.jackson.databind`) on the classpath. The app's JSON is Jackson 3 (`tools.jackson.databind`; the annotations stay in `com.fasterxml.jackson.annotation`), so import Jackson 3 types.
 
+### CI (task 2.7)
+`.github/workflows/ci.yml` (D-14) has one job so far, `backend`; the frontend job joins it in task 4.17.
+- **When:** every push to `main` or a `phase-*` branch, every pull request whatever its base branch (the branches are stacked, so a pull request targets the branch below it, not `main`), and by hand (`workflow_dispatch`). There are no path filters: the tests read `docs/API_CONTRACT.md`, so a docs-only change can break them. A newer push to the same branch cancels the older run, except on `main`.
+- **What:** `ubuntu-latest`, then checkout, JDK 25 (Eclipse Temurin, via `actions/setup-java`), and `./gradlew build --no-daemon` in `backend/`. `build` runs `spotlessCheck` and every test. The tests start their own Postgres containers with Testcontainers on the runner's Docker, so CI needs no `.env`, no Compose services and no secrets. When the build fails, the test reports are kept for 7 days as an artifact.
+- **Java 25:** `build.gradle.kts` asks for a Java 25 toolchain and has no resolver that downloads one, so the job must install JDK 25 itself. A missing JDK is then a clear error, not a surprise download.
+- **Caching:** `setup-java`'s `cache: gradle` stores `~/.gradle/caches` and the Gradle distribution under a key made from `backend/*.gradle*` and `gradle-wrapper.properties`. It has no fallback key, so any change to those files starts from an empty cache. `gradle/actions/setup-gradle` v6 would add a job summary and smarter caching, but since v6 its caching is a separate proprietary component, used under Gradle's Terms of Use. That choice is the owner's to make, so the workflow doesn't use it.
+- **Pinning and permissions:** every `uses:` is a full commit SHA with the release in a comment (tags can be moved). The token is `contents: read`, the checkout keeps no credentials, and the workflow uses `pull_request`, never `pull_request_target`, because the repository is public and fork pull requests run it.
+- **Not done yet:** a check that `gradle-wrapper.jar` is the real one (the `gradle/actions/wrapper-validation` action does it; task 2.1 checked the jar by hand and the wrapper pins the Gradle zip's SHA-256), and Dependabot updates for the pinned actions.
+
 ### Profiles
 | Profile | Used for | Notable settings |
 |---|---|---|
@@ -236,7 +245,7 @@ src/
 - **Backend (Render):** deploy as a Docker image. The health check path is `/actuator/health`. Free instances sleep when idle (open question Q5).
 - **Database (Neon):** Postgres 17. Flyway runs on startup.
 - **Media (R2):** a private bucket; credentials come from Render environment variables.
-- **CI (GitHub Actions):** backend tests (Testcontainers on `ubuntu-latest`), plus frontend lint, typecheck, unit tests and build.
+- **CI (GitHub Actions):** backend tests (Testcontainers on `ubuntu-latest`) from task 2.7, plus frontend lint, typecheck, unit tests and build from task 4.17. How the backend job works is in [§2 CI](#ci-task-27).
 - **Installable app (D-31, task 5.8):** `vite-plugin-pwa` builds the web app manifest and a service worker that caches the app shell. Offline writing waits for Phase 5.
 - **Emails (D-32):** unlock, yearly-letter and (from Phase 4) weekly emails carry dates, counts and a link only, never entry or summary text. Scheduled sends follow Q5's job approach and are safe to repeat.
 - **Product events (D-38, task 5.11):** written by the services in the same transaction as the action they count. No third-party analytics.

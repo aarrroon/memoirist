@@ -2,7 +2,7 @@
 
 > Setup and day-to-day commands for working on memoirist. For what the app is, see the [README](../README.md). For how it's built, see [TECH_STACK.md](TECH_STACK.md).
 >
-> **Status:** `docker-compose.yml` (task 1.3) and the backend project (`backend/`, tasks 2.1 to 2.5) exist. The backend reads its configuration (`local` and `test` profiles), creates the Phase 1 tables and the dev user in Postgres when it starts, knows who is calling (the dev-user header, task 2.5) and answers its health check, but it has no API endpoints yet. The frontend (`frontend/`) doesn't exist yet. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
+> **Status:** `docker-compose.yml` (task 1.3) and the backend project (`backend/`, tasks 2.1 to 2.6) exist. The backend reads its configuration (`local` and `test` profiles), creates the Phase 1 tables and the dev user in Postgres when it starts, knows who is calling (the dev-user header, task 2.5), answers every error in one RFC 9457 problem shape (task 2.6) and answers its health check, but it has no API endpoints yet. A GitHub Actions workflow (`.github/workflows/ci.yml`, task 2.7) builds and tests it on every push to `main` or a `phase-*` branch and on every pull request (see [Continuous integration](#continuous-integration-task-27)). The frontend (`frontend/`) doesn't exist yet. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
 
 ## 1. Prerequisites
 
@@ -85,6 +85,21 @@ cd backend
 - `./gradlew build` fails when a Java file isn't formatted (`spotlessCheck`); `./gradlew spotlessApply` fixes it. The formatter is palantir-java-format: 4-space indents, 120 columns.
 - Tests print each result as `PASSED` or `FAILED`; the full report is `build/reports/tests/test/index.html`. Each test run starts its own Postgres container (`pgvector/pgvector:pg17`) and leaves the Compose database alone. Integration tests use the `@IntegrationTest` annotation, which gives them the `test` profile and one shared app and container per run, so each extra test class costs milliseconds, not another 30-second start. `MigrationsTest` is the exception: it runs Flyway by hand and starts a second container of its own, and so does `DevProviderAbsentInProdTest` (it starts the app under the `prod` profile). Plain unit tests and `@WebMvcTest` slices such as `CurrentUserHttpTest` need no Docker.
 
+### Continuous integration (task 2.7)
+GitHub Actions runs `.github/workflows/ci.yml`. Its `backend` job does what you do before a commit, on a clean Linux machine:
+
+| When | What runs |
+|---|---|
+| A push to `main` or to any `phase-*` branch, and every pull request (whatever branch it targets) | `cd backend && ./gradlew build --no-daemon` on `ubuntu-latest` with Eclipse Temurin 25: compile, `spotlessCheck`, every test, the jar |
+| By hand: **Actions** tab, **CI**, **Run workflow** (or `gh workflow run ci.yml --ref <branch>`) | The same job. This works once the file is on `main` |
+
+- The tests start their own Postgres containers with Testcontainers, using the Docker that `ubuntu-latest` already has. The job needs no `.env`, no Compose services and no secrets: the `test` profile carries its own settings.
+- The Gradle dependencies and the Gradle distribution are cached between runs (`actions/setup-java` with `cache: gradle`). Changing `build.gradle.kts`, `settings.gradle.kts` or `gradle-wrapper.properties` starts from an empty cache, so that run is slower.
+- A push to a branch with an open pull request runs the workflow twice, once for the push and once for the pull request. A newer push cancels the older run on the same branch.
+- To see a run from your machine: `gh run list --workflow ci.yml --limit 5`, then `gh run view <id> --log-failed`. When the build fails, the job keeps the HTML test report and the XML results for 7 days (the `backend-test-reports` artifact): `gh run download <id> -n backend-test-reports`.
+- Every action in the file is pinned to a full commit SHA, with its version in a comment. To update one, find the SHA of the new release (`gh api repos/actions/checkout/commits/<tag> --jq .sha`) and change the SHA and the comment together.
+- [TECH_STACK §2](TECH_STACK.md#ci-task-27) says why it is built this way.
+
 ### Frontend (task 4.1)
 ```bash
 cd frontend
@@ -141,4 +156,5 @@ Personal, uncommitted settings go in `.claude/settings.local.json` or `CLAUDE.lo
 | `spotlessCheck` fails, and its diff shows every line changing from `\n` to `\r\n` | Spotless follows git's line-ending rules. With `core.autocrlf=true` (Git for Windows' default) git checks text files out with CRLF, so Spotless expects CRLF too, and a file saved with LF fails. Run `./gradlew spotlessApply`; git still stores the file with LF |
 | `./gradlew` says `JAVA_HOME is set to an invalid directory`, or `./gradlew --version` shows a JVM other than 25 | The wrapper starts Gradle with `$JAVA_HOME/bin/java`; it uses `java` on `PATH` only when `JAVA_HOME` is unset. Point `JAVA_HOME` at the JDK 25 folder, then restart the terminal, your IDE and Claude Code, because a running program keeps the environment it started with. `echo $JAVA_HOME` should show the JDK 25 folder |
 | Tests hang or fail to start containers | Docker isn't running, or it's low on memory. Give Docker Desktop at least 4 GB |
+| CI fails but `./gradlew build` passes on your machine | Four usual causes. (1) Line endings: CI checks out LF files, so `spotlessCheck` fails if the committed text has CRLF; check with `git ls-files --eol backend` (every text file should say `i/lf`). (2) Case: Linux tells `Entry.java` from `entry.java`, Windows doesn't. (3) A test reads `.env` or a Compose service, which CI doesn't have. (4) `gradlew` lost its executable bit (`git ls-files -s backend/gradlew` should start with `100755`). To reproduce on Linux, build a clean copy in a container; the journal entry for task 2.7 shows how |
 | Frontend types out of date | Start the backend, then `npm run gen:api` |

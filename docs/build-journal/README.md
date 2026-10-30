@@ -14,7 +14,7 @@
 | Sprint | Overview | Tasks |
 |---|---|---|
 | 1. Setup and local infrastructure | [Overview](sprint-1/README.md) | [1.2 Machine prerequisites](sprint-1/1.2-machine-prerequisites.md), [1.3 Docker Compose: Postgres and SeaweedFS](sprint-1/1.3-docker-compose.md) (1.1 came before the journal) |
-| 2. Backend foundation | | |
+| 2. Backend foundation | [Overview](sprint-2/README.md) | [2.1 Spring Boot project](sprint-2/2.1-spring-boot-project.md), [2.2 Configuration and profiles](sprint-2/2.2-configuration-and-profiles.md), [2.3 V1 migration and seed](sprint-2/2.3-v1-migration-and-seed.md), [2.4 Entities and repositories](sprint-2/2.4-entities-and-repositories.md), [2.5 Current user resolution](sprint-2/2.5-current-user-resolution.md), [2.6 Global error handling](sprint-2/2.6-global-error-handling.md), [2.7 CI: backend](sprint-2/2.7-ci-backend.md) |
 | 3. Phase 1 API | | |
 
 ## Writing an entry
