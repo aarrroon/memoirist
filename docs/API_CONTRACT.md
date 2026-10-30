@@ -16,6 +16,9 @@
 ### Who is the current user?
 - **Never** send a user ID in a body, query string or path.
 - **Phase 1 (`local` and `test` profiles only):** an optional `X-Dev-User-Id: <uuid>` header. Without it the server uses the seeded dev user `00000000-0000-0000-0000-000000000001`.
+  - The value must be a UUID in its usual form (8-4-4-4-12 hexadecimal digits, capitals allowed), and the header must be sent once. Anything else, including an empty value, is `400 malformed-request`, never a fall-back to the dev user.
+  - Reading the header doesn't check that the user exists. A read for a user who isn't there is `404`, like any resource that isn't found. What a create does for such a user (a foreign key error or a `404`) is settled in task 3.2.
+  - In any other profile there is no provider that reads the header, so it is ignored.
 - **Phase 2:** `Authorization: Bearer <jwt>` (or a cookie; see open question Q2). Controller signatures do not change.
 - A resource that belongs to someone else behaves exactly like one that doesn't exist: `404`.
 
@@ -35,7 +38,7 @@
 | `type` suffix | Status | When |
 |---|---|---|
 | `validation-failed` | 400 | Bean validation or a business rule on input; `fieldErrors` when field-specific |
-| `malformed-request` | 400 | Unreadable JSON, bad UUID, bad `X-Dev-User-Id` |
+| `malformed-request` | 400 | Unreadable JSON, bad UUID, bad `X-Dev-User-Id` (not a UUID, empty, or sent twice) |
 | `not-found` | 404 | Missing **or not owned** |
 | `entry-sealed` | 409 | Changing a sealed entry's content, date, template or media; or moving its unlock date earlier |
 | `entry-stale` | 409 | `PUT /entries/{id}` sent a `version` older than the stored one: the entry changed elsewhere (D-23) |
