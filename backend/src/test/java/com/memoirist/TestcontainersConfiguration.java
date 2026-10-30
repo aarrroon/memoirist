@@ -16,7 +16,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 public class TestcontainersConfiguration {
 
     /** The image Docker Compose runs (D-04), so tests and local runs use the same Postgres. */
-    static final String POSTGRES_IMAGE = "pgvector/pgvector:pg17";
+    public static final String POSTGRES_IMAGE = "pgvector/pgvector:pg17";
 
     @Bean
     @ServiceConnection

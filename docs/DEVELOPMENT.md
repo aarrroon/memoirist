@@ -2,7 +2,7 @@
 
 > Setup and day-to-day commands for working on memoirist. For what the app is, see the [README](../README.md). For how it's built, see [TECH_STACK.md](TECH_STACK.md).
 >
-> **Status:** `docker-compose.yml` (task 1.3) and the backend project (`backend/`, tasks 2.1 and 2.2) exist. The backend reads its configuration (`local` and `test` profiles) and answers its health check, but it has no API endpoints or tables yet. The frontend (`frontend/`) doesn't exist yet. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
+> **Status:** `docker-compose.yml` (task 1.3) and the backend project (`backend/`, tasks 2.1 to 2.3) exist. The backend reads its configuration (`local` and `test` profiles), creates the Phase 1 tables and the dev user in Postgres when it starts, and answers its health check, but it has no API endpoints yet. The frontend (`frontend/`) doesn't exist yet. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
 
 ## 1. Prerequisites
 
@@ -45,7 +45,7 @@ Open http://localhost:5173. In Phase 1 there's no login; you're the seeded dev u
 | Swagger UI | http://localhost:8080/swagger-ui.html | Try every endpoint in the browser |
 | OpenAPI JSON | http://localhost:8080/v3/api-docs | Source for `npm run gen:api` |
 | Health | http://localhost:8080/actuator/health | Should say `UP` |
-| Postgres | `localhost:5432`, database `memoirist` | Credentials in `.env`. `docker compose exec postgres psql` opens a SQL shell |
+| Postgres | `localhost:5432`, database `memoirist` | Credentials in `.env`. `docker compose exec postgres psql` opens a SQL shell. The tables appear when the backend first starts (Flyway, task 2.3) |
 | SeaweedFS S3 | http://localhost:8333 | Bucket `memoirist-media`, created at backend startup. Requests must be signed with the `.env` keys; unsigned ones get `403` |
 | SeaweedFS file browser | http://localhost:8888 | See uploaded files. It has **no login**: anyone who can reach it can read, add and delete files |
 
@@ -79,9 +79,10 @@ cd backend
 
 - `bootRun` with the `local` profile reads `../.env`, so run it from `backend/`. It's ready when the log says `Started MemoiristApplication` (about 20 seconds); then http://localhost:8080/actuator/health says `UP`. Stop it with Ctrl+C.
 - Settings come from several places. From highest to lowest: command-line arguments, Java system properties (`-D`), the OS environment, `.env`, then the profile file (`application-local.yml`) and `application.yml`. So `STORAGE_PRESIGN_TTL=PT30M ./gradlew bootRun ...` overrides `.env` for one run without editing it. [TECH_STACK §2](TECH_STACK.md#profiles) says which file holds what.
+- On start, Flyway applies the migrations in `src/main/resources/db/migration/` and, in the `local` and `test` profiles, the dev-user seed in `db/seed-local/` (task 2.3). To see what it did: `docker compose exec -T postgres psql -c 'select version, description, script, success from flyway_schema_history'`. The seed's row has an empty `version`, because a repeatable migration has none. A second start logs `Schema "public" is up to date`.
 - The app and the tests run in UTC. Log lines end in `Z` whatever your machine's zone is; add 10 hours (11 in daylight saving time) for Melbourne time.
 - `./gradlew build` fails when a Java file isn't formatted (`spotlessCheck`); `./gradlew spotlessApply` fixes it. The formatter is palantir-java-format: 4-space indents, 120 columns.
-- Tests print each result as `PASSED` or `FAILED`; the full report is `build/reports/tests/test/index.html`. Each test run starts its own Postgres container (`pgvector/pgvector:pg17`) and leaves the Compose database alone. Integration tests use the `@IntegrationTest` annotation, which gives them the `test` profile and one shared app and container per run, so each extra test class costs milliseconds, not another 30-second start.
+- Tests print each result as `PASSED` or `FAILED`; the full report is `build/reports/tests/test/index.html`. Each test run starts its own Postgres container (`pgvector/pgvector:pg17`) and leaves the Compose database alone. Integration tests use the `@IntegrationTest` annotation, which gives them the `test` profile and one shared app and container per run, so each extra test class costs milliseconds, not another 30-second start. `MigrationsTest` is the exception: it runs Flyway by hand and starts a second container of its own.
 
 ### Frontend (task 4.1)
 ```bash
@@ -131,7 +132,7 @@ Personal, uncommitted settings go in `.claude/settings.local.json` or `CLAUDE.lo
 | `password authentication failed`, or a role or database that `does not exist`, after you changed `POSTGRES_USER`, `POSTGRES_PASSWORD` or `POSTGRES_DB` in `.env` | Postgres applies them only when its volume is first created. Put the old values back, or change the database to match (for a new password: `docker compose exec postgres psql`, then `\password <user>`), or start again with `docker compose down -v`, which deletes all local data |
 | `docker compose exec postgres psql` says `the input device is not a TTY` | Git Bash's own window (mintty) isn't a Windows console. Prefix the command with `winpty`, or use Windows Terminal. For a one-off query, `docker compose exec -T postgres psql -c 'select 1'` needs no terminal |
 | S3 calls fail with `InvalidAccessKeyId` or `SignatureDoesNotMatch` | The client's keys differ from SeaweedFS's. SeaweedFS reads them from `.env` when its container is created: after editing `.env`, run `docker compose up -d`, which recreates it with the new keys (the old ones stop working), and restart the backend if it's running, so both sides use the new keys |
-| Backend fails with a Flyway checksum error | A committed migration was changed. Revert it and add a new migration instead. Last resort for local data only: `docker compose down -v` |
+| Backend fails with a Flyway checksum error | A migration was changed after your local database applied it. If it's committed, revert it and add a new migration instead. If it was never committed, you can keep editing it, but your local database no longer matches: reset it with `docker compose down -v`, which deletes all local data. (Line endings don't matter: Flyway's checksum ignores LF versus CRLF.) |
 | Backend fails "schema-validation: missing column" | Entity and migrations disagree. Add a migration; don't change `ddl-auto` |
 | Photos don't load after the tab sat open a while | Presigned links expire after 60 minutes; refocusing the tab refetches them. If they still fail, check SeaweedFS is running |
 | `./gradlew: Permission denied` | `gradlew` lost its executable bit (Git on Windows doesn't track it unless told to). Run `chmod +x gradlew` locally; to fix it for everyone, `git update-index --chmod=+x backend/gradlew` and commit |
