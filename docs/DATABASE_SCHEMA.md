@@ -68,7 +68,7 @@ A user-named chapter of life. It holds every week its dates overlap and shows th
 | id | UUID | PK |
 | user_id | UUID | NOT NULL → users ON DELETE CASCADE |
 | name | VARCHAR(100) | NOT NULL |
-| subheadings | JSONB | NOT NULL DEFAULT '[]'. Array of strings (up to 20 items, each up to 200 characters, enforced in the service). CHECK that it is an array |
+| subheadings | JSONB | NOT NULL DEFAULT '[]'. Array of strings (up to 20 items, each up to 200 characters, enforced when the request is read, task 3.4: the limits are constants on `Template`). CHECK that it is an array |
 | created_at, updated_at | TIMESTAMPTZ | |
 
 ### `weekly_logs`

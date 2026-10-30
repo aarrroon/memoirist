@@ -243,6 +243,21 @@ How `/eras` behaves (task 3.3):
 
 Template shape: `{ "id", "name", "subheadings": ["What triggered the spiral?", "..."], "createdAt", "updatedAt" }`.
 
+How `/templates` behaves (task 3.4):
+- **The body.**
+  - `name` is stripped of spaces at both ends, then must be 1 to 100 characters (`fieldErrors.name`: `must not be null` when missing, `size must be between 1 and 100` when empty or too long).
+  - `subheadings` is required, because the table doesn't mark it optional: a missing or `null` list is `fieldErrors.subheadings`: `must not be null`. `[]` is the way to say no prompts. A `PUT` needs it too, so a body that forgets it can't quietly empty the list.
+  - The list holds at most 20 items (`fieldErrors.subheadings`: `size must be between 0 and 20`). Each item is stripped, then must be 1 to 200 characters, so an item of only spaces is empty. A bad item is named by its position (`fieldErrors["subheadings[2]"]`: `size must be between 1 and 200`, or `must not be null` for a `null`).
+  - Lengths count Java characters (UTF-16 units), which is never more than the database counts, so an accepted name always fits its column. An emoji counts as 2.
+  - The order of the subheadings is kept, and repeats are allowed. Two templates may have the same name. Nothing limits how many templates a user has.
+  - Every wrong field is named in one `400`. An `id` in a `PUT` body is ignored: the path names the template. A `userId` or a timestamp in a body is ignored too.
+- **`POST` and the `id`.** `201` for a new template, `200` with the stored template (body not re-applied) when the user already has one with that `id`, `409 conflict` when someone else has it (D-12). A user who isn't there is `404` before anything else (see *Who is the current user?*). `GET /templates` for such a user is an empty list.
+- **Order.** `GET /templates` lists by name, ignoring case and accents (`apple`, `Banana`, `Éclair`, `Zucchini`), with digits sorted as text (`10 days` before `2 days`). Templates whose names look the same come in their exact spelling's order (capitals first), then oldest first. The server sorts them, so the order doesn't depend on the database's collation.
+- **`PUT`** replaces the name and the whole list. It changes no entry: an entry that started from the template keeps its `templateId` and every word it holds (D-06). A `PUT` that changes nothing leaves `updatedAt` alone.
+- **`DELETE`** removes the template and nothing else. Every entry that started from it stays, with all its content, and its `templateId` becomes `null`; that includes sealed entries (their `templateId` is hidden anyway, D-10) and entries in Recently deleted (D-30). The database does this (`ON DELETE SET NULL`), so an entry's `version` and `updatedAt` don't move. Another user's template, and one that was already deleted, is `404`.
+- **`404 not-found`** for a template that doesn't exist or isn't the user's. `415` when the body is not `application/json`. A path id that isn't a UUID is `400 malformed-request`.
+- **The starter gallery** (*Trip day*, *Spiralling check-in*, …) lives in the app and adds a copy with this same `POST` (D-06), so the server has no gallery endpoint.
+
 ### Tags (tag: Tags)
 Manual tags are Phase 1 (D-26). `Tag`: `{ "id", "name", "entryCount" }`. `entryCount` never counts sealed entries (D-10).
 

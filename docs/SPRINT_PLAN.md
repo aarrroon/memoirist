@@ -134,7 +134,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - `GET /eras/{id}` counts only the entries inside its dates, so an Era from Saturday to Sunday doesn't count the rest of the week; sealed entries and entries in Recently deleted aren't counted (D-10, D-30)
     - a week's `eras` list puts pinned Eras first, then the latest start (D-22)
 
-- [ ] **3.4 Templates CRUD** (`/new-endpoint`)
+- [x] **3.4 Templates CRUD** (`/new-endpoint`)
   - **Done when:** every row of §Templates works and is tested; subheading limits are enforced.
 
 - [ ] **3.5 Entries: create, read, update, delete, seal, redaction**

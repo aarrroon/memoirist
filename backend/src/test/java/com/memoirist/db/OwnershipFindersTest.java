@@ -97,8 +97,8 @@ class OwnershipFindersTest {
 
         assertThat(templates.findByIdAndUserId(template.getId(), alice.getId())).isPresent();
         assertThat(templates.findByIdAndUserId(template.getId(), bob.getId())).isEmpty();
-        assertThat(templates.findByUserIdOrderByNameAsc(bob.getId())).isEmpty();
-        assertThat(templates.findByUserIdOrderByNameAsc(alice.getId())).hasSize(1);
+        assertThat(templates.findByUserId(bob.getId())).isEmpty();
+        assertThat(templates.findByUserId(alice.getId())).hasSize(1);
     }
 
     @Test
