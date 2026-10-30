@@ -79,7 +79,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:** `db/migration/V1__core_schema.sql` and `db/seed-local/R__seed_dev_user.sql`, exactly as specified, including `users.birthday` and `entries.reply_to_entry_id` (D-33), `soundtrack` on `entries`, `weekly_logs` and `eras` (D-35), `eras.cover_media_id` (D-36), `media.purpose` (D-20), `entries.unlock_seen_at` (D-10), `entries.deleted_at` (D-30), `entries.version` (D-23), `entries.date_unknown` (D-34) and the 1900 date check (D-09). There's no week–Era table: Eras are worked out from their dates (D-22).
   - **Done when:** a Testcontainers test applies the migrations to an empty database and finds the dev user; local boot shows V1 in `flyway_schema_history`.
 
-- [ ] **2.4 Entities and repositories**
+- [x] **2.4 Entities and repositories**
   - **Read:** `.claude/rules/backend.md`, DATABASE_SCHEMA, D-12.
   - **Do:**
     - Entities: `User`, `Era`, `Template`, `WeeklyLog`, `Entry`, `Media`, `Tag` (with `entry_tags` as the link). There's no week–Era entity (D-22).

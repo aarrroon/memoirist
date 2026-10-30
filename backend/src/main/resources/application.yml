@@ -23,6 +23,11 @@ spring:
         jdbc:
           # Read and write timestamps in UTC whatever zone the JVM runs in (D-07).
           time_zone: UTC
+        type:
+          # How a JSON column's Java value (a TipTap JsonNode, a list of headings) becomes text. Hibernate picks the
+          # library itself, and with Jackson 2 (a transitive dependency of springdoc) and Jackson 3 (Spring Boot 4's)
+          # both on the classpath it picks Jackson 2, which cannot read a Jackson 3 JsonNode. So name the one we use.
+          json_format_mapper: org.hibernate.type.format.jackson.Jackson3JsonFormatMapper
 
   flyway:
     # The schema only. `local` and `test` add db/seed-local, the dev user (D-11). A profile's list replaces this

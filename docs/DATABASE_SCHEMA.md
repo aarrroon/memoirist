@@ -303,6 +303,24 @@ VALUES ('00000000-0000-0000-0000-000000000001', 'dev@memoirist.local', 'Dev User
 ON CONFLICT (id) DO NOTHING;
 ```
 
+### Entity classes (task 2.4)
+Each Phase 1 table has one JPA entity, in the feature package named in [TECH_STACK.md §2](TECH_STACK.md#layout). `ddl-auto=validate` makes the application refuse to start if an entity maps a table or column that V1 doesn't have, and `EntityMappingTest` saves every column and reads it back.
+
+| Table | Entity | Extends | Mapping notes |
+|---|---|---|---|
+| `users` | `User` | `TimestampedEntity` | |
+| `eras` | `Era` | `TimestampedEntity` | `cover_media_id` is a plain `UUID` |
+| `templates` | `Template` | `TimestampedEntity` | `subheadings` is a `List<String>` with `@JdbcTypeCode(SqlTypes.JSON)` |
+| `weekly_logs` | `WeeklyLog` | `TimestampedEntity` | `is_closed` is the field `closed`; `start_date` and `end_date` are never updated |
+| `entries` | `Entry` | `TimestampedEntity` | `content_json` is a Jackson 3 `JsonNode` (`@JdbcTypeCode(SqlTypes.JSON)`); `version` is `@Version` (D-23); `@SQLRestriction("deleted_at IS NULL")` hides Recently deleted entries (D-30); `media` and `tags` below |
+| `media` | `Media` | `BaseEntity` | No `created_at` or `updated_at` (D-12); `uploaded_at` is `@CreationTimestamp`; `entry` is a `LAZY` `@ManyToOne`; `purpose` and `media_type` are strings checked in the service |
+| `tags` | `Tag` | `TimestampedEntity` | |
+| `entry_tags` | no entity | | `Entry.tags` is a `@ManyToMany` through this table. Hibernate writes only `entry_id` and `tag_id`, so `source` (`'USER'`) and `created_at` come from their column defaults. Phase 4 needs an `EntryTag` entity to record `'AI'` |
+
+- `user_id`, `weekly_log_id`, `template_id`, `reply_to_entry_id` and `cover_media_id` are plain `UUID` fields, not associations. The only associations are `Entry.media` (`@OneToMany`, `@OrderBy("displayOrder ASC")`, `@BatchSize(50)`, no cascade), `Media.entry` and `Entry.tags` (`@BatchSize(50)`).
+- Deleting an entry (the sweep, or erase) deletes one `entries` row and leaves its `media` rows to the foreign key's `ON DELETE CASCADE` (a test shows Hibernate never touches `media`). Its `entry_tags` rows go by cascade or by a Hibernate `delete from entry_tags` (not asserted by a test; the result is the same).
+- A text column that the schema constrains in length (`VARCHAR(150)` for a title) is only checked by the database and the service; the entity records the length for readers but Hibernate doesn't enforce it.
+
 ---
 
 ## Phase 2 draft: auth and sharing
