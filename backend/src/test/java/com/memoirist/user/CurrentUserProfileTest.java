@@ -1,6 +1,7 @@
 package com.memoirist.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
@@ -55,5 +56,21 @@ class CurrentUserProfileTest {
             assertThat(context).hasNotFailed();
             assertThat(context).doesNotHaveBean(CurrentUserProvider.class);
         });
+    }
+
+    @Test
+    void anAppThatNeedsAProviderDoesNotStartWithoutOne() {
+        // Task 3.2's UserService asks for a CurrentUserProvider. Outside local and test no bean provides one (until
+        // Phase 2), and the context must refuse to start instead of falling back to some default user. This is the
+        // safety that the missing bean was always meant to give (TECH_STACK, Current user).
+        new ApplicationContextRunner()
+                .withUserConfiguration(DevHeaderCurrentUserProvider.class, UserService.class)
+                .withBean(HttpServletRequest.class, MockHttpServletRequest::new)
+                .withBean(UserRepository.class, () -> mock(UserRepository.class))
+                .withPropertyValues("spring.profiles.active=prod")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure()).hasStackTraceContaining("CurrentUserProvider");
+                });
     }
 }

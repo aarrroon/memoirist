@@ -17,7 +17,7 @@
 - **Never** send a user ID in a body, query string or path.
 - **Phase 1 (`local` and `test` profiles only):** an optional `X-Dev-User-Id: <uuid>` header. Without it the server uses the seeded dev user `00000000-0000-0000-0000-000000000001`.
   - The value must be a UUID in its usual form (8-4-4-4-12 hexadecimal digits, capitals allowed), and the header must be sent once. Anything else, including an empty value, is `400 malformed-request`, never a fall-back to the dev user.
-  - Reading the header doesn't check that the user exists. A read for a user who isn't there is `404`, like any resource that isn't found. What a create does for such a user (a foreign key error or a `404`) is settled in task 3.2.
+  - Reading the header doesn't check that the user exists. A well-formed id that names nobody is `404 not-found` wherever the request needs that user: `GET` and `PATCH /users/me`, and every create. A create starts by loading the current user (`UserService.currentUser()`, task 3.2, D-11), so it never reaches the foreign key and never answers `500`. A list for such a user is an empty list, as for a user with no data. The `404` never repeats the id.
   - In any other profile there is no provider that reads the header, so it is ignored.
 - **Phase 2:** `Authorization: Bearer <jwt>` (or a cookie; see open question Q2). Controller signatures do not change.
 - A resource that belongs to someone else behaves exactly like one that doesn't exist: `404`.
@@ -198,6 +198,14 @@ Used by the feed and by week detail. `eras` lists every Era whose dates overlap 
 |---|---|---|
 | `GET /users/me` | — | `200` `{ "id", "email", "displayName", "timezone", "birthday" }` |
 | `PATCH /users/me` | `{ "displayName"?: string(1–100), "timezone"?: IANA zone, "birthday"?: date or null }` | `200` user. Unknown zone, or a birthday after today: `400`. The birthday powers the *next birthday* unlock suggestion (D-33) |
+
+How `/users/me` behaves (task 3.2):
+- **`birthday` arrives in task 3.13.** Until then the response has the other four fields, and a `birthday` in the body is ignored like any other field the endpoint doesn't know.
+- **A field that is missing or `null` is left alone**, and `{}` is a valid request that changes nothing. Only these fields can change: `email`, `id` and the dates are not in the body, so a body that names them has no effect.
+- **`displayName`** is stripped of spaces at both ends, then must be 1 to 100 characters (`fieldErrors.displayName`: `size must be between 1 and 100`). A name of only spaces is empty.
+- **`timezone`** must be an IANA region name from Java's list, such as `Australia/Melbourne`, `America/New_York` or `UTC` (`fieldErrors.timezone`: `must be an IANA time zone, such as Australia/Melbourne`). Offsets and abbreviations (`+10:00`, `UTC+10`, `Z`, `EST`) are refused even though Java can read some of them, because the browser's `Intl` can't use them. Names are case-sensitive and not trimmed.
+- **Both fields are checked before anything is saved**, and every wrong field is named in one `400`. A good name with a bad zone saves neither.
+- **`404 not-found`** when `X-Dev-User-Id` names a user who isn't there (see *Who is the current user?*). `415` when the body is not `application/json`. There is no `PUT` or `DELETE` on `/users/me` in Phase 1 (`405`).
 
 ### Eras (tag: Eras)
 | Method and path | Body | Success |

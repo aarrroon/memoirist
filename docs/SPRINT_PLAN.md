@@ -119,7 +119,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - After-commit object deletion.
   - **Done when:** a Testcontainers test (SeaweedFS) uploads, presigns (URL host = public endpoint; GET returns the bytes) and deletes.
 
-- [ ] **3.2 `/users/me`**
+- [x] **3.2 `/users/me`**
   - **Read:** D-07, API_CONTRACT §Users.
   - **Also decide:** what a well-formed `X-Dev-User-Id` naming a user who isn't there does when a create inserts a row (foreign key error or `404`); see API_CONTRACT (Who is the current user?).
   - **Done when:** tests prove GET and PATCH work; an unknown timezone returns `400`; a `displayName` that is blank or over 100 characters returns `400`. (`birthday` is task 3.13.)

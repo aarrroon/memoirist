@@ -42,7 +42,7 @@
 | id | UUID | PK |
 | email | VARCHAR(255) | NOT NULL UNIQUE |
 | display_name | VARCHAR(100) | NOT NULL DEFAULT 'Time Traveler' |
-| timezone | VARCHAR(64) | NOT NULL DEFAULT 'Australia/Melbourne'. IANA zone, validated with `ZoneId.of` |
+| timezone | VARCHAR(64) | NOT NULL DEFAULT 'Australia/Melbourne'. IANA region name, checked by `@IanaTimeZone` against `ZoneId.getAvailableZoneIds()` (offsets such as `+10:00` are refused; the longest name is 32 characters) |
 | birthday | DATE | NULL. Optional; not after today (service check). Powers the *next birthday* unlock suggestion (D-33) and is the yearly letter's default day (D-32) |
 | created_at, updated_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() |
 

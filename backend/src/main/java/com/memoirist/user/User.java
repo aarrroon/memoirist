@@ -11,7 +11,8 @@ import java.util.UUID;
  * A person with a journal. In Phase 1 the only row is the dev user from the local seed (D-11); Phase 2 adds accounts.
  *
  * <p>{@code timezone} is an IANA zone name such as {@code Australia/Melbourne}. It decides what "today" and a week
- * are for this user (D-07); the service checks it with {@code ZoneId.of}.
+ * are for this user (D-07). The entity trusts what it is given: {@code PATCH /users/me} checks the name with
+ * {@link IanaTimeZone} before it gets here.
  */
 @Entity
 @Table(name = "users")

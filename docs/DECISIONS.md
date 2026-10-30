@@ -18,7 +18,7 @@ Settled choices for memoirist, and the questions still open.
 | D-08 | Weeks are created automatically (Monday–Sunday) | 2026-10-25 | 2026-10-28 |
 | D-09 | Entries have a memory date: backdated, never future, not before 1900 | 2026-10-25 | 2026-10-27 |
 | D-10 | Loot Drops use a strict seal, and opening one is surfaced | 2026-10-25 | 2026-10-28 |
-| D-11 | Ownership checks and local-only dev user | 2026-10-25 | |
+| D-11 | Ownership checks and local-only dev user | 2026-10-25 | 2026-10-31 |
 | D-12 | Clients may generate entity UUIDs | 2026-10-25 | 2026-10-29 |
 | D-13 | Frontend library set | 2026-10-25 | 2026-10-28 |
 | D-14 | Testing and CI approach | 2026-10-25 | 2026-10-30 |
@@ -132,8 +132,11 @@ Seal last: create the entry, upload media, then call `POST /entries/{id}/seal`. 
 - Controllers never receive a user ID from the request body, query or path. The current user comes from `CurrentUserProvider`.
 - Every lookup by ID is scoped to the current user. Another user's resource returns `404` (not `403`), so its existence isn't revealed.
 - Phase 1 resolves the user from the `X-Dev-User-Id` header, defaulting to `00000000-0000-0000-0000-000000000001`. That provider exists only in the `local` and `test` profiles.
+- **A well-formed id that names nobody is `404 not-found`.** The provider only reads the id; it doesn't check the database. The code that needs the user does: `GET` and `PATCH /users/me` load it, and every service that creates a row starts with `UserService.currentUser()`, so a create never reaches the foreign key (which would be a `500`). A list for such a user is simply empty.
 - The dev user is seeded from `db/seed-local`, a Flyway location only those profiles load, so it never reaches production.
 - Phase 2 adds a JWT-based provider with no controller changes.
+
+**Why (the unknown user, task 3.2):** a header naming nobody is a client mistake, so it answers `4xx` like any resource that isn't found, never `500`. Most creates load the user anyway, for the time zone that decides "today" and the week (D-07, D-08), so the lookup costs nothing extra. Checking inside the provider or a filter would run a query on every request and turn a seam into a service; mapping the foreign-key error to `404` would also label other foreign-key failures (a template deleted a moment ago) as "user not found".
 
 ## D-12 Client-generated UUIDs
 Create requests for eras, templates and entries may include an `id` (UUID v4). If the `id` already exists for the same user, the server returns the existing resource with `200` (a safe retry). If it exists for someone else, the server returns `409`. An `id` that belongs to one of the user's entries in Recently deleted also returns `409`; the user restores that entry instead (D-30). Without an `id`, the server generates one.
