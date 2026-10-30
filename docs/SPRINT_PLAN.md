@@ -110,7 +110,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 ### Sprint 3: Phase 1 API
 
-- [ ] **3.1 Storage service**
+- [x] **3.1 Storage service**
   - **Read:** TECH_STACK §2 (Storage), D-03, D-17.
   - **Do:**
     - `StorageService`: put, delete and presign, with `S3Client` using `endpoint` and `S3Presigner` using `public-endpoint`.
@@ -377,7 +377,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 - [ ] **5.3 Share links.** Hashed tokens, expiry and revoke; a public read-only view with redaction. **Done when:** a test proves a share link to a week containing a sealed entry never exposes that entry's content or media.
 - [ ] **5.4 PDF export of a week** (per Q4).
 - [ ] **5.5 Account export and deletion** (per Q3), including stored files.
-- [ ] **5.6 Production deploy.** Neon, R2 (private bucket), Render (Docker, health check `/actuator/health`), Vercel (with an `/api` rewrite), environment secrets. **Done when:** the deployed app passes the Playwright smoke test.
+- [ ] **5.6 Production deploy.** Neon, R2 (private bucket), Render (Docker, health check `/actuator/health`), Vercel (with an `/api` rewrite), environment secrets. **Read:** TECH_STACK §2 (Storage). **Also check against the real R2 bucket** (handed on from 3.1): whether uploads work with and without the `WHEN_REQUIRED` checksum setting in `StorageConfiguration`, and whether R2 needs `S3Configuration.chunkedEncodingEnabled(false)`. **Done when:** the deployed app passes the Playwright smoke test and a photo uploads, presigns and deletes against R2.
 - [ ] **5.7 Unlock emails** (D-10). An email when a Loot Drop opens, on by default with a setting to turn it off. It needs the email service from Q2 and the job approach from Q5. **Done when:** a test with a fixed `Clock` sends one email per unlocked entry, never before it unlocks and never twice.
 - [ ] **5.8 Installable app** (D-31; ask before adding `vite-plugin-pwa`, D-13). A web app manifest, icons and a service worker that caches the app shell, so memoirist installs to the home screen and opens full-screen. Offline writing stays in Phase 5. **Done when:** Chrome's install check passes on the deployed app, and it installs and opens full-screen on an Android phone and through Safari's *Add to Home Screen* on an iPhone.
 - [ ] **5.9 App lock** (D-37; the mechanism comes from Q2). An optional lock in Settings: it locks after a few minutes in the background and unlocks with the device's fingerprint, face or passcode (WebAuthn) or a PIN. **Done when:** with the lock on, coming back after the timeout shows only the lock screen until it's unlocked; nothing from the journal shows behind it; and turning it off removes it.

@@ -64,11 +64,18 @@ dependencies {
 // so they don't depend on the folder they start in, and lists it as an input, so editing the contract re-runs them.
 val apiContract = rootProject.projectDir.resolve("../docs/API_CONTRACT.md").canonicalFile
 
+// Docker Compose's file, which SeaweedFsComposeTest compares the tests' SeaweedFS container with (D-03: one pinned tag).
+val composeFile = rootProject.projectDir.resolve("../docker-compose.yml").canonicalFile
+
 tasks.withType<Test> {
     useJUnitPlatform()
     systemProperty("memoirist.apiContract", apiContract.path)
     if (apiContract.exists()) {
         inputs.file(apiContract).withPropertyName("apiContract")
+    }
+    systemProperty("memoirist.composeFile", composeFile.path)
+    if (composeFile.exists()) {
+        inputs.file(composeFile).withPropertyName("composeFile")
     }
     // The app runs in UTC (MemoiristApplication.main), so the tests do too, on every machine and from the first test,
     // whatever the host's zone. MemoiristApplicationTest checks main() itself, starting from another zone.

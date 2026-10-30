@@ -10,7 +10,7 @@ Settled choices for memoirist, and the questions still open.
 |---|---|---|---|
 | D-01 | Project name is **memoirist** | 2026-10-25 | |
 | D-02 | Spring Boot 4.x on Java 25 | 2026-10-25 | 2026-10-28 |
-| D-03 | SeaweedFS locally, Cloudflare R2 in production | 2026-10-25 | 2026-10-29 |
+| D-03 | SeaweedFS locally, Cloudflare R2 in production | 2026-10-25 | 2026-10-31 |
 | D-04 | PostgreSQL 17 everywhere | 2026-10-25 | 2026-10-28 |
 | D-05 | Entry content is TipTap JSON plus derived plain text | 2026-10-25 | 2026-10-28 |
 | D-06 | Templates attach to entries, not weeks; starter templates | 2026-10-25 | 2026-10-28 |
@@ -76,7 +76,7 @@ Settled choices for memoirist, and the questions still open.
 **Local credentials:** SeaweedFS's S3 gateway reads its one identity from environment variables. Compose maps `STORAGE_ACCESS_KEY` and `STORAGE_SECRET_KEY` from `.env` to `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. No identity file is committed, and nothing passes `-s3.config` or stores identities in the filer. SeaweedFS's wiki says either would make it ignore the environment variables, but the pinned 4.48 merges them instead, so an identity file would add keys rather than replace the `.env` ones.
 - **Why:** the keys have one home (`.env`), as Postgres's do, and the backend sees the same variables locally and on R2. A config file only pays off with several identities.
 - **Watch out:** when no credentials load, SeaweedFS allows every request unsigned. Compose refuses to start unless both keys are set (`${VAR:?}`), and task 1.3 checked that an unsigned request gets `403`.
-- **Version:** the image is pinned to `chrislusf/seaweedfs:4.48` (task 1.3). 4.50 and 4.51 hold the first write on a fresh server for about 15 seconds ([seaweedfs#12145](https://github.com/seaweedfs/seaweedfs/issues/12145)), which every Testcontainers run would pay, and 4.49 has no plain image. This bullet is the tag's one home: Compose and the Testcontainers SeaweedFS (task 3.1) both use it. Move to a later release once one fixes that, and check the `403` again.
+- **Version:** the image is pinned to `chrislusf/seaweedfs:4.48` (task 1.3). 4.50 and 4.51 hold the first write on a fresh server for about 15 seconds ([seaweedfs#12145](https://github.com/seaweedfs/seaweedfs/issues/12145)), which every Testcontainers run would pay, and 4.49 has no plain image. This bullet is the tag's one home: Compose and the Testcontainers SeaweedFS (`SeaweedFsTestConfiguration`, task 3.1) both use it. Java can't read this page, so the tag is written in `docker-compose.yml` and in the test configuration's `SEAWEEDFS_IMAGE`, and `SeaweedFsComposeTest` fails if the two (or the `server -s3 ...` command) differ. To move to a later release once one fixes that, change those two files and this bullet together, and check the `403` again.
 
 ## D-04 PostgreSQL 17 everywhere
 Locally the image is `pgvector/pgvector:pg17`; production is Neon on Postgres 17. One major version in both places avoids surprises. pgvector is installed in the image but only enabled in Phase 4.
