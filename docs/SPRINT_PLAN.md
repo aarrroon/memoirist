@@ -104,7 +104,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:** extend the existing `common/GlobalExceptionHandler` (task 2.5 created it and it already maps `malformed-request`; do not add a second advice) so it maps the remaining exceptions to the `ProblemDetail` types listed in API_CONTRACT (`timestamp`, `fieldErrors`), with no stack traces in responses.
   - **Done when:** tests cover `400` with `fieldErrors`, `404`, `409`, `409 entry-stale` (from an optimistic-locking failure), `413` and `500`.
 
-- [ ] **2.7 CI: backend**
+- [x] **2.7 CI: backend**
   - **Do:** `.github/workflows/ci.yml` with a backend job that runs `./gradlew build` on JDK 25 with Testcontainers.
   - **Done when:** the workflow passes on GitHub. If no remote exists yet, the YAML validates and the job's commands pass locally.
 
