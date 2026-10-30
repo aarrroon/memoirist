@@ -49,7 +49,7 @@
 | Sprint | Branch | Base | PR | State |
 |---|---|---|---|---|
 | 1. Setup and local infrastructure | `phase-1-sprint-1` | `phase-1` | [#1](https://github.com/aarrroon/memoirist/pull/1) | Ready for review (not a draft). Its GitGuardian check fails on a false positive, see *Needs attention* |
-| 2. Backend foundation | `phase-1-sprint-2` | `phase-1-sprint-1` | | |
+| 2. Backend foundation | `phase-1-sprint-2` | `phase-1-sprint-1` | [#2](https://github.com/aarrroon/memoirist/pull/2) | Ready for review (not a draft). Stacked on #1, so it shows only this sprint's diff: merge #1 first, then retarget this one with `gh pr edit 2 --base phase-1`. CI passes on the pull request (run 41062443059, 219 tests) and GitGuardian passes |
 | 3. Phase 1 API | `phase-1-sprint-3` | `phase-1-sprint-2` | | |
 
 ## Assumptions
@@ -68,7 +68,7 @@ Made instead of asking, each from a documented default or the doc that wins (D-2
 | 9 | 1.3 | `.claude/skills/implement-task/SKILL.md` step 7; assumption 2 | The Sprint 1 overview (`build-journal/sprint-1/README.md`) and its index row were written in task 1.3, Sprint 1's last task, then completed in the sprint's close-out commit (*Sprint 1: add the build journal overview*) with the commit hashes, the test strategy and the lessons |
 | 10 | 1.3 | DATABASE_SCHEMA.md Conventions; SPRINT_PLAN 2.3; the run brief (SQL edits only on failure) | V1's two inline `UNIQUE` constraints keep Postgres's default names (`users_email_key`, `media_object_key_key`), not `uq_<table>_<cols>`. Task 2.3 copies V1 as written, so once it's committed a rename needs a V2 migration |
 | 11 | 2.1 | SPRINT_PLAN 2.1 vs the Spring Boot 4.0 migration guide | The sprint plan's "web" and "spring-boot-starter-test" are Boot 3 names. The build uses Boot 4's `spring-boot-starter-webmvc` and one `spring-boot-starter-<technology>-test` per starter, each of which brings `spring-boot-starter-test`, as the migration guide says. The sprint plan wasn't edited |
-| 12 | 2.1 | D-14 vs the Spring Boot 4.1.2 BOM | D-14's "JUnit 5" was merely out of date: Boot 4.1.2 manages JUnit Jupiter 6.0.3. The wording was corrected in place (Updated 2026-10-29); the decision (JUnit and Testcontainers, no H2) is unchanged |
+| 12 | 2.1 | D-14 vs the Spring Boot 4.1.2 BOM | D-14's "JUnit 5" was merely out of date: Boot 4.1.2 manages JUnit Jupiter 6.0.3. The wording was corrected in place (Updated 2026-10-30); the decision (JUnit and Testcontainers, no H2) is unchanged |
 | 13 | 2.1 | SPRINT_PLAN 2.2; TECH_STACK §1 | Configuration is the minimum that boots: `application.yml` (the app's name) and `application-local.yml` (the `optional:file:../.env[.properties]` import TECH_STACK §1 specifies, and the datasource from `DB_URL`, `POSTGRES_USER` and `POSTGRES_PASSWORD`). Task 2.2 owns the rest |
 | 14 | 2.1 | D-15 (Spotless, no formatter named) | Spotless runs palantir-java-format (4-space indents, 120 columns), pinned to 2.102.0, Spotless 8.10.4's default, so a Spotless upgrade can't reformat the code. See *Questions for the morning* |
 | 15 | 2.1 | `.gitattributes` (`* text=auto`) and `core.autocrlf=true` | Spotless keeps its default line-ending policy, which follows git: CRLF in a Windows working copy, LF on Linux. A Java file saved with LF on Windows fails `spotlessCheck` until `./gradlew spotlessApply` |
