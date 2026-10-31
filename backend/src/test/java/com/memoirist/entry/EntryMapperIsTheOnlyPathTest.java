@@ -16,15 +16,16 @@ import org.junit.jupiter.api.Test;
  *
  * <p>Java can't make a record's constructor private to one class, so this reads the source files instead. It is
  * deliberately blunt (it looks for the text {@code new EntryResponse(}), and a plain check that cannot be reasoned
- * around is what a rule like this needs. The list rows ({@code EntrySummaryResponse}, task 3.9) join the list below
- * when they exist.
+ * around is what a rule like this needs. The list rows ({@code EntrySummaryResponse}, task 3.9) are in the list below
+ * too: a row of a sealed Loot Drop is just as private as the full entry.
  */
 class EntryMapperIsTheOnlyPathTest {
 
     /** Gradle runs the tests with the project folder ({@code backend/}) as the working directory. */
     private static final Path MAIN_SOURCES = Path.of("src", "main", "java");
 
-    private static final List<String> DTOS_ONLY_THE_MAPPER_BUILDS = List.of("new EntryResponse(");
+    private static final List<String> DTOS_ONLY_THE_MAPPER_BUILDS =
+            List.of("new EntryResponse(", "new EntrySummaryResponse(");
 
     private static List<Path> javaFiles() throws IOException {
         try (Stream<Path> files = Files.walk(MAIN_SOURCES)) {
@@ -40,7 +41,7 @@ class EntryMapperIsTheOnlyPathTest {
     }
 
     @Test
-    void onlyEntryMapperBuildsAnEntryResponse() throws IOException {
+    void onlyEntryMapperBuildsAnEntryResponseOrAnEntrySummaryResponse() throws IOException {
         for (String construction : DTOS_ONLY_THE_MAPPER_BUILDS) {
             List<String> builders = javaFiles().stream()
                     .filter(path -> contains(path, construction))
@@ -55,7 +56,7 @@ class EntryMapperIsTheOnlyPathTest {
     void noOtherClassNamesTheResponseRecordsBesideTheMapperAndTheirOwnDocs() throws IOException {
         // A call to a *method reference* to the constructor would slip past the text above, so look for that too.
         List<String> references = javaFiles().stream()
-                .filter(path -> contains(path, "EntryResponse::new"))
+                .filter(path -> contains(path, "EntryResponse::new") || contains(path, "EntrySummaryResponse::new"))
                 .map(path -> path.getFileName().toString())
                 .toList();
 

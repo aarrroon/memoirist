@@ -7,6 +7,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
@@ -119,6 +121,86 @@ public interface EntryRepository extends Repository<Entry, UUID> {
             @Param("weeklyLogIds") Collection<UUID> weeklyLogIds,
             @Param("userId") UUID userId,
             @Param("now") Instant now);
+
+    // The all-entries timeline (task 3.9, D-25). Both queries sort the same way: newest memory date first, then newest
+    // written, then the id. The id is there only to make the order total: two entries made in the same instant on the
+    // same day (the photo dump does this) would otherwise be free to swap places between one page request and the
+    // next, and a client paging through would see one twice and miss another. idx_entries_user_date serves the date;
+    // Postgres sorts the few rows of one day by created_at.
+
+    /**
+     * One page of the user's entries, sealed ones included as locked rows (D-10), newest first. Entries in Recently
+     * deleted are left out by {@code @SQLRestriction} (D-30). The count is its own query because the page query has a
+     * {@code limit}; Spring Data runs it only when the page is full.
+     */
+    @Query(value = """
+                    select e from Entry e
+                    where e.userId = :userId
+                    order by e.entryDate desc, e.createdAt desc, e.id desc
+                    """, countQuery = """
+                    select count(e) from Entry e
+                    where e.userId = :userId
+                    """)
+    Page<Entry> findTimelinePage(@Param("userId") UUID userId, Pageable pageable);
+
+    // TODO(human) PRACTICE: Write the query behind the timeline's tag filter: one page of the user's entries that carry
+    //   a given tag, newest first, plus its count query. A sealed Loot Drop must never come back, and must not be
+    //   counted in totalItems either, because a count that moves when the user seals an entry would tell them what is
+    //   under the seal. Decide where the sealed rule goes (the service after loading? the query?), how an entry that
+    //   has just opened is treated, and whether a join to the tags can repeat an entry.
+    // Hint: D-10 and security.md ("leave them out in the query itself"). EntrySeal says when an entry is open: no
+    //   unlock date, or one that is not after now (an entry is open at the very instant). entry_tags has a primary key
+    //   on (entry_id, tag_id), so one tag matches an entry at most once. Keep the same order as findTimelinePage, and
+    //   pass the same `now` that goes to the mapper.
+    // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+    /**
+     * One page of the user's entries that carry this tag, <em>open entries only</em>, newest first (D-10): a sealed
+     * Loot Drop is not listed and is not counted, so the total never moves because of a seal. An entry whose unlock
+     * date is not after {@code now} is open and is included, the same rule as {@code EntrySeal}. The join to the tags
+     * can't repeat an entry, because {@code entry_tags} has one row per (entry, tag). Entries in Recently deleted are
+     * left out by {@code @SQLRestriction} (D-30). Served by {@code idx_entry_tags_tag}.
+     */
+    @Query(value = """
+                    select e from Entry e join e.tags t
+                    where e.userId = :userId
+                      and t.id = :tagId
+                      and (e.unlockDate is null or e.unlockDate <= :now)
+                    order by e.entryDate desc, e.createdAt desc, e.id desc
+                    """, countQuery = """
+                    select count(e) from Entry e join e.tags t
+                    where e.userId = :userId
+                      and t.id = :tagId
+                      and (e.unlockDate is null or e.unlockDate <= :now)
+                    """)
+    Page<Entry> findOpenTimelinePageByTag(
+            @Param("userId") UUID userId, @Param("tagId") UUID tagId, @Param("now") Instant now, Pageable pageable);
+    // └── END ANSWER ▲ ──
+
+    /**
+     * Fills in the {@code media} of the <em>open</em> entries among these ids, with one query: what a page of a list
+     * needs for its photo and voice note counts. Like {@link #fetchMediaOfOpenEntries}, it returns the entries the caller
+     * loaded a moment ago in the same transaction, with the lazy list initialised on the way; read the entries from the
+     * persistence context, not from the result. Sealed entries are left out in the query (D-10), by the same rule and
+     * the same {@code now} as the mapper. Pass a non-empty list.
+     */
+    @Query("""
+            select e from Entry e left join fetch e.media
+            where e.id in :entryIds
+              and e.userId = :userId
+              and (e.unlockDate is null or e.unlockDate <= :now)
+            """)
+    List<Entry> fetchMediaOfOpenEntriesByIds(
+            @Param("entryIds") Collection<UUID> entryIds, @Param("userId") UUID userId, @Param("now") Instant now);
+
+    /** The same for the {@code tags}. See {@link #fetchMediaOfOpenEntriesByIds}. */
+    @Query("""
+            select e from Entry e left join fetch e.tags
+            where e.id in :entryIds
+              and e.userId = :userId
+              and (e.unlockDate is null or e.unlockDate <= :now)
+            """)
+    List<Entry> fetchTagsOfOpenEntriesByIds(
+            @Param("entryIds") Collection<UUID> entryIds, @Param("userId") UUID userId, @Param("now") Instant now);
 
     /**
      * How many entries each week has among the entries whose memory date is on or after {@code from} and, when

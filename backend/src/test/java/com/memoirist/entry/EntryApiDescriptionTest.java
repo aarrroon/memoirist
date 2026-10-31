@@ -20,6 +20,7 @@ class EntryApiDescriptionTest extends EntryApiTest {
 
         for (String operation : List.of(
                 "$.paths['/api/v1/entries'].post",
+                "$.paths['/api/v1/entries'].get",
                 "$.paths['/api/v1/entries/{entryId}'].get",
                 "$.paths['/api/v1/entries/{entryId}'].put",
                 "$.paths['/api/v1/entries/{entryId}'].delete",
@@ -28,6 +29,8 @@ class EntryApiDescriptionTest extends EntryApiTest {
                     .as(operation)
                     .containsExactly("Entries");
         }
+        assertThat(responseCodes(body, "$.paths['/api/v1/entries'].get"))
+                .containsExactlyInAnyOrder("200", "400", "404");
         assertThat(responseCodes(body, "$.paths['/api/v1/entries'].post"))
                 .containsExactlyInAnyOrder("200", "201", "400", "404", "409", "413", "415");
         assertThat(responseCodes(body, "$.paths['/api/v1/entries/{entryId}'].get"))
@@ -67,6 +70,52 @@ class EntryApiDescriptionTest extends EntryApiTest {
                         "dateUnknown",
                         "version",
                         "media");
+    }
+
+    @Test
+    void theListRowHasTheContractFieldsAndCallsTheFlagIsLocked() {
+        String body = bodyText(
+                client.get().uri("/v3/api-docs").exchange().expectStatus().isOk());
+
+        Map<String, Object> properties = JsonPath.read(body, "$.components.schemas.EntrySummaryResponse.properties");
+
+        assertThat(properties.keySet())
+                .containsExactlyInAnyOrder(
+                        "id",
+                        "weeklyLogId",
+                        "entryDate",
+                        "title",
+                        "previewLine",
+                        "photoCount",
+                        "voiceNoteCount",
+                        "firstMediaKind",
+                        "tags",
+                        "createdAt",
+                        "unlockDate",
+                        "isLocked",
+                        "dateUnknown",
+                        "deletedAt");
+        assertThat(JsonPath.<List<String>>read(
+                        body, "$.components.schemas.EntrySummaryResponse.properties.firstMediaKind.enum"))
+                .containsExactly("PHOTO", "PAGE_SCAN", "VOICE_NOTE");
+    }
+
+    @Test
+    void theListTakesPageSizeAndTagIdWithTheContractLimits() {
+        String body = bodyText(
+                client.get().uri("/v3/api-docs").exchange().expectStatus().isOk());
+        String parameters = "$.paths['/api/v1/entries'].get.parameters";
+
+        assertThat(JsonPath.<List<String>>read(body, parameters + "[*].name"))
+                .containsExactlyInAnyOrder("page", "size", "tagId");
+        assertThat(JsonPath.<List<Integer>>read(body, parameters + "[?(@.name=='size')].schema.maximum"))
+                .containsExactly(100);
+        assertThat(JsonPath.<List<Integer>>read(body, parameters + "[?(@.name=='size')].schema.minimum"))
+                .containsExactly(1);
+        assertThat(JsonPath.<List<Integer>>read(body, parameters + "[?(@.name=='size')].schema.default"))
+                .containsExactly(50);
+        assertThat(JsonPath.<List<Boolean>>read(body, parameters + "[?(@.name=='tagId')].required"))
+                .containsExactly(false);
     }
 
     @Test

@@ -1,14 +1,18 @@
 package com.memoirist.entry;
 
 import com.memoirist.common.CreateResult;
+import com.memoirist.common.PageResponse;
 import com.memoirist.entry.dto.EntryCreateRequest;
 import com.memoirist.entry.dto.EntryResponse;
 import com.memoirist.entry.dto.EntrySealRequest;
+import com.memoirist.entry.dto.EntrySummaryResponse;
 import com.memoirist.entry.dto.EntryUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,7 +32,9 @@ import org.springframework.web.bind.annotation.RestController;
  * that the entry is theirs and applies the seal rules, and the mapper hides what a sealed entry must not show. No user
  * id comes from the request (D-11).
  *
- * <p>The list, the Opened strip, Recently deleted and On this day (tasks 3.9 to 3.12) are added here later.
+ * <p>Reading one entry and changing one go through {@link EntryService}; the list rows go through
+ * {@link EntryListService}. The Opened strip, Recently deleted and On this day (tasks 3.10 to 3.12) are added here
+ * later.
  */
 @RestController
 @RequestMapping("/api/v1/entries")
@@ -35,9 +42,32 @@ import org.springframework.web.bind.annotation.RestController;
 class EntryController {
 
     private final EntryService entries;
+    private final EntryListService entryList;
 
-    EntryController(EntryService entries) {
+    EntryController(EntryService entries, EntryListService entryList) {
         this.entries = entries;
+        this.entryList = entryList;
+    }
+
+    @GetMapping
+    @Operation(
+            summary = "A page of every entry (the all-entries timeline)",
+            description = "One row per entry, newest memory date first and then newest written. Rows have no caption"
+                    + " and no media URLs. A sealed Loot Drop is a locked row with nothing private in it. With tagId"
+                    + " only open entries that carry the tag are listed and counted, so a seal never shows up in the"
+                    + " list or in totalItems. Entries in Recently deleted are left out.")
+    @ApiResponse(responseCode = "200", description = "The page; items is empty when there is nothing on it")
+    @ApiResponse(
+            responseCode = "400",
+            description = "validation-failed with fieldErrors (page below 0, size below 1 or above 100), or"
+                    + " malformed-request (page or size is not a whole number, tagId is not a UUID, a bad"
+                    + " X-Dev-User-Id)")
+    @ApiResponse(responseCode = "404", description = "not-found: tagId is not one of the user's tags")
+    PageResponse<EntrySummaryResponse> list(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "50") @Min(1) @Max(100) int size,
+            @RequestParam(required = false) UUID tagId) {
+        return entryList.list(page, size, tagId);
     }
 
     @PostMapping

@@ -301,14 +301,30 @@ public abstract class EntryApiTest {
      * only a name; the tests that sign it need no real object, because signing makes no call to storage.
      */
     protected UUID aPhoto(Object entryId, String objectKey, int order) {
+        return aMedia(entryId, objectKey, order, "image/jpeg", "PHOTO");
+    }
+
+    /** A photo of a paper diary page (D-20): an image whose purpose is {@code PAGE_SCAN}. */
+    protected UUID aDiaryPage(Object entryId, String objectKey, int order) {
+        return aMedia(entryId, objectKey, order, "image/png", "PAGE_SCAN");
+    }
+
+    /** A voice note: an audio file (D-17). Its purpose is {@code PHOTO}, the column's default, as an upload sets it. */
+    protected UUID aVoiceNote(Object entryId, String objectKey, int order) {
+        return aMedia(entryId, objectKey, order, "audio/webm", "PHOTO");
+    }
+
+    private UUID aMedia(Object entryId, String objectKey, int order, String mediaType, String purpose) {
         UUID id = UUID.randomUUID();
         jdbc.sql("""
                         INSERT INTO media (id, entry_id, object_key, media_type, purpose, display_order, file_size_bytes)
-                        VALUES (:id, :entryId, :key, 'image/jpeg', 'PHOTO', :order, 2048)
+                        VALUES (:id, :entryId, :key, :type, :purpose, :order, 2048)
                         """)
                 .param("id", id)
                 .param("entryId", UUID.fromString(entryId.toString()))
                 .param("key", objectKey)
+                .param("type", mediaType)
+                .param("purpose", purpose)
                 .param("order", order)
                 .update();
         return id;
