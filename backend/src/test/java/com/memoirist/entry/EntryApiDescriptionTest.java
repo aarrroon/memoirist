@@ -79,7 +79,7 @@ class EntryApiDescriptionTest extends EntryApiTest {
         assertThat(JsonPath.<Integer>read(body, "$.components.schemas.EntryUpdateRequest.properties.title.maxLength"))
                 .isEqualTo(150);
         assertThat(JsonPath.<List<String>>read(body, "$.components.schemas.EntryUpdateRequest.required"))
-                .containsExactlyInAnyOrder("entryDate", "version");
+                .containsExactlyInAnyOrder("entryDate", "tagIds", "version");
         assertThat(JsonPath.<List<String>>read(body, "$.components.schemas.EntrySealRequest.required"))
                 .containsExactly("unlockDate");
     }

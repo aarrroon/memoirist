@@ -136,7 +136,7 @@ The user's own categories for entries (D-26).
 | created_at, updated_at | TIMESTAMPTZ | |
 
 ### `entry_tags`
-Links entries to tags. Owned through `entries`; the service checks the tag belongs to the same user. At most 20 tags per entry (service check).
+Links entries to tags. Owned through `entries`; `EntryService` checks that every tag in a request belongs to the entry's user (`404` otherwise) and takes a share lock on them (`SELECT ... FOR SHARE`), so a tag deleted at the same moment can't break the foreign key. At most 20 tags per entry: the `tagIds` of the entry requests are limited to 20 as sent (task 3.8); the database does not enforce it.
 
 | Column | Type | Constraints and notes |
 |---|---|---|
@@ -314,11 +314,11 @@ Each Phase 1 table has one JPA entity, in the feature package named in [TECH_STA
 | `weekly_logs` | `WeeklyLog` | `TimestampedEntity` | `is_closed` is the field `closed`; `start_date` and `end_date` are never updated; `@DynamicUpdate`, so an `UPDATE` writes only the columns that changed (the title and the closed flag are saved by separate requests and the row has no `@Version`) |
 | `entries` | `Entry` | `TimestampedEntity` | `content_json` is a Jackson 3 `JsonNode` (`@JdbcTypeCode(SqlTypes.JSON)`); `version` is `@Version` (D-23); `@SQLRestriction("deleted_at IS NULL")` hides Recently deleted entries (D-30); `media` and `tags` below |
 | `media` | `Media` | `BaseEntity` | No `created_at` or `updated_at` (D-12); `uploaded_at` is `@CreationTimestamp`; `entry` is a `LAZY` `@ManyToOne`; `purpose` and `media_type` are strings checked in the service |
-| `tags` | `Tag` | `TimestampedEntity` | |
-| `entry_tags` | no entity | | `Entry.tags` is a `@ManyToMany` through this table. Hibernate writes only `entry_id` and `tag_id`, so `source` (`'USER'`) and `created_at` come from their column defaults. Phase 4 needs an `EntryTag` entity to record `'AI'` |
+| `tags` | `Tag` | `TimestampedEntity` | `Tag.BY_NAME` is the list order, sorted in Java (`NameCollation`, shared with templates). `TagRepository.insertIfAbsent` is a native `INSERT ... ON CONFLICT (user_id, lower(name)) DO NOTHING` (the create path); the lookup by name is `lower(name) = lower(:name)`, the expression of `uq_tags_user_name`; `findAndLockByIdInAndUserId` adds `FOR SHARE`. `EntryRepository.countOpenEntriesByTag` counts the entries per tag, leaving out sealed ones in the query (task 3.8) |
+| `entry_tags` | no entity | | `Entry.tags` is a `@ManyToMany` through this table. Hibernate writes only `entry_id` and `tag_id`, so `source` (`'USER'`) and `created_at` come from their column defaults. The entry owns the collection, so a changed set raises `entries.version` and moves `updated_at`, and an unchanged set writes nothing (tested). Phase 4 needs an `EntryTag` entity to record `'AI'` |
 
 - `user_id`, `weekly_log_id`, `template_id`, `reply_to_entry_id` and `cover_media_id` are plain `UUID` fields, not associations. The only associations are `Entry.media` (`@OneToMany`, `@OrderBy("displayOrder ASC")`, `@BatchSize(50)`, no cascade), `Media.entry` and `Entry.tags` (`@BatchSize(50)`).
-- Deleting an entry (the sweep, or erase) deletes one `entries` row and leaves its `media` rows to the foreign key's `ON DELETE CASCADE` (a test shows Hibernate never touches `media`). A query that finds an entry's media rows through the entry, JPQL or a derived finder, also applies the entry's `@SQLRestriction`, so it finds none for an entry in Recently deleted; `EntryErasure` reads the keys with a native query for that reason (task 3.6). Its `entry_tags` rows go by cascade or by a Hibernate `delete from entry_tags` (not asserted by a test; the result is the same).
+- Deleting an entry (the sweep, or erase) deletes one `entries` row and leaves its `media` rows to the foreign key's `ON DELETE CASCADE` (a test shows Hibernate never touches `media`). A query that finds an entry's media rows through the entry, JPQL or a derived finder, also applies the entry's `@SQLRestriction`, so it finds none for an entry in Recently deleted; `EntryErasure` reads the keys with a native query for that reason (task 3.6). Its `entry_tags` rows go by cascade or by a Hibernate `delete from entry_tags` (not asserted by a test; the result is the same). Deleting a *tag* is only `delete from tags`: `Tag` has no collection of entries, so the `entry_tags` rows go by the foreign key's cascade and no entry row is written (`TagEndpointTest` asserts both).
 - A text column that the schema constrains in length (`VARCHAR(150)` for a title) is only checked by the database and the service; the entity records the length for readers but Hibernate doesn't enforce it.
 
 ---

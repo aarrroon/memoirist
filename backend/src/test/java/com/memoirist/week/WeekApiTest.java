@@ -31,7 +31,7 @@ public abstract class WeekApiTest extends EntryApiTest {
     protected static final String W3 = "2026-10-19";
     protected static final String W4 = "2026-10-26";
 
-    /** Gives an entry a tag of the user's, written straight to the database (the tag endpoints arrive in task 3.8). */
+    /** Gives an entry a tag of the user's, written straight to the database: the feed tests need no endpoint calls for it. */
     protected void aTag(User user, Object entryId, String name) {
         UUID tagId = UUID.randomUUID();
         jdbc.sql("INSERT INTO tags (id, user_id, name) VALUES (:id, :user, :name)")

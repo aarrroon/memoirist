@@ -156,7 +156,19 @@ public abstract class EntryApiTest {
                 .exchange();
     }
 
+    /**
+     * A {@code PUT} of this body. {@code tagIds} is required on an update (D-26), and most tests are about something
+     * else, so a body that leaves it out is sent with {@code "tagIds": []}, which is what the entries these tests make
+     * already have. A test about {@code tagIds} itself uses {@link #putAsSent}.
+     */
     protected RestTestClient.ResponseSpec put(User user, Object entryId, Map<String, Object> body) {
+        Map<String, Object> withTags = new LinkedHashMap<>(body);
+        withTags.putIfAbsent("tagIds", List.of());
+        return putAsSent(user, entryId, withTags);
+    }
+
+    /** A {@code PUT} of exactly this body: nothing is added to it. */
+    protected RestTestClient.ResponseSpec putAsSent(User user, Object entryId, Map<String, Object> body) {
         return client.put()
                 .uri(ENTRIES + "/" + entryId)
                 .header(HEADER, user.getId().toString())

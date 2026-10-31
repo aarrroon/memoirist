@@ -146,6 +146,33 @@ public interface EntryRepository extends Repository<Entry, UUID> {
             @Param("to") LocalDate to,
             @Param("now") Instant now);
 
+    /**
+     * How many of the user's entries carry each tag: the {@code entryCount} of {@code GET /tags}. A tag that no entry
+     * carries isn't returned, so the caller treats a missing tag as {@code 0}.
+     *
+     * <p>Leaves out sealed entries in the query itself (D-10), by the same rule as {@link #countOpenEntriesByWeek}: an
+     * entry counts only if it has no unlock date or that date is not after {@code now}. Entries in Recently deleted are
+     * left out by {@code @SQLRestriction} (D-30). Served by {@code idx_entry_tags_tag} and the entry's primary key.
+     */
+    @Query("""
+            select new com.memoirist.entry.EntryCountByTag(t.id, count(e))
+            from Entry e join e.tags t
+            where e.userId = :userId
+              and (e.unlockDate is null or e.unlockDate <= :now)
+            group by t.id
+            """)
+    List<EntryCountByTag> countOpenEntriesByTag(@Param("userId") UUID userId, @Param("now") Instant now);
+
+    /** The same count for one tag, for the answer of a create or a rename. See {@link #countOpenEntriesByTag}. */
+    @Query("""
+            select count(e)
+            from Entry e join e.tags t
+            where e.userId = :userId
+              and t.id = :tagId
+              and (e.unlockDate is null or e.unlockDate <= :now)
+            """)
+    long countOpenEntriesWithTag(@Param("userId") UUID userId, @Param("tagId") UUID tagId, @Param("now") Instant now);
+
     // Recently deleted (D-30). Native SQL, because Hibernate adds the @SQLRestriction to JPQL and derived queries but
     // never rewrites native ones. These two, restore/erase and the daily sweep are the only reads of deleted entries,
     // and they are served by idx_entries_deleted.

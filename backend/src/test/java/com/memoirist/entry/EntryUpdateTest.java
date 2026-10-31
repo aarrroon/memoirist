@@ -370,9 +370,7 @@ class EntryUpdateTest extends EntryApiTest {
                                 "soundtrack",
                                 null,
                                 "replyToEntryId",
-                                UUID.randomUUID().toString(),
-                                "tagIds",
-                                List.of(UUID.randomUUID().toString())))
+                                UUID.randomUUID().toString()))
                 .expectStatus()
                 .isOk());
 

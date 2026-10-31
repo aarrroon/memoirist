@@ -52,11 +52,13 @@ class EntryController {
                     + " (redacted if it is sealed)")
     @ApiResponse(
             responseCode = "400",
-            description = "validation-failed with fieldErrors (title, entryDate, contentJson), or malformed-request"
-                    + " (unreadable JSON, a bad X-Dev-User-Id)")
+            description =
+                    "validation-failed with fieldErrors (title, entryDate, contentJson, tagIds), or malformed-request"
+                            + " (unreadable JSON, a bad X-Dev-User-Id)")
     @ApiResponse(
             responseCode = "404",
-            description = "not-found: the header names a user who doesn't exist, or templateId isn't the user's")
+            description =
+                    "not-found: the header names a user who doesn't exist, templateId isn't the user's, or a tag in tagIds isn't")
     @ApiResponse(
             responseCode = "409",
             description = "conflict: the id belongs to another user's entry, or to one in Recently deleted")
@@ -83,18 +85,18 @@ class EntryController {
 
     @PutMapping("/{entryId}")
     @Operation(
-            summary = "Replace an entry's date, template, title and caption",
+            summary = "Replace an entry's date, template, title, caption and tags",
             description = "A full replace: a field that is left out is cleared. version must be the one last read."
                     + " A new date moves the entry to the matching week and clears dateUnknown.")
     @ApiResponse(responseCode = "200", description = "The entry as saved, with the next version")
     @ApiResponse(
             responseCode = "400",
-            description = "validation-failed with fieldErrors (version, entryDate, title, contentJson),"
+            description = "validation-failed with fieldErrors (version, entryDate, title, contentJson, tagIds),"
                     + " or malformed-request (unreadable JSON, a bad id)")
     @ApiResponse(
             responseCode = "404",
             description = "not-found: no such entry, it is another user's, it is in Recently deleted,"
-                    + " or templateId isn't the user's")
+                    + " templateId isn't the user's, or a tag in tagIds isn't")
     @ApiResponse(
             responseCode = "409",
             description = "entry-sealed: the entry is a sealed Loot Drop; or entry-stale: version is not the stored"

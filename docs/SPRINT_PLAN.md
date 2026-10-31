@@ -169,7 +169,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - PUT (the title), close and reopen work
     - a week's `eras` are every Era whose dates overlap it, pinned first and then latest start, via `WeekEras.of` (built in 3.3), and change as soon as an Era's dates change (D-22)
 
-- [ ] **3.8 Tags** (`/new-endpoint`)
+- [x] **3.8 Tags** (`/new-endpoint`)
   - **Read:** D-10, D-26, API_CONTRACT §Tags and §Entries.
   - **Do:** tag CRUD; `tagIds` on `POST` and `PUT /entries`; `tags` on `Entry` through `EntryMapper`.
   - **Done when:** tests prove tags are scoped to the user; names are unique ignoring case (creating a duplicate returns the existing tag); renaming to an existing name is `409`; deleting a tag untags its entries; more than 20 tags is `400`; another user's tag ID is `404`; a sealed entry's tags are hidden and can't be changed (`409`); and `entryCount` doesn't count sealed entries.

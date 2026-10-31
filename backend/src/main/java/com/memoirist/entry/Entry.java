@@ -51,6 +51,9 @@ public class Entry extends TimestampedEntity {
     /** The longest title, in characters (D-24). The request records check it; the column is {@code VARCHAR(150)}. */
     public static final int MAX_TITLE_LENGTH = 150;
 
+    /** The most tags one entry can carry (D-26). The request records check it. */
+    public static final int MAX_TAGS = 20;
+
     /** The earliest memory date (D-09), the same day as the {@code chk_entries_entry_date_min} constraint. */
     public static final LocalDate EARLIEST_ENTRY_DATE = LocalDate.of(1900, 1, 1);
 

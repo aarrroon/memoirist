@@ -10,6 +10,8 @@ import com.memoirist.entry.dto.EntryCreateRequest;
 import com.memoirist.entry.dto.EntryResponse;
 import com.memoirist.entry.dto.EntrySealRequest;
 import com.memoirist.entry.dto.EntryUpdateRequest;
+import com.memoirist.tag.Tag;
+import com.memoirist.tag.TagRepository;
 import com.memoirist.template.TemplateRepository;
 import com.memoirist.user.CurrentUserProvider;
 import com.memoirist.user.User;
@@ -21,8 +23,11 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,8 +49,9 @@ import tools.jackson.databind.JsonNode;
  *       injected {@link Clock}.
  * </ul>
  *
- * <p>Tags, soundtracks and reply targets are set by tasks 3.8, 3.14 and 3.13, and the entry's media by
- * {@code MediaService} (task 3.6). This class doesn't change them: the mapper only reads them, and {@code delete}
+ * <p>Tags are set here, from the {@code tagIds} of a create or an update (D-26); {@code TagService} makes and renames
+ * the tags themselves. Soundtracks and reply targets are set by tasks 3.14 and 3.13, and the entry's media by
+ * {@code MediaService} (task 3.6). This class doesn't change those: the mapper only reads them, and {@code delete}
  * hands an empty entry to {@link EntryErasure}.
  */
 @Service
@@ -57,6 +63,7 @@ public class EntryService {
 
     private final EntryRepository entries;
     private final TemplateRepository templates;
+    private final TagRepository tags;
     private final WeekService weeks;
     private final UserService users;
     private final CurrentUserProvider currentUser;
@@ -67,6 +74,7 @@ public class EntryService {
     public EntryService(
             EntryRepository entries,
             TemplateRepository templates,
+            TagRepository tags,
             WeekService weeks,
             UserService users,
             CurrentUserProvider currentUser,
@@ -75,6 +83,7 @@ public class EntryService {
             Clock clock) {
         this.entries = entries;
         this.templates = templates;
+        this.tags = tags;
         this.weeks = weeks;
         this.users = users;
         this.currentUser = currentUser;
@@ -117,6 +126,7 @@ public class EntryService {
         checkMemoryDate(date, today);
         checkContent(request.contentJson());
         checkTemplate(request.templateId(), user.getId());
+        List<Tag> tagsToLink = requireOwnedTags(request.tagIds(), user.getId());
 
         Entry entry = new Entry(
                 id, user.getId(), weeks.findOrCreate(user.getId(), date).getId(), date);
@@ -124,6 +134,7 @@ public class EntryService {
         entry.setTitle(request.title());
         setContent(entry, request.contentJson());
         entry.setDateUnknown(Boolean.TRUE.equals(request.dateUnknown()));
+        entry.replaceTags(tagsToLink);
         return CreateResult.created(mapper.toResponse(entries.saveAndFlush(entry), now));
     }
 
@@ -134,12 +145,13 @@ public class EntryService {
     }
 
     /**
-     * Replaces the entry's date, template, title and caption with the request's (a {@code PUT}). A new date moves the
-     * entry to the week that contains it and clears {@code dateUnknown} (D-34); an unchanged date leaves both alone.
+     * Replaces the entry's date, template, title, caption and tags with the request's (a {@code PUT}). A new date moves
+     * the entry to the week that contains it and clears {@code dateUnknown} (D-34); an unchanged date leaves both alone.
      *
      * <p>The checks run in this order, and the first to fail answers: the entry is the user's ({@code 404}), it isn't
-     * sealed ({@code 409 entry-sealed}), the client has seen its latest version ({@code 409 entry-stale}), then the
-     * new values are valid ({@code 400}, or {@code 404} for a template that isn't theirs). Nothing is written until all
+     * sealed ({@code 409 entry-sealed}, before the tags are looked at, so a sealed entry can't be used to find out
+     * whether a tag id exists), the client has seen its latest version ({@code 409 entry-stale}), then the new values
+     * are valid ({@code 400}, or {@code 404} for a template or tag that isn't theirs). Nothing is written until all
      * have passed.
      */
     public EntryResponse update(UUID entryId, EntryUpdateRequest request) {
@@ -162,6 +174,7 @@ public class EntryService {
         if (!Objects.equals(request.templateId(), entry.getTemplateId())) {
             checkTemplate(request.templateId(), userId);
         }
+        List<Tag> newTags = requireOwnedTags(request.tagIds(), userId);
 
         // Find the new week BEFORE touching the entry. Finding it runs a native INSERT, and Hibernate flushes pending
         // changes before a native query, so a setter called first would be written by its own UPDATE and the
@@ -176,6 +189,9 @@ public class EntryService {
         entry.setTemplateId(request.templateId());
         entry.setTitle(request.title());
         setContent(entry, request.contentJson());
+        // The same set leaves the collection untouched; a different one makes Hibernate insert and delete just the
+        // changed entry_tags rows and raise the entry's version, because the entry owns the collection.
+        entry.replaceTags(newTags);
         // Hibernate adds "AND version = ?" to the UPDATE. If another request commits between the check above and this
         // flush, no row matches and the flush throws ObjectOptimisticLockingFailureException, which is also 409
         // entry-stale. An update that changes nothing writes nothing and leaves the version where it was.
@@ -274,6 +290,26 @@ public class EntryService {
             EntryContentValidator.validate(contentJson);
         }
     }
+
+    // TODO(human) PRACTICE: Write requireOwnedTags: turn the tagIds of a request into the user's own Tag objects.
+    //   A tag that is someone else's and one that doesn't exist must look the same to the client, and an id that
+    //   appears twice in the list is one tag. Think about the empty list and about what to hand back.
+    // Hint: security.md (Ownership) and D-26. The repository finder only returns the user's tags, so compare how many
+    //   distinct ids you asked for with how many came back. Why is 403 the wrong answer, and why must the error not
+    //   say which id was wrong? The lock in findAndLockByIdInAndUserId is explained on the repository method.
+    // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+    private List<Tag> requireOwnedTags(List<UUID> tagIds, UUID userId) {
+        if (tagIds == null || tagIds.isEmpty()) {
+            return List.of();
+        }
+        Set<UUID> wanted = new LinkedHashSet<>(tagIds);
+        List<Tag> found = tags.findAndLockByIdInAndUserId(wanted, userId);
+        if (found.size() != wanted.size()) {
+            throw new NotFoundException("Tag");
+        }
+        return found;
+    }
+    // └── END ANSWER ▲ ──
 
     /** A template named in a request has to be the user's own; someone else's looks the same as one that isn't there. */
     private void checkTemplate(UUID templateId, UUID userId) {

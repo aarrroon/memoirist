@@ -5,7 +5,6 @@ import com.memoirist.entry.dto.EntryTagResponse;
 import com.memoirist.media.MediaMapper;
 import com.memoirist.tag.Tag;
 import java.time.Instant;
-import java.util.Comparator;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
@@ -34,9 +33,6 @@ public class EntryMapper {
     /** Until Phase 4 adds {@code AI}, every tag on an entry was put there by the user (D-26). */
     private static final String TAG_SOURCE_USER = "USER";
 
-    private static final Comparator<Tag> BY_NAME_THEN_ID =
-            Comparator.comparing(Tag::getName, String.CASE_INSENSITIVE_ORDER).thenComparing(Tag::getId);
-
     private final MediaMapper mediaMapper;
 
     public EntryMapper(MediaMapper mediaMapper) {
@@ -61,7 +57,8 @@ public class EntryMapper {
                 entry.getContentJson(),
                 entry.getContentText(),
                 entry.getTags().stream()
-                        .sorted(BY_NAME_THEN_ID)
+                        // The order of GET /tags, so a client sees the same sequence in both places.
+                        .sorted(Tag.BY_NAME)
                         .map(tag -> new EntryTagResponse(tag.getId(), tag.getName(), TAG_SOURCE_USER))
                         .toList(),
                 entry.getSoundtrack(),

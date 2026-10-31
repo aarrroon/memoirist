@@ -381,8 +381,6 @@ class EntryEndpointTest extends EntryApiTest {
                         "spotify:track:1a2B3c4D5e6F7g8H9i0J1k",
                         "replyToEntryId",
                         UUID.randomUUID().toString(),
-                        "tagIds",
-                        List.of(UUID.randomUUID().toString()),
                         "contentJson",
                         doc("The real words")));
 
