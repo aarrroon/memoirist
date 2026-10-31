@@ -5,6 +5,7 @@ import com.memoirist.common.PageResponse;
 import com.memoirist.entry.dto.EntrySummaryResponse;
 import com.memoirist.tag.TagRepository;
 import com.memoirist.user.CurrentUserProvider;
+import jakarta.persistence.EntityManager;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -16,8 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The user's entries as list rows ({@code EntrySummary}, API_CONTRACT): the all-entries timeline (D-25) and the Opened
- * strip (task 3.10), and Recently deleted and On this day when tasks 3.11 and 3.12 add them. It only reads. Writing an entry is
+ * The user's entries as list rows ({@code EntrySummary}, API_CONTRACT): the all-entries timeline (D-25), the Opened
+ * strip (task 3.10) and Recently deleted (task 3.11), and On this day when task 3.12 adds it. It only reads. Writing an entry is
  * {@link EntryService}'s job, so the rules about changing one stay in one class and the read paths, which are mostly
  * about queries and how many of them run, stay in another.
  *
@@ -46,6 +47,7 @@ public class EntryListService {
     private final TagRepository tags;
     private final CurrentUserProvider currentUser;
     private final EntryMapper mapper;
+    private final EntityManager entityManager;
     private final Clock clock;
 
     public EntryListService(
@@ -53,11 +55,13 @@ public class EntryListService {
             TagRepository tags,
             CurrentUserProvider currentUser,
             EntryMapper mapper,
+            EntityManager entityManager,
             Clock clock) {
         this.entries = entries;
         this.tags = tags;
         this.currentUser = currentUser;
         this.mapper = mapper;
+        this.entityManager = entityManager;
         this.clock = clock;
     }
 
@@ -103,6 +107,36 @@ public class EntryListService {
         Instant now = Instant.now(clock);
         List<Entry> found = entries.findOpenedUnseen(userId, now, Limit.of(OPENED_STRIP_SIZE));
         return summaries(found, userId, now);
+    }
+
+    /**
+     * The user's Recently deleted list (D-30), the entry deleted most recently first, with its {@code deletedAt}. A
+     * sealed Loot Drop is still a locked row: only its memory date, unlock date and when it was deleted show (D-10),
+     * and one that has opened since is whole again. A page past the end is empty.
+     *
+     * <p>The only list that reads entries through a native query, because {@code @SQLRestriction} on {@code Entry} hides
+     * the very rows it lists from every JPQL query, including the media and tags queries {@link #summaries} uses. So
+     * the media counts and the tags of an open row are filled in by Hibernate itself, when the mapper reads them, in
+     * its batches of 50 ({@code @BatchSize}): one statement for the media and one for the tags of the whole page.
+     *
+     * <p><b>Loot Drops are detached first.</b> A batch loads the lists of <em>every</em> entry of the page that has not
+     * loaded them yet, not only the one being read, and the mapper never reads a sealed entry's lists. Left attached, a
+     * Loot Drop's media and tags would be fetched from the database along with the open entries' and then thrown
+     * away. Nothing leaks, but it breaks the rule the other lists keep (D-10): a sealed entry's children are never
+     * read. A detached entry is no longer in the session, so the batch skips it, and the mapper's sealed branch needs
+     * nothing but the entry's own columns. A test counts the lists Hibernate loads.
+     */
+    public PageResponse<EntrySummaryResponse> deleted(int page, int size) {
+        UUID userId = currentUser.currentUserId();
+        Instant now = Instant.now(clock);
+        Page<Entry> found = entries.findDeletedPageByUserId(userId, PageRequest.of(page, size));
+        found.getContent().stream()
+                .filter(entry -> EntrySeal.isSealed(entry, now))
+                .forEach(entityManager::detach);
+        List<EntrySummaryResponse> rows = found.getContent().stream()
+                .map(entry -> mapper.toSummary(entry, now))
+                .toList();
+        return PageResponse.of(found, rows);
     }
 
     /**

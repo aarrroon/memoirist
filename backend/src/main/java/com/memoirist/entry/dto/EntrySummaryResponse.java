@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * One row of an entry list (API_CONTRACT, EntrySummary): the all-entries timeline and the Opened strip, and later Recently
- * deleted and On this day. No caption and no media URLs. <b>Only {@code EntryMapper} builds one</b>, for the same reason
+ * One row of an entry list (API_CONTRACT, EntrySummary): the all-entries timeline, the Opened strip and Recently deleted,
+ * and later On this day. No caption and no media URLs. <b>Only {@code EntryMapper} builds one</b>, for the same reason
  * as {@link EntryResponse}: it is the class that hides everything private about a sealed Loot Drop (D-10), and
  * {@code EntryMapperIsTheOnlyPathTest} fails if another source file builds it.
  *

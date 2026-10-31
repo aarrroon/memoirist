@@ -7,7 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.memoirist.SeaweedFsTestConfiguration;
-import com.memoirist.entry.EntryApiTest;
+import com.memoirist.entry.EntryOpenedApiTest;
 import com.memoirist.storage.StorageService;
 import com.memoirist.user.User;
 import java.io.IOException;
@@ -35,8 +35,10 @@ import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 /**
- * What every {@code /api/v1} media test needs, on top of {@link EntryApiTest}: a real SeaweedFS to store into, a way to
- * send a multipart upload, and a way to look at what is really stored and what is really in the table.
+ * What every {@code /api/v1} media test needs, on top of {@link EntryOpenedApiTest} (and so the feed, list and Opened
+ * strip helpers below it): a real SeaweedFS to store into, a way to send a multipart upload, and a way to look at what
+ * is really stored and what is really in the table. It is public because the Recently deleted tests (package
+ * {@code entry}) also need stored files.
  *
  * <p>{@link StorageService} is a Mockito <em>spy</em>: every call goes to the real thing unless a test says otherwise,
  * which lets a test change the world in the middle of an upload (seal the entry while its file is in flight) or make
@@ -44,7 +46,7 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
  * SeaweedFS.
  */
 @Import(SeaweedFsTestConfiguration.class)
-abstract class MediaApiTest extends EntryApiTest {
+public abstract class MediaApiTest extends EntryOpenedApiTest {
 
     @MockitoSpyBean
     protected StorageService storage;

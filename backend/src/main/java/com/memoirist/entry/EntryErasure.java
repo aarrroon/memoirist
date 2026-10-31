@@ -9,9 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Erases an entry for good: the row, its media rows and its stored files. This is the one place that does it
- * (D-30): the empty entry that {@code DELETE} erases at once calls it, and so will {@code POST /entries/{id}/erase}
- * and the daily sweep of entries 30 days in Recently deleted (task 3.11). Deleting an entry only moves it to
- * Recently deleted, and its files stay.
+ * (D-30): the empty entry that {@code DELETE} erases at once calls it, and so do {@code POST /entries/{id}/erase}
+ * ({@link RecentlyDeletedService}) and the daily sweep of entries 30 days in Recently deleted
+ * ({@link RecentlyDeletedSweeper}). Deleting an entry only moves it to Recently deleted, and its files stay.
  *
  * <p>What it does, in this order:
  * <ol>

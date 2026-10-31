@@ -190,7 +190,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:** `GET /entries/opened` and `POST /entries/{entryId}/mark-seen`; sealing an entry clears `unlock_seen_at`.
   - **Done when:** tests with a fixed `Clock` prove an entry appears once its unlock time passes, disappears after mark-seen, appears again after being sealed and unlocking again, and never appears while sealed (mark-seen returns `409`); another user's entry returns `404`.
 
-- [ ] **3.11 Recently deleted** (D-30, `/new-endpoint`)
+- [x] **3.11 Recently deleted** (D-30, `/new-endpoint`)
   - **Read:** D-30, API_CONTRACT §Entries.
   - **Do:** (erase and the sweep must call `EntryErasure.erase(entry)` inside a transaction, and read an entry's media with native queries only: TECH_STACK Storage, DATABASE_SCHEMA entity notes.) `GET /entries/deleted`, `POST /entries/{entryId}/restore` and `/erase`, and a sweep that erases entries deleted more than 30 days ago, with their stored files. The sweep is a service method that is safe to repeat; a daily `@Scheduled` job only calls it, so Sprint 5 can start it another way (Q5).
   - **Done when:** tests with a fixed `Clock` prove:

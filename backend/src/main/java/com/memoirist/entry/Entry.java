@@ -36,7 +36,8 @@ import tools.jackson.databind.JsonNode;
  *
  * <p><b>Recently deleted (D-30).</b> {@code @SQLRestriction} adds {@code deleted_at IS NULL} to every query and load of
  * this entity, so a deleted entry is invisible by default and a new finder can't forget to leave it out. The only
- * reads of deleted entries are the two native queries in {@code EntryRepository}, which Hibernate does not rewrite.
+ * reads of deleted entries are the native queries in {@code EntryRepository} for Recently deleted, which Hibernate does
+ * not rewrite.
  *
  * <p><b>Foreign keys are plain ids</b> ({@code userId}, {@code weeklyLogId}, {@code templateId},
  * {@code replyToEntryId}), not associations, because nothing walks them: services compare ids and look the other

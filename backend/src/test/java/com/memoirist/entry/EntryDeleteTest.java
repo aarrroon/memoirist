@@ -12,7 +12,8 @@ import org.junit.jupiter.api.Test;
 /**
  * Deleting an entry through the API (D-30, API_CONTRACT {@code DELETE /entries/{id}}): it goes to Recently deleted and
  * every other request about it is a {@code 404}, except that an entry with nothing to bring back is erased at once.
- * Restore, erase and the daily sweep are task 3.11; here the row's {@code deleted_at} is read with SQL.
+ * Restore, erase and the daily sweep are tested in the {@code RecentlyDeleted*Test} classes (task 3.11); here the
+ * row's {@code deleted_at} is read with SQL.
  */
 class EntryDeleteTest extends EntryApiTest {
 

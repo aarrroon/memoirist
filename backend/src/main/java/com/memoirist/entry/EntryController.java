@@ -34,8 +34,8 @@ import org.springframework.web.bind.annotation.RestController;
  * id comes from the request (D-11).
  *
  * <p>Reading one entry and changing one go through {@link EntryService}; the list rows go through
- * {@link EntryListService}. Recently deleted and On this day (tasks 3.11 and 3.12) are added here
- * later.
+ * {@link EntryListService}; restoring and erasing an entry in Recently deleted go through
+ * {@link RecentlyDeletedService}. On this day (task 3.12) is added here later.
  */
 @RestController
 @RequestMapping("/api/v1/entries")
@@ -44,10 +44,12 @@ class EntryController {
 
     private final EntryService entries;
     private final EntryListService entryList;
+    private final RecentlyDeletedService recentlyDeleted;
 
-    EntryController(EntryService entries, EntryListService entryList) {
+    EntryController(EntryService entries, EntryListService entryList, RecentlyDeletedService recentlyDeleted) {
         this.entries = entries;
         this.entryList = entryList;
+        this.recentlyDeleted = recentlyDeleted;
     }
 
     @GetMapping
@@ -82,6 +84,24 @@ class EntryController {
     @ApiResponse(responseCode = "400", description = "malformed-request: a bad X-Dev-User-Id")
     List<EntrySummaryResponse> opened() {
         return entryList.opened();
+    }
+
+    @GetMapping("/deleted")
+    @Operation(
+            summary = "Recently deleted: the entries waiting to be erased",
+            description = "The entry deleted most recently first, each row an EntrySummary with deletedAt. They are"
+                    + " erased 30 days after it. A sealed Loot Drop is a locked row with only its dates; one that has"
+                    + " opened since is whole. Restore one with POST /entries/{entryId}/restore, or erase it now with"
+                    + " POST /entries/{entryId}/erase.")
+    @ApiResponse(responseCode = "200", description = "The page; items is empty when nothing is waiting")
+    @ApiResponse(
+            responseCode = "400",
+            description = "validation-failed with fieldErrors (page below 0, size below 1 or above 50), or"
+                    + " malformed-request (page or size is not a whole number, a bad X-Dev-User-Id)")
+    PageResponse<EntrySummaryResponse> deleted(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(50) int size) {
+        return entryList.deleted(page, size);
     }
 
     @PostMapping
@@ -199,5 +219,34 @@ class EntryController {
     @ApiResponse(responseCode = "409", description = "entry-sealed: the Loot Drop has not opened yet")
     void markSeen(@PathVariable UUID entryId) {
         entries.markSeen(entryId);
+    }
+
+    @PostMapping("/{entryId}/restore")
+    @Operation(
+            summary = "Restore an entry from Recently deleted",
+            description = "Puts it back in its week with its media, tags and seal as they were. A sealed Loot Drop"
+                    + " comes back sealed, so the answer is redacted. It raises the entry's version by one.")
+    @ApiResponse(responseCode = "200", description = "The entry, whole or redacted if it is sealed")
+    @ApiResponse(responseCode = "400", description = "malformed-request: the id is not a UUID")
+    @ApiResponse(
+            responseCode = "404",
+            description = "not-found: no such entry, it is another user's, or it is not in Recently deleted")
+    EntryResponse restore(@PathVariable UUID entryId) {
+        return recentlyDeleted.restore(entryId);
+    }
+
+    @PostMapping("/{entryId}/erase")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(
+            summary = "Erase an entry in Recently deleted for good",
+            description = "Removes the entry and its media files at once. It can't be undone. Allowed when the entry"
+                    + " is a sealed Loot Drop.")
+    @ApiResponse(responseCode = "204", description = "Erased")
+    @ApiResponse(responseCode = "400", description = "malformed-request: the id is not a UUID")
+    @ApiResponse(
+            responseCode = "404",
+            description = "not-found: no such entry, it is another user's, or it is not in Recently deleted")
+    void erase(@PathVariable UUID entryId) {
+        recentlyDeleted.erase(entryId);
     }
 }

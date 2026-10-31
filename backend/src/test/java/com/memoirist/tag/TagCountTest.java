@@ -117,7 +117,8 @@ class TagCountTest extends TagApiTest {
                 .as("the entry keeps its tag while it waits")
                 .containsExactly(work);
 
-        // Restore arrives in task 3.11; until then clear the mark the way the restore will.
+        // Restoring clears the mark. This test does it with SQL; RecentlyDeletedVisibilityTest goes through the
+        // endpoint.
         jdbc.sql("UPDATE entries SET deleted_at = NULL WHERE id = :id")
                 .param("id", UUID.fromString(binned))
                 .update();

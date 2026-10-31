@@ -298,7 +298,8 @@ class EraWeeksTest {
                 .update();
         assertThat(counts(alice, eraId)).containsExactly(Map.entry(id(w4), 1));
 
-        // Restoring clears deleted_at (task 3.11 adds the endpoint): the entry counts again.
+        // Restoring clears deleted_at (the restore endpoint does it; RecentlyDeletedVisibilityTest goes through it):
+        // the entry counts again.
         jdbc.sql("UPDATE entries SET deleted_at = NULL WHERE id = :id")
                 .param("id", deleted.getId())
                 .update();

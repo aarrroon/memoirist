@@ -312,19 +312,78 @@ public interface EntryRepository extends Repository<Entry, UUID> {
             """)
     long countOpenEntriesWithTag(@Param("userId") UUID userId, @Param("tagId") UUID tagId, @Param("now") Instant now);
 
-    // Recently deleted (D-30). Native SQL, because Hibernate adds the @SQLRestriction to JPQL and derived queries but
-    // never rewrites native ones. These two, restore/erase and the daily sweep are the only reads of deleted entries,
-    // and they are served by idx_entries_deleted.
+    // Recently deleted (D-30, task 3.11). Native SQL, because Hibernate adds the @SQLRestriction to JPQL and derived
+    // queries but never rewrites native ones. These five are the only reads of deleted entries, and the partial index
+    // idx_entries_deleted (user_id, deleted_at WHERE deleted_at IS NOT NULL) holds exactly the rows they look at.
+    // Every one of them says "deleted_at IS NOT NULL" itself: a native query for a live entry would find deleted ones.
 
-    /** One entry in Recently deleted, for restore and erase. A live entry, or another user's, is not found. */
+    /**
+     * One entry in Recently deleted, unlocked: a plain read. A live entry, or another user's, is not found. Restore and
+     * erase use {@link #findDeletedForUpdateByIdAndUserId} instead.
+     */
     @Query(
             value = "SELECT * FROM entries WHERE id = :id AND user_id = :userId AND deleted_at IS NOT NULL",
             nativeQuery = true)
     Optional<Entry> findDeletedByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
 
-    /** The user's Recently deleted list, most recently deleted first. */
+    /**
+     * The same entry, and its row stays locked until the transaction ends ({@code FOR NO KEY UPDATE}). Restore and
+     * erase take it so two requests for one entry take turns: whichever comes second waits, and when the first has
+     * committed Postgres re-checks {@code deleted_at IS NOT NULL} on the new version of the row. A restored entry then
+     * no longer matches and an erased one is gone, so the second request finds nothing and answers {@code 404}. Without
+     * the lock a restore and an erase that overlap would both succeed. Needs a running transaction.
+     */
+    @Query(value = """
+                    SELECT * FROM entries
+                    WHERE id = :id AND user_id = :userId AND deleted_at IS NOT NULL
+                    FOR NO KEY UPDATE
+                    """, nativeQuery = true)
+    Optional<Entry> findDeletedForUpdateByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
+
+    /**
+     * One page of the user's Recently deleted list, the entry deleted most recently first. The id is the last sort key
+     * so the order is total: entries deleted in the same instant (a clock that ticks in whole seconds, or two taps on a
+     * fast phone) never swap places between one page request and the next. Hibernate adds {@code LIMIT}/{@code OFFSET}
+     * for the page; the count is its own query, run by Spring Data only when the page is full.
+     */
     @Query(
-            value = "SELECT * FROM entries WHERE user_id = :userId AND deleted_at IS NOT NULL ORDER BY deleted_at DESC",
+            value = """
+                    SELECT * FROM entries
+                    WHERE user_id = :userId AND deleted_at IS NOT NULL
+                    ORDER BY deleted_at DESC, id DESC
+                    """,
+            countQuery = "SELECT count(*) FROM entries WHERE user_id = :userId AND deleted_at IS NOT NULL",
             nativeQuery = true)
-    List<Entry> findDeletedByUserIdOrderByDeletedAtDesc(@Param("userId") UUID userId);
+    Page<Entry> findDeletedPageByUserId(@Param("userId") UUID userId, Pageable pageable);
+
+    /**
+     * The ids of every entry, <em>of any user</em>, that has been in Recently deleted for more than 30 days by the
+     * {@code cutoff} (that is, deleted before it), the one that has waited longest first. The sweep's list of work
+     * (D-30); the only query here with no user, because the sweep has no request and no current user.
+     */
+    @Query(
+            value = "SELECT id FROM entries WHERE deleted_at IS NOT NULL AND deleted_at < :cutoff"
+                    + " ORDER BY deleted_at, id",
+            nativeQuery = true)
+    List<UUID> findDeletedIdsBefore(@Param("cutoff") Instant cutoff);
+
+    /**
+     * One entry that is <em>still</em> due for the sweep, locked and not waited for: the row is returned only if it is
+     * in Recently deleted, was deleted before the {@code cutoff}, and no other transaction holds it
+     * ({@code FOR NO KEY UPDATE SKIP LOCKED}). The sweep read its list of ids a moment ago without a lock, so
+     * each of these things may have changed since:
+     * <ul>
+     *   <li>the user restored the entry: {@code deleted_at} is null now, and the row is not returned;
+     *   <li>the user erased it, or another sweep did: the row is gone;
+     *   <li>a restore or an erase is running at this moment: the row is locked, it is skipped instead of waited for, and
+     *       whichever way that request ends there is nothing left for the sweep to do.
+     * </ul>
+     * Needs a running transaction; the lock ends with it.
+     */
+    @Query(value = """
+                    SELECT * FROM entries
+                    WHERE id = :id AND deleted_at IS NOT NULL AND deleted_at < :cutoff
+                    FOR NO KEY UPDATE SKIP LOCKED
+                    """, nativeQuery = true)
+    Optional<Entry> findDeletedForSweep(@Param("id") UUID id, @Param("cutoff") Instant cutoff);
 }

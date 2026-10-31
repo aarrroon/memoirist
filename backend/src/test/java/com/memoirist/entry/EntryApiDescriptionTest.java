@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * What {@code /v3/api-docs} says about the entry endpoints built so far, which is what Swagger UI shows and what the
- * frontend's generated types (task 4.2) are made from. The list grows as tasks 3.11 and 3.12 add endpoints.
+ * frontend's generated types (task 4.2) are made from. The list grows as task 3.12 adds its endpoint.
  */
 class EntryApiDescriptionTest extends EntryApiTest {
 
@@ -26,7 +26,10 @@ class EntryApiDescriptionTest extends EntryApiTest {
                 "$.paths['/api/v1/entries/{entryId}'].delete",
                 "$.paths['/api/v1/entries/{entryId}/seal'].post",
                 "$.paths['/api/v1/entries/opened'].get",
-                "$.paths['/api/v1/entries/{entryId}/mark-seen'].post")) {
+                "$.paths['/api/v1/entries/{entryId}/mark-seen'].post",
+                "$.paths['/api/v1/entries/deleted'].get",
+                "$.paths['/api/v1/entries/{entryId}/restore'].post",
+                "$.paths['/api/v1/entries/{entryId}/erase'].post")) {
             assertThat(JsonPath.<List<String>>read(body, operation + ".tags"))
                     .as(operation)
                     .containsExactly("Entries");
@@ -47,6 +50,28 @@ class EntryApiDescriptionTest extends EntryApiTest {
                 .containsExactlyInAnyOrder("200", "400");
         assertThat(responseCodes(body, "$.paths['/api/v1/entries/{entryId}/mark-seen'].post"))
                 .containsExactlyInAnyOrder("204", "400", "404", "409");
+        assertThat(responseCodes(body, "$.paths['/api/v1/entries/deleted'].get"))
+                .containsExactlyInAnyOrder("200", "400");
+        assertThat(responseCodes(body, "$.paths['/api/v1/entries/{entryId}/restore'].post"))
+                .containsExactlyInAnyOrder("200", "400", "404");
+        assertThat(responseCodes(body, "$.paths['/api/v1/entries/{entryId}/erase'].post"))
+                .containsExactlyInAnyOrder("204", "400", "404");
+    }
+
+    @Test
+    void theRecentlyDeletedListTakesPageAndSizeWithTheContractLimits() {
+        String body = bodyText(
+                client.get().uri("/v3/api-docs").exchange().expectStatus().isOk());
+        String parameters = "$.paths['/api/v1/entries/deleted'].get.parameters";
+
+        assertThat(JsonPath.<List<String>>read(body, parameters + "[*].name"))
+                .containsExactlyInAnyOrder("page", "size");
+        assertThat(JsonPath.<List<Integer>>read(body, parameters + "[?(@.name=='size')].schema.maximum"))
+                .containsExactly(50);
+        assertThat(JsonPath.<List<Integer>>read(body, parameters + "[?(@.name=='size')].schema.minimum"))
+                .containsExactly(1);
+        assertThat(JsonPath.<List<Integer>>read(body, parameters + "[?(@.name=='size')].schema.default"))
+                .containsExactly(10);
     }
 
     @Test

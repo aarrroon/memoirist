@@ -32,3 +32,9 @@ management:
     health:
       # Name each health check (db, diskSpace, …) in /actuator/health, so a test can see the database was checked.
       show-components: always
+
+# The daily Recently deleted sweep (RecentlyDeletedSweepJob) never starts by itself in a test: "-" is Spring's disabled
+# cron. The tests that are about the sweep call RecentlyDeletedSweeper.sweep() themselves, on a clock they move.
+memoirist:
+  recently-deleted:
+    sweep-cron: "-"

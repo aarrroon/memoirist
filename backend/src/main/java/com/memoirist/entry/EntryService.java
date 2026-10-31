@@ -201,7 +201,8 @@ public class EntryService {
 
     /**
      * Deletes the entry. It goes to Recently deleted for 30 days (D-30): hidden everywhere at once, but its media files
-     * stay until it is erased (task 3.11). Allowed when the entry is sealed, which stays sealed in there.
+     * stay until it is erased ({@link RecentlyDeletedService}, or {@link RecentlyDeletedSweeper} after 30 days). Allowed
+     * when the entry is sealed, which stays sealed in there.
      *
      * <p>An entry with no title, no caption and no media has nothing to bring back, so it is erased at once instead,
      * through {@link EntryErasure}, which is also the path that deletes the stored files of an entry that has media.

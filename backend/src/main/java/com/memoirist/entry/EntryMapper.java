@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 /**
  * <b>The only place an {@link Entry} becomes a response.</b> Create, read, update, seal, the feed (3.7), week detail,
  * share links (Phase 2) and group views (Phase 3) all call {@link #toResponse}, and every list row (the all-entries
- * timeline and the Opened strip now; Recently deleted and On this day later) calls {@link #toSummary}, so the rule that
+ * timeline, the Opened strip and Recently deleted now; On this day later) calls {@link #toSummary}, so the rule that
  * keeps a sealed Loot Drop secret (D-10, non-negotiable 4) is written once. {@code EntryMapperIsTheOnlyPathTest} fails
  * if another source file builds an {@link EntryResponse} or an {@link EntrySummaryResponse}.
  *
