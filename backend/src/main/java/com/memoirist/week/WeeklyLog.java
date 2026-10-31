@@ -6,13 +6,20 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.util.UUID;
+import org.hibernate.annotations.DynamicUpdate;
 
 /**
  * One Monday-to-Sunday week of a user's journal, in their timezone (D-08). Created automatically when the first
  * entry lands in it. It has no link to Eras (D-22): the service matches the user's Eras to it by date.
+ *
+ * <p>{@code @DynamicUpdate} makes Hibernate's {@code UPDATE} name only the columns that changed. Without it every update
+ * writes all of them, so a title saved on one device while the week is closed on another could put the old
+ * {@code is_closed} back: the row has no {@code @Version}, and the two requests change different columns, which is no
+ * reason for one to undo the other.
  */
 @Entity
 @Table(name = "weekly_logs")
+@DynamicUpdate
 public class WeeklyLog extends TimestampedEntity {
 
     @Column(name = "user_id", nullable = false, updatable = false)

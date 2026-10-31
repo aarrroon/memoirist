@@ -311,7 +311,7 @@ Each Phase 1 table has one JPA entity, in the feature package named in [TECH_STA
 | `users` | `User` | `TimestampedEntity` | |
 | `eras` | `Era` | `TimestampedEntity` | `cover_media_id` is a plain `UUID` |
 | `templates` | `Template` | `TimestampedEntity` | `subheadings` is a `List<String>` with `@JdbcTypeCode(SqlTypes.JSON)` |
-| `weekly_logs` | `WeeklyLog` | `TimestampedEntity` | `is_closed` is the field `closed`; `start_date` and `end_date` are never updated |
+| `weekly_logs` | `WeeklyLog` | `TimestampedEntity` | `is_closed` is the field `closed`; `start_date` and `end_date` are never updated; `@DynamicUpdate`, so an `UPDATE` writes only the columns that changed (the title and the closed flag are saved by separate requests and the row has no `@Version`) |
 | `entries` | `Entry` | `TimestampedEntity` | `content_json` is a Jackson 3 `JsonNode` (`@JdbcTypeCode(SqlTypes.JSON)`); `version` is `@Version` (D-23); `@SQLRestriction("deleted_at IS NULL")` hides Recently deleted entries (D-30); `media` and `tags` below |
 | `media` | `Media` | `BaseEntity` | No `created_at` or `updated_at` (D-12); `uploaded_at` is `@CreationTimestamp`; `entry` is a `LAZY` `@ManyToOne`; `purpose` and `media_type` are strings checked in the service |
 | `tags` | `Tag` | `TimestampedEntity` | |

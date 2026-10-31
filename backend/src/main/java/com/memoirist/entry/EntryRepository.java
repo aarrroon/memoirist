@@ -66,6 +66,61 @@ public interface EntryRepository extends Repository<Entry, UUID> {
     List<Entry> findByWeeklyLogIdAndUserIdOrderByEntryDateAscCreatedAtAsc(UUID weeklyLogId, UUID userId);
 
     /**
+     * The entries of a page of weeks, all in one query, in feed order: by memory date, then by when they were written,
+     * oldest first (API_CONTRACT, WeeklyLog). The caller splits the list by {@code weeklyLogId}; because the whole list
+     * is sorted by date, the entries of any one week keep that order. Sealed entries are included, since the feed shows
+     * them as locked rows and {@code EntryMapper} hides what is private (D-10); entries in Recently deleted are not
+     * (D-30). Backed by {@code idx_entries_week_date}.
+     *
+     * <p>Pass a non-empty list: some databases refuse an empty {@code IN ()}.
+     */
+    List<Entry> findByWeeklyLogIdInAndUserIdOrderByEntryDateAscCreatedAtAsc(Collection<UUID> weeklyLogIds, UUID userId);
+
+    /**
+     * Fills in the {@code media} of the <em>open</em> entries of these weeks, all with one query, so a page of the feed
+     * costs the same however many entries it holds. The entries are the ones the caller loaded a moment ago in the same
+     * transaction: this query returns those same objects, and the {@code left join fetch} initialises their lazy
+     * {@code media} lists on the way. Read the entries from the persistence context, not from the result; it is only
+     * returned because a Spring Data query has to return something.
+     *
+     * <p>Sealed entries are left out in the query (D-10), by the rule {@code EntrySeal} states: an entry is open when it
+     * has no unlock date or that date is not after {@code now}. Their media is never read, and the mapper never asks for
+     * it. Pass the same {@code now} that goes to {@code EntryMapper}: an entry this query skips but the mapper treats as
+     * open would still get its media, only through Hibernate's slower lazy batches.
+     *
+     * <p>Only one collection is fetched per query: fetch-joining two lists at once fails
+     * ({@code MultipleBagFetchException}) and multiplies the rows. The price is that each entry row (with its caption)
+     * comes once per photo. Media is ordered by {@code displayOrder} by the {@code @OrderBy} on the collection.
+     *
+     * <p>Pass a non-empty list: some databases refuse an empty {@code IN ()}.
+     */
+    @Query("""
+            select e from Entry e left join fetch e.media
+            where e.weeklyLogId in :weeklyLogIds
+              and e.userId = :userId
+              and (e.unlockDate is null or e.unlockDate <= :now)
+            """)
+    List<Entry> fetchMediaOfOpenEntries(
+            @Param("weeklyLogIds") Collection<UUID> weeklyLogIds,
+            @Param("userId") UUID userId,
+            @Param("now") Instant now);
+
+    /**
+     * The same for the {@code tags} of the open entries: the second of the two queries that fill in the collections
+     * a feed or week needs. See {@link #fetchMediaOfOpenEntries}.
+     */
+    @Query("""
+            select e from Entry e left join fetch e.tags
+            where e.weeklyLogId in :weeklyLogIds
+              and e.userId = :userId
+              and (e.unlockDate is null or e.unlockDate <= :now)
+            """)
+    List<Entry> fetchTagsOfOpenEntries(
+            @Param("weeklyLogIds") Collection<UUID> weeklyLogIds,
+            @Param("userId") UUID userId,
+            @Param("now") Instant now);
+
+    /**
      * How many entries each week has among the entries whose memory date is on or after {@code from} and, when
      * {@code to} is given, on or before it: an Era's dates (D-22). Both ends count. A week with none isn't returned.
      *

@@ -160,7 +160,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:** upload (type, size, count and `purpose` checks), reorder (deferrable unique), delete with gap closing, and stored-file cleanup when an entry is erased (D-30).
   - **Done when:** tests cover the `415`, `413`, item-limit and sealed (`409`) cases; a `PAGE_SCAN` that isn't an image (`415`) and an unknown purpose (`400`); a reorder swap; and stored objects disappearing after deleting a media item and after erasing an entry, while deleting an entry keeps them (D-30).
 
-- [ ] **3.7 Weekly logs and feed**
+- [x] **3.7 Weekly logs and feed**
   - **Read:** API_CONTRACT §Feed and §Weekly logs, TECH_STACK §2 (Weeks and the feed), D-22.
   - **Done when:**
     - the feed and week detail (`GET /weekly-logs/{id}`) show sealed entries redacted (D-10)

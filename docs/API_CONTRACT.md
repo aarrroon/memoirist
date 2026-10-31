@@ -67,6 +67,7 @@ Every paged endpoint takes `?page=0&size=10` (`size` max 50, unless the endpoint
 ```json
 { "items": [ ... ], "page": 0, "size": 10, "totalItems": 42, "totalPages": 5 }
 ```
+A `page` below 0, or a `size` below 1 or above the endpoint's maximum, is `400 validation-failed` with `fieldErrors.page` or `fieldErrors.size`; it is never clamped silently (task 3.7, first built for the feed). A page past the end is `200` with empty `items`.
 
 ### Client-supplied IDs (D-12)
 `POST` for eras, templates and entries accepts an optional `"id"` (UUID).
@@ -284,6 +285,16 @@ Weeks are created automatically when an entry is created (D-08). There is no cre
 | `PUT /weekly-logs/{logId}` | `{ "title": string(0–200) or null, "soundtrack": Spotify URI or null }` (full replace) | `200` `WeeklyLog`. A week's Eras follow from their dates and can't be set here (D-22) |
 | `POST /weekly-logs/{logId}/close` | — | `200` `WeeklyLog` with `isClosed: true` (idempotent). Phase 4: writes the week's summary through `WeeklyLogClosedEvent` (D-28) |
 | `POST /weekly-logs/{logId}/reopen` | — | `200` `WeeklyLog` with `isClosed: false` (idempotent) |
+
+How `/feed` and `/weekly-logs` behave (task 3.7):
+- **Paging.** `page` is 0 or more and `size` is 1 to 50 (defaults 0 and 10). A value outside that is `400 validation-failed` with `fieldErrors.page` or `fieldErrors.size` (`must be greater than or equal to 0`, `must be greater than or equal to 1`, `must be less than or equal to 50`), never a silent clamp, so a client that asks for 51 learns it. A value that is not a whole number is `400 malformed-request`. A page past the end is `200` with empty `items` and the real `totalItems` and `totalPages`. A user with no entries gets `totalItems: 0` and `totalPages: 0`, and so does a header that names a user who isn't there (see *Who is the current user?*).
+- **Which weeks.** A week is on the feed if it has at least one entry that is not in Recently deleted. A week whose entries are all sealed stays, as locked rows (D-10); a week whose only entries are in Recently deleted, or whose entries were erased, is left out and is not counted in `totalItems` (D-08, D-30). `GET /weekly-logs/{logId}` still finds a week with no entries left (`200`, `entries: []`), because an Era's page lists such weeks and a client may open one.
+- **A week's entries** are the same `Entry` objects as everywhere else, built by the one mapper: a sealed Loot Drop is a locked row with nothing private in it and no signed photo URL, and it is whole again at the unlock instant (D-10). They run from the oldest `entryDate`, then the oldest `createdAt`, so the week reads as a story (D-25).
+- **A week's `eras`** are every Era of the user whose dates overlap the week, pinned first, then the latest start, then the newest created (D-22; `WeekEras.of`, task 3.3). Each is `{ id, title, startDate, endDate, pinnedInFeed }` (`endDate` is `null` for an ongoing Era), and an Era of another user is never listed. They are worked out when the week is read, so a new Era, new dates, a pin or a deleted Era show on the very next read. Which Era a week is grouped under, and any nesting, is the client's job from this list (D-22).
+- **`soundtrack`** is in every week and is `null` until task 3.14 can set it.
+- **`PUT /weekly-logs/{logId}`** replaces what the user may set, which is the title for now. `title` is stripped of spaces at both ends and may be 0 to 200 characters (`fieldErrors.title`: `size must be between 0 and 200`); a title that is left out, `null`, empty or only spaces clears it (stored as `null`). Task 3.14 adds `soundtrack` to the body; until then a `soundtrack` in the body, and every other field the endpoint doesn't know (`isClosed`, `startDate`, `eras`, `userId`), is ignored. The answer is the whole `WeeklyLog`. A `PUT` that changes nothing writes nothing.
+- **`close` and `reopen`** change only `isClosed`, answer with the whole `WeeklyLog`, and are safe to repeat: closing a closed week, or reopening an open one, is `200` and writes nothing. A closed week stays editable: its title can change and entries can still be added to it. Closing and renaming a week at the same moment from two devices can't undo each other, because each writes only its own column.
+- **`404 not-found`** for a week that doesn't exist or isn't the user's, on all four calls (`detail` never repeats the id). `415` when a `PUT` body is not `application/json`. A path id that isn't a UUID is `400 malformed-request`. There is no `POST /weekly-logs` and no `DELETE`: `DELETE /weekly-logs/{logId}` is `405`, and `POST /weekly-logs` is `404` like any path that doesn't exist.
 
 ### Entries (tag: Entries)
 | Method and path | Body | Success |

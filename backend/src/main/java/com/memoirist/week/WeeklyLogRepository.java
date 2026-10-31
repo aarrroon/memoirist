@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
@@ -58,4 +60,37 @@ public interface WeeklyLogRepository extends Repository<WeeklyLog, UUID> {
             """)
     List<WeeklyLog> findOverlapping(
             @Param("userId") UUID userId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    // TODO(human) PRACTICE: Write the query behind the feed: one page of the user's weeks that have at least one entry,
+    //   newest week first, plus the query that counts them for totalItems. A week row is created for every week that
+    //   ever had an entry, so a week whose only entries sit in Recently deleted must be left out, and a week whose
+    //   entries are all sealed must stay in (a sealed entry is still a row in the feed).
+    //   Think about what you would use to ask "has at least one": a join with DISTINCT, IN, or EXISTS.
+    // Hint: D-08, D-10, D-30. Entry carries @SQLRestriction("deleted_at IS NULL"), which Hibernate adds to a JPQL
+    //   subquery on Entry as well, so you don't write the deleted filter yourself. A paged @Query needs a countQuery
+    //   when it isn't a plain select of the entity; write one that has the same where clause.
+    // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+    /**
+     * One page of the user's weeks that have at least one entry, newest first (the feed, D-08). {@code exists} stops at
+     * the first entry it finds, so a week with fifty entries costs no more than a week with one, and, unlike a join, it
+     * can't repeat a week once per entry. Entries in Recently deleted don't count, because {@code Entry}'s
+     * {@code @SQLRestriction} is added to the subquery (D-30); sealed entries do (D-10), since the feed shows them as
+     * locked rows. The entry's {@code userId} is checked as well as the week's: the two are always equal, and the extra
+     * condition keeps this query user-scoped on its own terms (security.md).
+     *
+     * <p>The count is its own query: the page query has a {@code limit}, and the total is how many weeks match
+     * without one. The weeks come back with no entries; the service loads those for the whole page in one query.
+     */
+    @Query(value = """
+                    select w from WeeklyLog w
+                    where w.userId = :userId
+                      and exists (select 1 from Entry e where e.weeklyLogId = w.id and e.userId = :userId)
+                    order by w.startDate desc
+                    """, countQuery = """
+                    select count(w) from WeeklyLog w
+                    where w.userId = :userId
+                      and exists (select 1 from Entry e where e.weeklyLogId = w.id and e.userId = :userId)
+                    """)
+    Page<WeeklyLog> findNonEmptyByUserId(@Param("userId") UUID userId, Pageable pageable);
+    // └── END ANSWER ▲ ──
 }
