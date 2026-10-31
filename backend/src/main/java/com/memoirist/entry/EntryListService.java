@@ -5,10 +5,15 @@ import com.memoirist.common.PageResponse;
 import com.memoirist.entry.dto.EntrySummaryResponse;
 import com.memoirist.tag.TagRepository;
 import com.memoirist.user.CurrentUserProvider;
+import com.memoirist.user.User;
+import com.memoirist.user.UserRepository;
 import jakarta.persistence.EntityManager;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
@@ -18,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * The user's entries as list rows ({@code EntrySummary}, API_CONTRACT): the all-entries timeline (D-25), the Opened
- * strip (task 3.10) and Recently deleted (task 3.11), and On this day when task 3.12 adds it. It only reads. Writing an entry is
+ * strip (task 3.10), Recently deleted (task 3.11) and On this day (task 3.12). It only reads. Writing an entry is
  * {@link EntryService}'s job, so the rules about changing one stay in one class and the read paths, which are mostly
  * about queries and how many of them run, stay in another.
  *
@@ -43,8 +48,12 @@ public class EntryListService {
     /** How many Loot Drops the Opened strip shows (API_CONTRACT, Entries). */
     static final int OPENED_STRIP_SIZE = 20;
 
+    /** How many entries the On this day strip shows (API_CONTRACT, Entries). */
+    static final int ON_THIS_DAY_SIZE = 20;
+
     private final EntryRepository entries;
     private final TagRepository tags;
+    private final UserRepository users;
     private final CurrentUserProvider currentUser;
     private final EntryMapper mapper;
     private final EntityManager entityManager;
@@ -53,12 +62,14 @@ public class EntryListService {
     public EntryListService(
             EntryRepository entries,
             TagRepository tags,
+            UserRepository users,
             CurrentUserProvider currentUser,
             EntryMapper mapper,
             EntityManager entityManager,
             Clock clock) {
         this.entries = entries;
         this.tags = tags;
+        this.users = users;
         this.currentUser = currentUser;
         this.mapper = mapper;
         this.entityManager = entityManager;
@@ -106,6 +117,36 @@ public class EntryListService {
         UUID userId = currentUser.currentUserId();
         Instant now = Instant.now(clock);
         List<Entry> found = entries.findOpenedUnseen(userId, now, Limit.of(OPENED_STRIP_SIZE));
+        return summaries(found, userId, now);
+    }
+
+    /**
+     * The On this day strip (D-32): what the user wrote on this day and month in earlier years, the newest year first,
+     * at most {@value #ON_THIS_DAY_SIZE}. Entries still sealed and entries in Recently deleted are not here (not even as
+     * a locked row, so nothing hints that a Loot Drop is waiting); a Loot Drop that has opened is an ordinary entry
+     * again and is.
+     *
+     * <p><b>"Today" is the user's today.</b> The clock is read once, and that one instant gives both the seal check
+     * ({@code now}) and the date, taken in the user's own zone (D-07), never the server's. Memory dates are calendar
+     * days in that zone already, so they are matched as they are. The day and month rule, including the 28 and 29
+     * February one, is {@link OnThisDay}.
+     *
+     * <p>The zone is on the user, so this looks the user up. A header that names a user who isn't there owns no
+     * entries: the answer is an empty strip, as for the other lists (API_CONTRACT, Who is the current user?), not the
+     * {@code 404} that {@code UserService.currentUser()} gives a create. The cost is that lookup, the strip's one query
+     * and then the media and tags of its rows: four statements for any number of entries, two when the strip is empty.
+     */
+    public List<EntrySummaryResponse> onThisDay() {
+        UUID userId = currentUser.currentUserId();
+        Optional<User> user = users.findById(userId);
+        if (user.isEmpty()) {
+            return List.of();
+        }
+        Instant now = Instant.now(clock);
+        LocalDate today = now.atZone(ZoneId.of(user.get().getTimezone())).toLocalDate();
+        OnThisDay.Lookup lookup = OnThisDay.lookupFor(today);
+        List<Entry> found = entries.findOnThisDay(
+                userId, lookup.month().getValue(), lookup.days(), lookup.before(), now, Limit.of(ON_THIS_DAY_SIZE));
         return summaries(found, userId, now);
     }
 

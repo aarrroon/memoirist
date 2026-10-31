@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * What {@code /v3/api-docs} says about the entry endpoints built so far, which is what Swagger UI shows and what the
- * frontend's generated types (task 4.2) are made from. The list grows as task 3.12 adds its endpoint.
+ * frontend's generated types (task 4.2) are made from. Task 3.12 added On this day, the last of the entry list calls.
  */
 class EntryApiDescriptionTest extends EntryApiTest {
 
@@ -28,6 +28,7 @@ class EntryApiDescriptionTest extends EntryApiTest {
                 "$.paths['/api/v1/entries/opened'].get",
                 "$.paths['/api/v1/entries/{entryId}/mark-seen'].post",
                 "$.paths['/api/v1/entries/deleted'].get",
+                "$.paths['/api/v1/entries/on-this-day'].get",
                 "$.paths['/api/v1/entries/{entryId}/restore'].post",
                 "$.paths['/api/v1/entries/{entryId}/erase'].post")) {
             assertThat(JsonPath.<List<String>>read(body, operation + ".tags"))
@@ -51,6 +52,8 @@ class EntryApiDescriptionTest extends EntryApiTest {
         assertThat(responseCodes(body, "$.paths['/api/v1/entries/{entryId}/mark-seen'].post"))
                 .containsExactlyInAnyOrder("204", "400", "404", "409");
         assertThat(responseCodes(body, "$.paths['/api/v1/entries/deleted'].get"))
+                .containsExactlyInAnyOrder("200", "400");
+        assertThat(responseCodes(body, "$.paths['/api/v1/entries/on-this-day'].get"))
                 .containsExactlyInAnyOrder("200", "400");
         assertThat(responseCodes(body, "$.paths['/api/v1/entries/{entryId}/restore'].post"))
                 .containsExactlyInAnyOrder("200", "400", "404");

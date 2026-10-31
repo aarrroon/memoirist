@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>Reading one entry and changing one go through {@link EntryService}; the list rows go through
  * {@link EntryListService}; restoring and erasing an entry in Recently deleted go through
- * {@link RecentlyDeletedService}. On this day (task 3.12) is added here later.
+ * {@link RecentlyDeletedService}.
  */
 @RestController
 @RequestMapping("/api/v1/entries")
@@ -84,6 +84,20 @@ class EntryController {
     @ApiResponse(responseCode = "400", description = "malformed-request: a bad X-Dev-User-Id")
     List<EntrySummaryResponse> opened() {
         return entryList.opened();
+    }
+
+    @GetMapping("/on-this-day")
+    @Operation(
+            summary = "On this day: entries from today's date in earlier years",
+            description = "What the user wrote on this day and month in earlier years, the newest year first, at most"
+                    + " 20 rows, each a whole EntrySummary. Today is the user's today, in their time zone. In a year"
+                    + " that isn't a leap year, entries from 29 February are listed on 28 February. A sealed Loot Drop"
+                    + " and an entry in Recently deleted are never listed, not even as a locked row. A plain array, not"
+                    + " a page.")
+    @ApiResponse(responseCode = "200", description = "The strip; an empty array when nothing was written on this day")
+    @ApiResponse(responseCode = "400", description = "malformed-request: a bad X-Dev-User-Id")
+    List<EntrySummaryResponse> onThisDay() {
+        return entryList.onThisDay();
     }
 
     @GetMapping("/deleted")

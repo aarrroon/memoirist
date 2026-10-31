@@ -260,6 +260,38 @@ public interface EntryRepository extends Repository<Entry, UUID> {
     // └── END ANSWER ▲ ──
 
     /**
+     * The On this day strip (task 3.12, D-32): the user's entries dated in {@code month} on one of {@code days} and
+     * before {@code before} (the first day of this year), newest first. {@link OnThisDay} works out the three values
+     * from the user's today, including the 28 and 29 February rule, so this query only matches dates.
+     *
+     * <p><b>Open entries only (D-10).</b> A sealed Loot Drop is not listed and not returned at all, not even as a locked
+     * row: the strip must not hint that one is waiting. An entry is open when it has no unlock date or the date is not
+     * after {@code now}, the rule of {@code EntrySeal}; pass the same {@code now} that goes to the mapper. Entries in
+     * Recently deleted are left out by {@code @SQLRestriction} (D-30).
+     *
+     * <p>The order is the timeline's, {@code entry_date} then {@code created_at} then the id (a total order, so entries
+     * from one day never swap places between two requests). Because every row has the same month and day, dates sort
+     * by year, so this is "newest year first". {@link Limit} becomes {@code fetch first ? rows only}. The month and day
+     * are tested on each row {@code idx_entries_user_date} hands back in date order; there is no index on them.
+     */
+    @Query("""
+            select e from Entry e
+            where e.userId = :userId
+              and extract(month from e.entryDate) = :month
+              and extract(day from e.entryDate) in :days
+              and e.entryDate < :before
+              and (e.unlockDate is null or e.unlockDate <= :now)
+            order by e.entryDate desc, e.createdAt desc, e.id desc
+            """)
+    List<Entry> findOnThisDay(
+            @Param("userId") UUID userId,
+            @Param("month") int month,
+            @Param("days") Collection<Integer> days,
+            @Param("before") LocalDate before,
+            @Param("now") Instant now,
+            Limit limit);
+
+    /**
      * How many entries each week has among the entries whose memory date is on or after {@code from} and, when
      * {@code to} is given, on or before it: an Era's dates (D-22). Both ends count. A week with none isn't returned.
      *

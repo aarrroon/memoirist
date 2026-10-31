@@ -200,7 +200,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - an empty entry is erased at once and never listed
     - restore and erase return `404` for an entry that isn't in Recently deleted, or is another user's
 
-- [ ] **3.12 On this day** (D-32, `/new-endpoint`)
+- [x] **3.12 On this day** (D-32, `/new-endpoint`)
   - **Read:** D-10, D-30, D-32, API_CONTRACT §Entries.
   - **Do:** `GET /entries/on-this-day`: the user's entries from the same day and month in earlier years, newest year first, as `EntrySummary` rows.
   - **Done when:** tests with a fixed `Clock` prove:
