@@ -185,7 +185,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - a sealed entry's title, preview, counts, media kind and tags are hidden
     - the query count per page doesn't grow with the number of entries
 
-- [ ] **3.10 Opened Loot Drops**
+- [x] **3.10 Opened Loot Drops**
   - **Read:** D-10, API_CONTRACT §Entries.
   - **Do:** `GET /entries/opened` and `POST /entries/{entryId}/mark-seen`; sealing an entry clears `unlock_seen_at`.
   - **Done when:** tests with a fixed `Clock` prove an entry appears once its unlock time passes, disappears after mark-seen, appears again after being sealed and unlocking again, and never appears while sealed (mark-seen returns `409`); another user's entry returns `404`.

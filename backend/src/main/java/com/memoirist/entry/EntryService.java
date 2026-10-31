@@ -34,7 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 
 /**
- * The user's entries (API_CONTRACT, Entries): create, read, edit, delete and seal. This is where the rules that
+ * The user's entries (API_CONTRACT, Entries): create, read, edit, delete, seal and mark seen. This is where the rules that
  * protect a journal live:
  *
  * <ul>
@@ -249,6 +249,27 @@ public class EntryService {
         entry.setUnlockSeenAt(null);
         entries.saveAndFlush(entry);
         return mapper.toResponse(entry, now);
+    }
+
+    /**
+     * Records that the user has seen an opened Loot Drop, which takes it out of the Opened strip (D-10). Safe to
+     * repeat: the first call writes the time and every later one changes nothing, so the first seen time stays.
+     *
+     * <p>The checks, in order: the entry is the user's and not in Recently deleted ({@code 404}), then it is not sealed
+     * ({@code 409 entry-sealed}: it has not opened, so there is nothing to have seen). An entry that was never sealed
+     * is not a Loot Drop and has nothing to mark, so it answers like a repeat and nothing is written.
+     *
+     * <p>Marking is one conditional {@code UPDATE} ({@link EntryRepository#markSeen}), not a setter and a save, so it
+     * does not raise {@code version} or move {@code updatedAt}: a view mark is not an edit (D-23), and the client that
+     * marks an entry seen and then saves the caption it read earlier must not be told its copy is stale.
+     */
+    public void markSeen(UUID entryId) {
+        Entry entry = find(entryId);
+        Instant now = Instant.now(clock);
+        if (EntrySeal.isSealed(entry, now)) {
+            throw new EntrySealedException("This entry is sealed, so it has not opened yet.");
+        }
+        entries.markSeen(entry.getId(), entry.getUserId(), now);
     }
 
     private Entry find(UUID entryId) {

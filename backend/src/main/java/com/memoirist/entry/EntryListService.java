@@ -9,14 +9,15 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The user's entries as list rows ({@code EntrySummary}, API_CONTRACT): today the all-entries timeline (D-25), and the
- * Opened strip, Recently deleted and On this day when tasks 3.10 to 3.12 add them. It only reads. Writing an entry is
+ * The user's entries as list rows ({@code EntrySummary}, API_CONTRACT): the all-entries timeline (D-25) and the Opened
+ * strip (task 3.10), and Recently deleted and On this day when tasks 3.11 and 3.12 add them. It only reads. Writing an entry is
  * {@link EntryService}'s job, so the rules about changing one stay in one class and the read paths, which are mostly
  * about queries and how many of them run, stay in another.
  *
@@ -37,6 +38,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class EntryListService {
+
+    /** How many Loot Drops the Opened strip shows (API_CONTRACT, Entries). */
+    static final int OPENED_STRIP_SIZE = 20;
 
     private final EntryRepository entries;
     private final TagRepository tags;
@@ -81,6 +85,24 @@ public class EntryListService {
             found = entries.findOpenTimelinePageByTag(userId, tagId, now, pageable);
         }
         return PageResponse.of(found, summaries(found.getContent(), userId, now));
+    }
+
+    /**
+     * The Opened strip (D-10): the user's Loot Drops that have unlocked and that they haven't marked seen, the one that
+     * opened most recently first, at most {@value #OPENED_STRIP_SIZE}. A Loot Drop that is sealed (again) isn't here,
+     * and neither is one in Recently deleted; marking one seen with {@code EntryService.markSeen} takes it out of the
+     * strip, and sealing it again puts it back once it has opened again.
+     *
+     * <p>Every entry the query returns is open at {@code now}, so each row is whole (title, preview, counts, tags).
+     * The query and the mapper use the same {@code now}, and an entry that opens in between is simply not in this
+     * answer yet. The cost is the strip's one query plus the media and the tags of its rows, three statements for any
+     * number of Loot Drops, the same as a page of the timeline without its count.
+     */
+    public List<EntrySummaryResponse> opened() {
+        UUID userId = currentUser.currentUserId();
+        Instant now = Instant.now(clock);
+        List<Entry> found = entries.findOpenedUnseen(userId, now, Limit.of(OPENED_STRIP_SIZE));
+        return summaries(found, userId, now);
     }
 
     /**

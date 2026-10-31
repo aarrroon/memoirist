@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
  * id comes from the request (D-11).
  *
  * <p>Reading one entry and changing one go through {@link EntryService}; the list rows go through
- * {@link EntryListService}. The Opened strip, Recently deleted and On this day (tasks 3.10 to 3.12) are added here
+ * {@link EntryListService}. Recently deleted and On this day (tasks 3.11 and 3.12) are added here
  * later.
  */
 @RestController
@@ -68,6 +69,19 @@ class EntryController {
             @RequestParam(defaultValue = "50") @Min(1) @Max(100) int size,
             @RequestParam(required = false) UUID tagId) {
         return entryList.list(page, size, tagId);
+    }
+
+    @GetMapping("/opened")
+    @Operation(
+            summary = "The Opened strip: Loot Drops that have unlocked and not been marked seen",
+            description = "At most 20 rows, the one that opened most recently first, each a whole EntrySummary (an"
+                    + " opened Loot Drop is an ordinary entry again). Nothing that is still sealed, was never sealed,"
+                    + " or is in Recently deleted is listed. A plain array, not a page. Mark one seen with"
+                    + " POST /entries/{entryId}/mark-seen; sealing it again puts it back once it has opened again.")
+    @ApiResponse(responseCode = "200", description = "The strip; an empty array when there is nothing to show")
+    @ApiResponse(responseCode = "400", description = "malformed-request: a bad X-Dev-User-Id")
+    List<EntrySummaryResponse> opened() {
+        return entryList.opened();
     }
 
     @PostMapping
@@ -168,5 +182,22 @@ class EntryController {
     @ApiResponse(responseCode = "415", description = "unsupported-media-type: the body is not application/json")
     EntryResponse seal(@PathVariable UUID entryId, @Valid @RequestBody EntrySealRequest request) {
         return entries.seal(entryId, request);
+    }
+
+    @PostMapping("/{entryId}/mark-seen")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(
+            summary = "Mark an opened Loot Drop as seen",
+            description = "Takes it out of the Opened strip. Safe to repeat. It is a view mark, not an edit: the"
+                    + " entry's version and updatedAt do not change. An entry that was never sealed has nothing to"
+                    + " mark and answers 204 too.")
+    @ApiResponse(responseCode = "204", description = "Marked, or already marked")
+    @ApiResponse(responseCode = "400", description = "malformed-request: the id is not a UUID")
+    @ApiResponse(
+            responseCode = "404",
+            description = "not-found: no such entry, it is another user's, or it is in Recently deleted")
+    @ApiResponse(responseCode = "409", description = "entry-sealed: the Loot Drop has not opened yet")
+    void markSeen(@PathVariable UUID entryId) {
+        entries.markSeen(entryId);
     }
 }

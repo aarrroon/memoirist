@@ -103,10 +103,10 @@ One Instagram-style post. `user_id` is duplicated from the week so ownership che
 | reply_to_entry_id | UUID | NULL → entries ON DELETE SET NULL. The user's own opened Loot Drop that this entry answers (service check, D-33) |
 | unlock_date | TIMESTAMPTZ | NULL. Sealed while `unlock_date > now()` (D-10) |
 | unlock_notified | BOOLEAN | NOT NULL DEFAULT FALSE. Set by the background unlock job (unlock emails in Phase 2, refreshing AI results in Phase 4) |
-| unlock_seen_at | TIMESTAMPTZ | NULL. When the user saw the opened Loot Drop in the *Opened* strip; cleared whenever the entry is sealed (D-10) |
+| unlock_seen_at | TIMESTAMPTZ | NULL. When the user saw the opened Loot Drop in the *Opened* strip; cleared whenever the entry is sealed (D-10). Written only by `mark-seen`, with a conditional bulk `UPDATE` that does not raise `version` or move `updated_at` (task 3.10) |
 | deleted_at | TIMESTAMPTZ | NULL. Set when the entry is deleted: it waits in Recently deleted, hidden everywhere else, until it is restored or erased. A daily sweep erases it 30 days later (D-30) |
 | date_unknown | BOOLEAN | NOT NULL DEFAULT FALSE. The memory date is a guess (a photo-dump photo with no date of its own); cleared when the date is changed (D-34) |
-| version | BIGINT | NOT NULL DEFAULT 0. Optimistic lock, mapped with `@Version`; a stale `PUT` is `409 entry-stale` (D-23). Raised by one for each request that changes the row (an edit, a seal, a delete into Recently deleted); a `PUT` that changes nothing writes nothing |
+| version | BIGINT | NOT NULL DEFAULT 0. Optimistic lock, mapped with `@Version`; a stale `PUT` is `409 entry-stale` (D-23). Raised by one for each request that changes the row (an edit, a seal, a delete into Recently deleted); a `PUT` that changes nothing writes nothing; `mark-seen` writes only `unlock_seen_at` with its own `UPDATE` and leaves `version` and `updated_at` alone (task 3.10) |
 | created_at, updated_at | TIMESTAMPTZ | |
 
 ### `media`
@@ -277,7 +277,7 @@ CREATE INDEX idx_entries_user_date ON entries (user_id, entry_date DESC);
 CREATE INDEX idx_entries_template ON entries (template_id);
 CREATE INDEX idx_entries_pending_unlock ON entries (unlock_date)
     WHERE unlock_date IS NOT NULL AND unlock_notified = FALSE;
--- Opened Loot Drops the user hasn't seen yet (D-10).
+-- Opened Loot Drops the user hasn't seen yet (D-10). Serves GET /entries/opened: the planner reads it backwards by unlock_date (task 3.10).
 CREATE INDEX idx_entries_opened_unseen ON entries (user_id, unlock_date)
     WHERE unlock_date IS NOT NULL AND unlock_seen_at IS NULL;
 -- Recently deleted: its list and the daily sweep (D-30).

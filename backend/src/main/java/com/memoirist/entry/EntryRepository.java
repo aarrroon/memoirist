@@ -7,9 +7,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
@@ -201,6 +203,61 @@ public interface EntryRepository extends Repository<Entry, UUID> {
             """)
     List<Entry> fetchTagsOfOpenEntriesByIds(
             @Param("entryIds") Collection<UUID> entryIds, @Param("userId") UUID userId, @Param("now") Instant now);
+
+    /**
+     * The Opened strip (task 3.10, D-10): the user's Loot Drops that have unlocked and that they haven't marked seen,
+     * the one that opened most recently first. Every entry returned is open by {@code EntrySeal}'s rule (its unlock
+     * date is not after {@code now}), so the mapper shows it whole; a sealed one can't match, and neither can an entry
+     * that was never sealed (no unlock date). Entries in Recently deleted are left out by {@code @SQLRestriction}
+     * (D-30). The id is the last sort key only to make the order total when two Loot Drops open in the same instant.
+     *
+     * <p>Spring Data turns {@link Limit} into {@code LIMIT}, so only the strip's few rows are read, however many seen
+     * Loot Drops the user has. The predicate is the partial index's own: {@code idx_entries_opened_unseen} holds
+     * exactly the entries with an unlock date and no seen mark, ordered by user and unlock date, so Postgres reads it
+     * backwards and stops after {@code limit} rows.
+     */
+    @Query("""
+            select e from Entry e
+            where e.userId = :userId
+              and e.unlockDate is not null
+              and e.unlockDate <= :now
+              and e.unlockSeenAt is null
+            order by e.unlockDate desc, e.id desc
+            """)
+    List<Entry> findOpenedUnseen(@Param("userId") UUID userId, @Param("now") Instant now, Limit limit);
+
+    // TODO(human) PRACTICE: Write the update behind mark-seen as one conditional UPDATE statement, instead of
+    //   loading the entry, calling a setter and saving it. It must change only the user's own entry, only once it has
+    //   opened and only if it hasn't been marked yet, and it must say how many rows it changed. Then decide what the
+    //   statement must NOT touch (think about `version` and `updatedAt`), and why running it twice is harmless.
+    // Hint: D-10, D-23 and security.md (Ownership). `unlock_seen_at` is view state, not writing, so a client that
+    //   marks an entry seen and then saves a caption it read earlier must not be told its copy is stale. A JPQL
+    //   bulk update goes straight to SQL and skips the entity's @Version. Put every rule in the WHERE clause, so
+    //   the check and the write are one atomic step, and let the service read the returned count if it needs it.
+    // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+    /**
+     * Records that the user has seen an opened Loot Drop, with one conditional UPDATE: it writes only where the entry
+     * is the user's, has an unlock date that is not after {@code now}, and has no seen mark yet. It returns the number
+     * of rows changed, {@code 1} the first time and {@code 0} on every repeat, so a second tap keeps the first seen
+     * time and a re-sealed or foreign entry is untouched.
+     *
+     * <p>A bulk update leaves {@code version} and {@code updated_at} as they were: the mark is not an edit (D-23), so
+     * it can't make a caption's {@code PUT} stale. It also needs no read-then-write, so there is nothing to race with
+     * a seal that lands in between (the seal moves the unlock date into the future, and this condition then fails).
+     * The persistence context is cleared afterwards, because an entity loaded earlier in the transaction would still
+     * hold the old mark.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            update Entry e set e.unlockSeenAt = :now
+            where e.id = :id
+              and e.userId = :userId
+              and e.unlockDate is not null
+              and e.unlockDate <= :now
+              and e.unlockSeenAt is null
+            """)
+    int markSeen(@Param("id") UUID id, @Param("userId") UUID userId, @Param("now") Instant now);
+    // └── END ANSWER ▲ ──
 
     /**
      * How many entries each week has among the entries whose memory date is on or after {@code from} and, when
