@@ -106,7 +106,7 @@ One Instagram-style post. `user_id` is duplicated from the week so ownership che
 | unlock_seen_at | TIMESTAMPTZ | NULL. When the user saw the opened Loot Drop in the *Opened* strip; cleared whenever the entry is sealed (D-10) |
 | deleted_at | TIMESTAMPTZ | NULL. Set when the entry is deleted: it waits in Recently deleted, hidden everywhere else, until it is restored or erased. A daily sweep erases it 30 days later (D-30) |
 | date_unknown | BOOLEAN | NOT NULL DEFAULT FALSE. The memory date is a guess (a photo-dump photo with no date of its own); cleared when the date is changed (D-34) |
-| version | BIGINT | NOT NULL DEFAULT 0. Optimistic lock, mapped with `@Version`; a stale `PUT` is `409 entry-stale` (D-23) |
+| version | BIGINT | NOT NULL DEFAULT 0. Optimistic lock, mapped with `@Version`; a stale `PUT` is `409 entry-stale` (D-23). Raised by one for each request that changes the row (an edit, a seal, a delete into Recently deleted); a `PUT` that changes nothing writes nothing |
 | created_at, updated_at | TIMESTAMPTZ | |
 
 ### `media`

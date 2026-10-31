@@ -31,7 +31,7 @@
 | 3.2 `/users/me` | done | *Sprint 3.2: Add GET and PATCH /users/me* | `GET` and `PATCH /api/v1/users/me` (`UserController`, `UserService.currentUser()` with 404 for an unknown user, `UserMapper`, DTO records, a custom `@IanaTimeZone` that refuses offsets); D-11 records the unknown-user rule; 96 new tests (359 total) | [3.2](build-journal/sprint-3/3.2-users-me.md) |
 | 3.3 Eras CRUD | done | *Sprint 3.3: Add the Eras endpoints* | The five `/api/v1/eras` operations (POST with client id replay and 409, list, detail with overlapping weeks and per-week `entryCount` that skips sealed and Recently deleted entries, PUT, DELETE); `WeekEras` (date overlap and pinned-first order) for task 3.7; 109 new tests (468 total) | [3.3](build-journal/sprint-3/3.3-eras-crud.md) |
 | 3.4 Templates CRUD | done | *Sprint 3.4: Add the Templates endpoints* | The five `/api/v1/templates` operations (POST with client id replay and 409, list by name ignoring case and accents, detail, PUT, DELETE that only empties `template_id` on entries); subheading limits (name 1-100, 20 items of 1-200) on the request records; 69 new tests (537 total) | [3.4](build-journal/sprint-3/3.4-templates-crud.md) |
-| 3.5 Entries: create, read, update, delete, seal, redaction | pending | | | |
+| 3.5 Entries: create, read, update, delete, seal, redaction | done | *Sprint 3.5: Add the Entries endpoints* | `POST`, `GET`, `PUT`, `DELETE /api/v1/entries/{id}` and `POST /entries/{id}/seal`: Monday weeks in the user's zone (DST-safe), TipTap validation, `EntryMapper` as the only path to a response with a nine-field sealed view, version checks (D-23), seal and Recently deleted rules; 299 new tests (836 total) | [3.5](build-journal/sprint-3/3.5-entries.md) |
 | 3.6 Media | pending | | | |
 | 3.7 Weekly logs and feed | pending | | | |
 | 3.8 Tags | pending | | | |
@@ -153,6 +153,19 @@ Made instead of asking, each from a documented default or the doc that wins (D-2
 | 94 | 3.4 | DATABASE_SCHEMA "enforced in the service" | The array limits are enforced when the request is read (container-element constraints), earlier than the service. Schema doc reworded |
 | 95 | 3.4 | 2.4 `findByUserIdOrderByNameAsc` vs Java sorting | Renamed `TemplateRepository.findByUserId` so the name does not promise an order; two lines of `OwnershipFindersTest` followed |
 | 96 | 3.4 | D-12 shared by Eras, Templates and 3.5 | Copied the create/replay/409 logic from `EraService` into `TemplateService` rather than extracting a helper; entries add a fourth step (Recently deleted), so extraction is better judged in 3.5 |
+| 97 | 3.5 | API_CONTRACT errors and D-05 say 413 for content over 200 KB; Content rules say "anything else: 400" | Over 200 KB (bytes of compact JSON, checked before the walk) is `413`; exactly 200 KB is accepted. Every other content rule is `400` with `fieldErrors.contentJson` |
+| 98 | 3.5 | SPRINT_PLAN 3.5 "redacted on PUT" vs D-10 "writes to a sealed entry are 409" | A PUT on a sealed entry is `409 entry-sealed` with a body carrying nothing from the entry. A PUT on an opened Loot Drop returns the full entry. Please confirm the plan wording |
+| 99 | 3.5 | API_CONTRACT seal ("must be later") vs D-10 | Sealing with the same unlock date again is `409 entry-sealed`; a date not in the future is `400` first; an opened Loot Drop can be sealed again; at most 100 years ahead |
+| 100 | 3.5 | D-23 says stale is `409`, not what "ahead" means | A client version that differs in either direction is `409 entry-stale`; it is compared, never stored. A PUT that changes nothing writes nothing; a change raises the version by exactly one |
+| 101 | 3.5 | D-30 "an entry with no title, caption or media is erased at once" | Empty = no title, blank text and no media: hard-deleted. Any other entry gets `deleted_at` from the `Clock` and keeps its media, tags and seal |
+| 102 | 3.5 | D-09 date limits vs a time-zone change | On PUT the "not after today" and "not before 1900-01-01" limits apply only to a date the client changes |
+| 103 | 3.5 | SPRINT_PLAN 3.5 vs tasks 3.8, 3.13, 3.14 | `tags` [], `soundtrack` null, `replyToEntryId` null and `replyIds` [] are always in the response; those request fields are ignored until their tasks. 3.8, 3.13 and 3.14 must make PUT clear them when omitted |
+| 104 | 3.5 | Order of checks on PUT not in the docs | 404 (missing, not owned, deleted), then sealed `409`, then stale `409`, then new values (`400`, or `404` for another user's template) |
+| 105 | 3.5 | D-05 names only heading levels and link protocols | Only `heading.attrs.level` (1-3) and `link.attrs.href` (http://, https://, mailto: after strip, no control character) are checked; unknown node fields are refused; over 500 levels deep is `400 malformed-request` |
+| 106 | 3.5 | TECH_STACK "no new dependency without approval" | No ArchUnit. `EntryMapperIsTheOnlyPathTest` scans the source for `new EntryResponse(` outside `EntryMapper` |
+| 107 | 3.5 | `backend.md` (inject `Clock`) and the need for exact instants | Test-side `MutableClock` and `MutableClockConfiguration` in a shared base class `EntryApiTest`; one extra app start |
+| 108 | 3.5 | D-12 with `@SQLRestriction` hiding Recently deleted rows | `EntryRepository.idIsTaken` (native `SELECT EXISTS`) is the one unscoped lookup, used after the scoped lookup finds nothing |
+| 109 | 3.5 | Run brief | 3.5 is not the sprint's last task, so no Sprint 3 README or journal index row |
 
 ## Needs attention
 - **GitGuardian fails on PR #1, a false positive** (Sprint 1 close-out). Its *Security Checks* flag `docker-compose.yml` line 15 (commit `3447288`) as a "Generic Password", but the line is `POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}`, a Compose placeholder that reads the value from `.env`. No password is in the repo, and `.env` was never committed. **Fix:** in GitGuardian's dashboard, resolve incident 39228980 as a false positive, then re-run the check. Later PRs may be flagged the same way wherever a password is read from `.env` by name; GitGuardian's ignore settings can stop that, which is your call.
@@ -243,6 +256,15 @@ Made instead of asking, each from a documented default or the doc that wins (D-2
 - **Skill gap left** (task 3.4): `.claude/skills/new-endpoint/SKILL.md`'s test table could gain rows for list order and null list items; needs your approval, and `docs/CURRENT_SKILLS.md` in step.
 - **Practice blocks** (task 3.4): `TemplateText.java:15-29` and `TemplateEndpointTest.java:800-828`, answers in place.
 - **Nothing else for you in task 3.4**: no failing tests (537 pass), no skipped dependencies, no README changes, no setup. Port 8080 is free. Another session's changes in `docs/README.md`, `docs/WORKFLOW.md`, `docs/design/` and `docs/marketing/` were left unstaged.
+- **Follow-up: NUL (U+0000) in a title or text node** (task 3.5, [journal section 9](build-journal/sprint-3/3.5-entries.md#9-review), review finding 1). Refused only inside link addresses. Postgres cannot store it, so a forged request probably gives `500` instead of `400`; no data leaks. Needs a check in `EntryText.title` and `EntryContentValidator.checkNode`, tests, and a rebuild.
+- **Confirm the SPRINT_PLAN 3.5 wording** (task 3.5, finding 3): "redacted on GET, PUT and seal responses" is met by a PUT `409` that leaks nothing. Tasks 3.8, 3.13 and 3.14 must make PUT clear tags, soundtrack and reply target when omitted.
+- **Content size statuses** (task 3.5): over 200 KB is `413` but a malformed or over-nested document is `400`, so clients handle both. A huge body is read in full first; a request-size limit is a Phase 2 deployment setting.
+- **A retried seal with the same unlock date is `409`**, not `200` (task 3.5).
+- **Create-with-client-id is now copied three times** (task 3.5): `EraService`, `TemplateService`, `EntryService`. Consider extracting a helper.
+- **Skill gap left** (task 3.5): `.claude/skills/new-endpoint` test table could gain "create with an `X-Dev-User-Id` naming nobody: 404"; needs your approval.
+- **ArchUnit skipped** (task 3.5): a source-scan test does the job; approve ArchUnit later if you want it.
+- **Practice blocks** (task 3.5): `EntryContentValidator.java:153-175` and `EntryService.java:232-245`, answers in place.
+- **Nothing else for you in task 3.5**: no failing tests (836 pass), no README changes, no setup. Port 8080 is free. An unrelated `universalbook_backend-ollama-1` container restarts in a loop; not touched. Another session's changes in `docs/README.md`, `docs/WORKFLOW.md`, `docs/design/` and `docs/marketing/` were left alone.
 
 ## Questions for the morning
 - **Keep or swap two build choices from task 2.1?** (spec review finding 2, [journal §9](build-journal/sprint-2/2.1-spring-boot-project.md#9-review)). No doc named either before the task, and the builder recorded both in TECH_STACK §2 itself:

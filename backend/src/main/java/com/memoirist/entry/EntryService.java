@@ -1,0 +1,289 @@
+package com.memoirist.entry;
+
+import com.memoirist.common.ConflictException;
+import com.memoirist.common.CreateResult;
+import com.memoirist.common.EntrySealedException;
+import com.memoirist.common.EntryStaleException;
+import com.memoirist.common.NotFoundException;
+import com.memoirist.common.ValidationFailedException;
+import com.memoirist.entry.dto.EntryCreateRequest;
+import com.memoirist.entry.dto.EntryResponse;
+import com.memoirist.entry.dto.EntrySealRequest;
+import com.memoirist.entry.dto.EntryUpdateRequest;
+import com.memoirist.template.TemplateRepository;
+import com.memoirist.user.CurrentUserProvider;
+import com.memoirist.user.User;
+import com.memoirist.user.UserService;
+import com.memoirist.week.WeekService;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
+
+/**
+ * The user's entries (API_CONTRACT, Entries): create, read, edit, delete and seal. This is where the rules that
+ * protect a journal live:
+ *
+ * <ul>
+ *   <li><b>Ownership (non-negotiable 3).</b> Every lookup is by id <em>and</em> the current user, and an entry that is
+ *       someone else's is {@code 404}, the same as one that doesn't exist. An entry in Recently deleted is hidden from
+ *       these lookups by {@code @SQLRestriction} on {@link Entry}, so it is {@code 404} too (D-30).
+ *   <li><b>The seal (D-10).</b> A sealed entry can't be edited ({@code 409 entry-sealed}) and its unlock date can only
+ *       move later. It can still be deleted. Every response is built by {@link EntryMapper}, which hides what is private.
+ *   <li><b>Stale edits (D-23).</b> A {@code PUT} carries the version the client read. If the entry has moved on, the
+ *       answer is {@code 409 entry-stale} and nothing is written.
+ *   <li><b>Time (D-07, D-09).</b> "Today", and so the latest allowed memory date, is the user's today, from the
+ *       injected {@link Clock}.
+ * </ul>
+ *
+ * <p>Tags, soundtracks and reply targets are set by tasks 3.8, 3.14 and 3.13; media by 3.6. This class doesn't touch
+ * them, and the entry's media and tags are only read, by the mapper.
+ */
+@Service
+@Transactional
+public class EntryService {
+
+    /** How far ahead a Loot Drop may be sealed (API_CONTRACT, Entries). */
+    private static final int MAX_SEAL_YEARS = 100;
+
+    private final EntryRepository entries;
+    private final TemplateRepository templates;
+    private final WeekService weeks;
+    private final UserService users;
+    private final CurrentUserProvider currentUser;
+    private final EntryMapper mapper;
+    private final Clock clock;
+
+    public EntryService(
+            EntryRepository entries,
+            TemplateRepository templates,
+            WeekService weeks,
+            UserService users,
+            CurrentUserProvider currentUser,
+            EntryMapper mapper,
+            Clock clock) {
+        this.entries = entries;
+        this.templates = templates;
+        this.weeks = weeks;
+        this.users = users;
+        this.currentUser = currentUser;
+        this.mapper = mapper;
+        this.clock = clock;
+    }
+
+    /**
+     * Creates an entry in the week of its memory date (the week is created if it is the first entry in it), or answers
+     * with the stored one when the user already has an entry with the client's {@code id} (a safe retry, D-12: the body
+     * is not applied again).
+     *
+     * @throws NotFoundException if the request names a user who isn't there (the first thing every create checks), or
+     *     a template that isn't the user's
+     * @throws ConflictException if the {@code id} belongs to another user's entry, or to one of the user's own entries
+     *     in Recently deleted (restore that one instead, D-30)
+     * @throws ValidationFailedException if the date is after today or before 1900-01-01, or the content breaks a rule
+     * @throws com.memoirist.common.PayloadTooLargeException if the content is over 200 KB
+     */
+    public CreateResult<EntryResponse> create(EntryCreateRequest request) {
+        User user = users.currentUser();
+        Instant now = Instant.now(clock);
+        UUID id = request.id();
+        if (id == null) {
+            id = UUID.randomUUID();
+        } else {
+            Optional<Entry> own = entries.findByIdAndUserId(id, user.getId());
+            if (own.isPresent()) {
+                return CreateResult.replayed(mapper.toResponse(own.get(), now));
+            }
+            if (entries.idIsTaken(id)) {
+                // Someone else has it, or it waits in the user's Recently deleted. Say only that it is taken.
+                throw new ConflictException("That id is already in use.");
+            }
+        }
+
+        LocalDate today = today(user);
+        LocalDate date = request.entryDate() == null ? today : request.entryDate();
+        checkMemoryDate(date, today);
+        checkContent(request.contentJson());
+        checkTemplate(request.templateId(), user.getId());
+
+        Entry entry = new Entry(
+                id, user.getId(), weeks.findOrCreate(user.getId(), date).getId(), date);
+        entry.setTemplateId(request.templateId());
+        entry.setTitle(request.title());
+        setContent(entry, request.contentJson());
+        entry.setDateUnknown(Boolean.TRUE.equals(request.dateUnknown()));
+        return CreateResult.created(mapper.toResponse(entries.saveAndFlush(entry), now));
+    }
+
+    /** One entry, redacted if it is a sealed Loot Drop. */
+    @Transactional(readOnly = true)
+    public EntryResponse get(UUID entryId) {
+        return mapper.toResponse(find(entryId), Instant.now(clock));
+    }
+
+    /**
+     * Replaces the entry's date, template, title and caption with the request's (a {@code PUT}). A new date moves the
+     * entry to the week that contains it and clears {@code dateUnknown} (D-34); an unchanged date leaves both alone.
+     *
+     * <p>The checks run in this order, and the first to fail answers: the entry is the user's ({@code 404}), it isn't
+     * sealed ({@code 409 entry-sealed}), the client has seen its latest version ({@code 409 entry-stale}), then the
+     * new values are valid ({@code 400}, or {@code 404} for a template that isn't theirs). Nothing is written until all
+     * have passed.
+     */
+    public EntryResponse update(UUID entryId, EntryUpdateRequest request) {
+        Entry entry = find(entryId);
+        Instant now = Instant.now(clock);
+        if (EntrySeal.isSealed(entry, now)) {
+            throw new EntrySealedException("This entry is sealed and can't be changed until it opens.");
+        }
+        requireCurrentVersion(entry, request.version());
+
+        UUID userId = entry.getUserId();
+        LocalDate date = request.entryDate();
+        boolean dateChanged = !date.equals(entry.getEntryDate());
+        if (dateChanged) {
+            // Only a date the user is changing is held to today: an entry whose date has since become "in the future"
+            // (the user moved their time zone) can still be edited without touching its date.
+            checkMemoryDate(date, today(users.currentUser()));
+        }
+        checkContent(request.contentJson());
+        if (!Objects.equals(request.templateId(), entry.getTemplateId())) {
+            checkTemplate(request.templateId(), userId);
+        }
+
+        // Find the new week BEFORE touching the entry. Finding it runs a native INSERT, and Hibernate flushes pending
+        // changes before a native query, so a setter called first would be written by its own UPDATE and the
+        // saveAndFlush below would write a second one: one edit would raise the version by two (a test found this).
+        UUID newWeekId = dateChanged ? weeks.findOrCreate(userId, date).getId() : entry.getWeeklyLogId();
+
+        if (dateChanged) {
+            entry.setEntryDate(date);
+            entry.setWeeklyLogId(newWeekId);
+            entry.setDateUnknown(false);
+        }
+        entry.setTemplateId(request.templateId());
+        entry.setTitle(request.title());
+        setContent(entry, request.contentJson());
+        // Hibernate adds "AND version = ?" to the UPDATE. If another request commits between the check above and this
+        // flush, no row matches and the flush throws ObjectOptimisticLockingFailureException, which is also 409
+        // entry-stale. An update that changes nothing writes nothing and leaves the version where it was.
+        entries.saveAndFlush(entry);
+        return mapper.toResponse(entry, now);
+    }
+
+    /**
+     * Deletes the entry. It goes to Recently deleted for 30 days (D-30): hidden everywhere at once, but its media files
+     * stay until it is erased (task 3.11). Allowed when the entry is sealed, which stays sealed in there.
+     *
+     * <p>An entry with no title, no caption and no media has nothing to bring back, so it is erased at once instead.
+     */
+    public void delete(UUID entryId) {
+        Entry entry = find(entryId);
+        if (isEmpty(entry)) {
+            entries.delete(entry);
+        } else {
+            entry.setDeletedAt(Instant.now(clock));
+            entries.saveAndFlush(entry);
+        }
+    }
+
+    /**
+     * Seals the entry as a Loot Drop that opens at {@code unlockDate}, or moves the date of one that is already
+     * sealed. Sealing also clears the "seen" mark, so an opened Loot Drop that is sealed again shows in the Opened
+     * strip once more when it opens (D-10). The answer is the sealed entry, so it is already redacted.
+     *
+     * @throws ValidationFailedException if the date isn't in the future, or is more than 100 years away
+     * @throws EntrySealedException if the entry is sealed and the date isn't later than its current unlock date
+     */
+    public EntryResponse seal(UUID entryId, EntrySealRequest request) {
+        Entry entry = find(entryId);
+        Instant now = Instant.now(clock);
+        // The database keeps microseconds. Cut the request to match, so the answer shows what is stored.
+        Instant unlockDate = request.unlockDate().truncatedTo(ChronoUnit.MICROS);
+        if (!unlockDate.isAfter(now)) {
+            throw new ValidationFailedException("unlockDate", "must be in the future");
+        }
+        if (unlockDate.isAfter(
+                now.atOffset(ZoneOffset.UTC).plusYears(MAX_SEAL_YEARS).toInstant())) {
+            throw new ValidationFailedException("unlockDate", "must be at most " + MAX_SEAL_YEARS + " years ahead");
+        }
+        if (EntrySeal.isSealed(entry, now) && !unlockDate.isAfter(entry.getUnlockDate())) {
+            throw new EntrySealedException("The unlock date of a sealed entry can only move later.");
+        }
+        entry.setUnlockDate(unlockDate);
+        entry.setUnlockSeenAt(null);
+        entries.saveAndFlush(entry);
+        return mapper.toResponse(entry, now);
+    }
+
+    private Entry find(UUID entryId) {
+        return entries.findByIdAndUserId(entryId, currentUser.currentUserId())
+                .orElseThrow(() -> new NotFoundException("Entry"));
+    }
+
+    // TODO(human) PRACTICE: Write requireCurrentVersion: refuse a PUT that was based on an older copy of the entry.
+    //   The client sends the version it last read; the entry holds the version stored now. Decide what to do when
+    //   they differ in each direction, and decide whether the client's number is ever copied onto the entity.
+    // Hint: D-23 and .claude/rules/backend.md (Persistence). Hibernate already refuses a save of an old copy, but
+    //   only for an entity it loaded in the same request; this method is the check that covers the copy living in
+    //   the client's editor. The Entry class has no setVersion on purpose. The stored version is the only truth: a
+    //   client that is behind has lost an edit and one that is ahead made its number up, so neither may write.
+    // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+    private static void requireCurrentVersion(Entry entry, long clientVersion) {
+        if (clientVersion != entry.getVersion()) {
+            throw new EntryStaleException();
+        }
+    }
+    // └── END ANSWER ▲ ──
+
+    private LocalDate today(User user) {
+        return LocalDate.now(clock.withZone(ZoneId.of(user.getTimezone())));
+    }
+
+    /** The memory date can't be in the future or before 1900-01-01 (D-09), so a typo can't create a week in year 202. */
+    private static void checkMemoryDate(LocalDate date, LocalDate today) {
+        if (date.isAfter(today)) {
+            throw new ValidationFailedException("entryDate", "must not be after today");
+        }
+        if (date.isBefore(Entry.EARLIEST_ENTRY_DATE)) {
+            throw new ValidationFailedException("entryDate", "must not be before " + Entry.EARLIEST_ENTRY_DATE);
+        }
+    }
+
+    private static void checkContent(JsonNode contentJson) {
+        if (contentJson != null) {
+            EntryContentValidator.validate(contentJson);
+        }
+    }
+
+    /** A template named in a request has to be the user's own; someone else's looks the same as one that isn't there. */
+    private void checkTemplate(UUID templateId, UUID userId) {
+        if (templateId != null
+                && templates.findByIdAndUserId(templateId, userId).isEmpty()) {
+            throw new NotFoundException("Template");
+        }
+    }
+
+    /** Stores the caption and the plain text and preview line the server derives from it (D-05, D-24). */
+    private static void setContent(Entry entry, JsonNode contentJson) {
+        ContentTextExtractor.Extracted extracted = ContentTextExtractor.extract(contentJson);
+        entry.setContentJson(contentJson);
+        entry.setContentText(extracted.text());
+        entry.setPreviewLine(extracted.previewLine());
+    }
+
+    /** Nothing to bring back (D-30): no title, no words in the caption, no photo or voice note. */
+    private static boolean isEmpty(Entry entry) {
+        return entry.getTitle() == null
+                && entry.getContentText().isBlank()
+                && entry.getMedia().isEmpty();
+    }
+}

@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +18,25 @@ public interface WeeklyLogRepository extends Repository<WeeklyLog, UUID> {
 
     /** The user's week that starts on this Monday; backed by the unique constraint on (user_id, start_date). */
     Optional<WeeklyLog> findByUserIdAndStartDate(UUID userId, LocalDate startDate);
+
+    /**
+     * Inserts the week unless the user already has one that starts on {@code startDate}, and says nothing if so
+     * (D-08). Native SQL, because JPA has no {@code ON CONFLICT}; {@code created_at} and {@code updated_at} take their
+     * column defaults. {@code WeekService.findOrCreate} calls it and then selects the row.
+     *
+     * @return 1 if the week was inserted, 0 if it was already there
+     */
+    @Modifying
+    @Query(value = """
+                    INSERT INTO weekly_logs (id, user_id, start_date, end_date)
+                    VALUES (:id, :userId, :startDate, :endDate)
+                    ON CONFLICT (user_id, start_date) DO NOTHING
+                    """, nativeQuery = true)
+    int insertIfAbsent(
+            @Param("id") UUID id,
+            @Param("userId") UUID userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 
     /**
      * The user's weeks that an Era with these dates holds, newest first (D-22): the week ends on or after the Era's

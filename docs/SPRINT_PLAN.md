@@ -137,7 +137,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 - [x] **3.4 Templates CRUD** (`/new-endpoint`)
   - **Done when:** every row of §Templates works and is tested; subheading limits are enforced.
 
-- [ ] **3.5 Entries: create, read, update, delete, seal, redaction**
+- [x] **3.5 Entries: create, read, update, delete, seal, redaction**
   - **Read:** D-05, D-08, D-09, D-10, D-12, D-30, API_CONTRACT §Entries.
   - **Do:** `WeekCalendar` (weeks always start on Monday, D-08), `EntryContentValidator`, `ContentTextExtractor`, `EntryMapper` (the only Entry→DTO path), and `EntryService` seal rules.
   - **Done when:** tests prove:

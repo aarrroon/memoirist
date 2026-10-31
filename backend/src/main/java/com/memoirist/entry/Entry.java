@@ -48,6 +48,12 @@ import tools.jackson.databind.JsonNode;
 @SQLRestriction("deleted_at IS NULL")
 public class Entry extends TimestampedEntity {
 
+    /** The longest title, in characters (D-24). The request records check it; the column is {@code VARCHAR(150)}. */
+    public static final int MAX_TITLE_LENGTH = 150;
+
+    /** The earliest memory date (D-09), the same day as the {@code chk_entries_entry_date_min} constraint. */
+    public static final LocalDate EARLIEST_ENTRY_DATE = LocalDate.of(1900, 1, 1);
+
     @Column(name = "user_id", nullable = false, updatable = false)
     private UUID userId;
 
@@ -58,7 +64,7 @@ public class Entry extends TimestampedEntity {
     @Column(name = "template_id")
     private UUID templateId;
 
-    @Column(name = "title", length = 150)
+    @Column(name = "title", length = MAX_TITLE_LENGTH)
     private String title;
 
     /** The memory date: when it happened, not when it was written. */

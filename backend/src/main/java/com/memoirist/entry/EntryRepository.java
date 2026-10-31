@@ -22,9 +22,27 @@ public interface EntryRepository extends Repository<Entry, UUID> {
 
     <S extends Entry> S save(S entry);
 
+    /**
+     * Saves and sends the INSERT or UPDATE now, instead of at commit. Hibernate fills {@code createdAt} and
+     * {@code updatedAt} (and bumps {@code version}) while it writes the row, so a response built from the entity
+     * before that would show them empty or old. A lost race on the version fails here too, inside the service, not
+     * later at commit.
+     */
+    <S extends Entry> S saveAndFlush(S entry);
+
     void delete(Entry entry);
 
     Optional<Entry> findByIdAndUserId(UUID id, UUID userId);
+
+    /**
+     * Whether any entry has this id, <em>any user's, Recently deleted included</em>: native SQL, so Hibernate's
+     * {@code @SQLRestriction} doesn't hide the deleted ones. The one lookup that isn't scoped to a user, and only for
+     * the client supplied {@code id} of a create (D-12, D-30): the service asks it after the user-scoped lookup found
+     * nothing, to tell {@code 409 conflict} (taken by someone else, or by the user's own deleted entry) from a fresh
+     * id. Never use it to read an entry; the answer reveals nothing but "taken".
+     */
+    @Query(value = "SELECT EXISTS (SELECT 1 FROM entries WHERE id = :id)", nativeQuery = true)
+    boolean idIsTaken(@Param("id") UUID id);
 
     /** The user's entries among these ids, for loading the children of a page of weeks in one query. */
     List<Entry> findByIdInAndUserId(Collection<UUID> ids, UUID userId);
