@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import com.memoirist.Fixtures;
 import com.memoirist.entry.dto.EntryResponse;
 import com.memoirist.media.Media;
+import com.memoirist.media.MediaMapper;
 import com.memoirist.storage.StorageService;
 import java.lang.reflect.RecordComponent;
 import java.time.Instant;
@@ -53,7 +54,7 @@ class EntryMapperTest {
             "version");
 
     private final StorageService storage = mock(StorageService.class);
-    private final EntryMapper mapper = new EntryMapper(storage);
+    private final EntryMapper mapper = new EntryMapper(new MediaMapper(storage));
 
     private UUID templateId;
     private UUID replyTarget;

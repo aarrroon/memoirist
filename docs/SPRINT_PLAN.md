@@ -155,7 +155,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - another user's entry returns `404`
     - replaying an existing ID returns `200`; another user's ID, or one in Recently deleted, returns `409`
 
-- [ ] **3.6 Media**
+- [x] **3.6 Media**
   - **Read:** API_CONTRACT §Media, D-17, D-20.
   - **Do:** upload (type, size, count and `purpose` checks), reorder (deferrable unique), delete with gap closing, and stored-file cleanup when an entry is erased (D-30).
   - **Done when:** tests cover the `415`, `413`, item-limit and sealed (`409`) cases; a `PAGE_SCAN` that isn't an image (`415`) and an unknown purpose (`400`); a reorder swap; and stored objects disappearing after deleting a media item and after erasing an entry, while deleting an entry keeps them (D-30).
@@ -192,7 +192,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 - [ ] **3.11 Recently deleted** (D-30, `/new-endpoint`)
   - **Read:** D-30, API_CONTRACT §Entries.
-  - **Do:** `GET /entries/deleted`, `POST /entries/{entryId}/restore` and `/erase`, and a sweep that erases entries deleted more than 30 days ago, with their stored files. The sweep is a service method that is safe to repeat; a daily `@Scheduled` job only calls it, so Sprint 5 can start it another way (Q5).
+  - **Do:** (erase and the sweep must call `EntryErasure.erase(entry)` inside a transaction, and read an entry's media with native queries only: TECH_STACK Storage, DATABASE_SCHEMA entity notes.) `GET /entries/deleted`, `POST /entries/{entryId}/restore` and `/erase`, and a sweep that erases entries deleted more than 30 days ago, with their stored files. The sweep is a service method that is safe to repeat; a daily `@Scheduled` job only calls it, so Sprint 5 can start it another way (Q5).
   - **Done when:** tests with a fixed `Clock` prove:
     - a deleted entry is left out of the feed, its week, the timeline, tag counts and filters, and the Opened strip, and comes back in all of them when restored
     - restoring keeps its media, tags and seal, and a sealed entry stays redacted in the list

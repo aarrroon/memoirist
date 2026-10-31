@@ -115,15 +115,15 @@ Carousel items (images and voice notes) belonging to an entry.
 | Column | Type | Constraints and notes |
 |---|---|---|
 | id | UUID | PK |
-| entry_id | UUID | NOT NULL → entries ON DELETE CASCADE. Delete the stored objects in the service *before* the cascade (TECH_STACK §2 Storage) |
+| entry_id | UUID | NOT NULL → entries ON DELETE CASCADE. Read the object keys *before* the cascade removes the rows, and delete the stored files after the commit: `EntryErasure` does both (TECH_STACK §2 Storage) |
 | object_key | VARCHAR(512) | NOT NULL UNIQUE. `users/{userId}/entries/{entryId}/{mediaId}.{ext}` |
 | media_type | VARCHAR(100) | NOT NULL. One of the D-17 MIME types |
 | purpose | VARCHAR(20) | NOT NULL DEFAULT 'PHOTO'. `PHOTO`, or `PAGE_SCAN` for a photo of a paper diary page, which must be an image. Checked in the service like `media_type`, so a new purpose needs no migration (D-20) |
-| display_order | INTEGER | NOT NULL, ≥ 0. UNIQUE `(entry_id, display_order)` DEFERRABLE INITIALLY DEFERRED, so a reorder can swap positions in one transaction |
+| display_order | INTEGER | NOT NULL, ≥ 0. UNIQUE `(entry_id, display_order)` DEFERRABLE INITIALLY DEFERRED, so a reorder, a delete that closes a gap and an insert in the middle can pass through a moment of repeated positions inside one transaction. The service keeps an entry's values as `0, 1, 2, …` with no gap, under a lock on the entry's row (task 3.6) |
 | file_size_bytes | BIGINT | NOT NULL, > 0, ≤ 25 MB (service check) |
 | uploaded_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() |
 
-At most 20 media items per entry (service check, D-17).
+At most 20 media items per entry (service check, D-17). The checks of an upload are in API_CONTRACT (Media).
 
 ### `tags`
 The user's own categories for entries (D-26).
@@ -318,7 +318,7 @@ Each Phase 1 table has one JPA entity, in the feature package named in [TECH_STA
 | `entry_tags` | no entity | | `Entry.tags` is a `@ManyToMany` through this table. Hibernate writes only `entry_id` and `tag_id`, so `source` (`'USER'`) and `created_at` come from their column defaults. Phase 4 needs an `EntryTag` entity to record `'AI'` |
 
 - `user_id`, `weekly_log_id`, `template_id`, `reply_to_entry_id` and `cover_media_id` are plain `UUID` fields, not associations. The only associations are `Entry.media` (`@OneToMany`, `@OrderBy("displayOrder ASC")`, `@BatchSize(50)`, no cascade), `Media.entry` and `Entry.tags` (`@BatchSize(50)`).
-- Deleting an entry (the sweep, or erase) deletes one `entries` row and leaves its `media` rows to the foreign key's `ON DELETE CASCADE` (a test shows Hibernate never touches `media`). Its `entry_tags` rows go by cascade or by a Hibernate `delete from entry_tags` (not asserted by a test; the result is the same).
+- Deleting an entry (the sweep, or erase) deletes one `entries` row and leaves its `media` rows to the foreign key's `ON DELETE CASCADE` (a test shows Hibernate never touches `media`). A query that finds an entry's media rows through the entry, JPQL or a derived finder, also applies the entry's `@SQLRestriction`, so it finds none for an entry in Recently deleted; `EntryErasure` reads the keys with a native query for that reason (task 3.6). Its `entry_tags` rows go by cascade or by a Hibernate `delete from entry_tags` (not asserted by a test; the result is the same).
 - A text column that the schema constrains in length (`VARCHAR(150)` for a title) is only checked by the database and the service; the entity records the length for readers but Hibernate doesn't enforce it.
 
 ---

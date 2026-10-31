@@ -1,11 +1,13 @@
 package com.memoirist.entry;
 
+import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
@@ -33,6 +35,19 @@ public interface EntryRepository extends Repository<Entry, UUID> {
     void delete(Entry entry);
 
     Optional<Entry> findByIdAndUserId(UUID id, UUID userId);
+
+    /**
+     * The same lookup, and the entry's row stays locked until the transaction ends ({@code SELECT ... FOR NO KEY
+     * UPDATE}); anyone else who asks for the lock waits. It is how the media calls (upload, reorder, delete) and the
+     * delete of an entry take turns: two uploads never pick the same carousel position, and an entry is never erased
+     * while a photo is being added to it.
+     *
+     * <p>The row is not changed, so {@code version} stays where it was: a photo upload must not make the caption's
+     * {@code PUT} stale (D-23). Needs a running transaction; the lock is released at its end.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select e from Entry e where e.id = :id and e.userId = :userId")
+    Optional<Entry> findForUpdateByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
 
     /**
      * Whether any entry has this id, <em>any user's, Recently deleted included</em>: native SQL, so Hibernate's

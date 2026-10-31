@@ -44,8 +44,9 @@ import tools.jackson.databind.JsonNode;
  *       injected {@link Clock}.
  * </ul>
  *
- * <p>Tags, soundtracks and reply targets are set by tasks 3.8, 3.14 and 3.13; media by 3.6. This class doesn't touch
- * them, and the entry's media and tags are only read, by the mapper.
+ * <p>Tags, soundtracks and reply targets are set by tasks 3.8, 3.14 and 3.13, and the entry's media by
+ * {@code MediaService} (task 3.6). This class doesn't change them: the mapper only reads them, and {@code delete}
+ * hands an empty entry to {@link EntryErasure}.
  */
 @Service
 @Transactional
@@ -60,6 +61,7 @@ public class EntryService {
     private final UserService users;
     private final CurrentUserProvider currentUser;
     private final EntryMapper mapper;
+    private final EntryErasure erasure;
     private final Clock clock;
 
     public EntryService(
@@ -69,6 +71,7 @@ public class EntryService {
             UserService users,
             CurrentUserProvider currentUser,
             EntryMapper mapper,
+            EntryErasure erasure,
             Clock clock) {
         this.entries = entries;
         this.templates = templates;
@@ -76,6 +79,7 @@ public class EntryService {
         this.users = users;
         this.currentUser = currentUser;
         this.mapper = mapper;
+        this.erasure = erasure;
         this.clock = clock;
     }
 
@@ -183,12 +187,19 @@ public class EntryService {
      * Deletes the entry. It goes to Recently deleted for 30 days (D-30): hidden everywhere at once, but its media files
      * stay until it is erased (task 3.11). Allowed when the entry is sealed, which stays sealed in there.
      *
-     * <p>An entry with no title, no caption and no media has nothing to bring back, so it is erased at once instead.
+     * <p>An entry with no title, no caption and no media has nothing to bring back, so it is erased at once instead,
+     * through {@link EntryErasure}, which is also the path that deletes the stored files of an entry that has media.
+     *
+     * <p>The entry's row is locked first. A photo upload takes the same lock before it adds its row, so the two take
+     * turns: either the photo is in before this looks, and the entry isn't empty, or this wins and the upload finds no
+     * entry. Without the lock, an upload that finished in between would have its media row removed by the cascade
+     * and its file left in storage with nothing pointing at it.
      */
     public void delete(UUID entryId) {
-        Entry entry = find(entryId);
+        Entry entry = entries.findForUpdateByIdAndUserId(entryId, currentUser.currentUserId())
+                .orElseThrow(() -> new NotFoundException("Entry"));
         if (isEmpty(entry)) {
-            entries.delete(entry);
+            erasure.erase(entry);
         } else {
             entry.setDeletedAt(Instant.now(clock));
             entries.saveAndFlush(entry);

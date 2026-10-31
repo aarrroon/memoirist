@@ -2,9 +2,7 @@ package com.memoirist.entry;
 
 import com.memoirist.entry.dto.EntryResponse;
 import com.memoirist.entry.dto.EntryTagResponse;
-import com.memoirist.media.Media;
-import com.memoirist.media.dto.MediaResponse;
-import com.memoirist.storage.StorageService;
+import com.memoirist.media.MediaMapper;
 import com.memoirist.tag.Tag;
 import java.time.Instant;
 import java.util.Comparator;
@@ -39,10 +37,10 @@ public class EntryMapper {
     private static final Comparator<Tag> BY_NAME_THEN_ID =
             Comparator.comparing(Tag::getName, String.CASE_INSENSITIVE_ORDER).thenComparing(Tag::getId);
 
-    private final StorageService storage;
+    private final MediaMapper mediaMapper;
 
-    public EntryMapper(StorageService storage) {
-        this.storage = storage;
+    public EntryMapper(MediaMapper mediaMapper) {
+        this.mediaMapper = mediaMapper;
     }
 
     /**
@@ -76,7 +74,9 @@ public class EntryMapper {
                 false,
                 entry.isDateUnknown(),
                 entry.getVersion(),
-                entry.getMedia().stream().map(media -> toResponse(entry, media)).toList());
+                entry.getMedia().stream()
+                        .map(media -> mediaMapper.toResponse(entry.getId(), media))
+                        .toList());
     }
 
     /** A Loot Drop that hasn't opened. Each line is a decision: what is shown is named, everything else is empty. */
@@ -100,17 +100,5 @@ public class EntryMapper {
                 entry.isDateUnknown(),
                 entry.getVersion(),
                 List.of()); // media
-    }
-
-    private MediaResponse toResponse(Entry entry, Media media) {
-        return new MediaResponse(
-                media.getId(),
-                entry.getId(),
-                storage.presignGet(media.getObjectKey()),
-                media.getMediaType(),
-                media.getPurpose(),
-                media.getDisplayOrder(),
-                media.getFileSizeBytes(),
-                media.getUploadedAt());
     }
 }

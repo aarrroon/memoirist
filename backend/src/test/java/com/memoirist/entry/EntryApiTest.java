@@ -39,7 +39,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
  */
 @IntegrationTest
 @Import(MutableClockConfiguration.class)
-abstract class EntryApiTest {
+public abstract class EntryApiTest {
 
     protected static final String ENTRIES = "/api/v1/entries";
     protected static final String HEADER = "X-Dev-User-Id";

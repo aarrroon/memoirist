@@ -62,6 +62,19 @@ class EntryMapperIsTheOnlyPathTest {
         assertThat(references).isEmpty();
     }
 
+    @Test
+    void onlyMediaMapperBuildsAMediaResponseSoOnlyItSignsAFileUrl() throws IOException {
+        // The same idea for non-negotiable 5: one place turns an object key into a presigned URL for a response.
+        // It is not the place that decides whether the user may see the file: EntryMapper never calls it for a
+        // sealed entry, and MediaService refuses a sealed entry before it maps anything.
+        List<String> builders = javaFiles().stream()
+                .filter(path -> contains(path, "new MediaResponse(") || contains(path, "MediaResponse::new"))
+                .map(path -> path.getFileName().toString())
+                .toList();
+
+        assertThat(builders).containsExactly("MediaMapper.java");
+    }
+
     private static boolean contains(Path path, String text) {
         try {
             return Files.readString(path).contains(text);

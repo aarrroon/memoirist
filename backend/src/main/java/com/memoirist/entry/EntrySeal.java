@@ -10,15 +10,15 @@ import java.time.Instant;
  * <p>The comparison is strict. At the very instant of the unlock date the entry is open, and that is the moment it
  * starts to count again (see {@code EntryRepository.countOpenEntriesByWeek}: {@code unlock_date <= now}).
  */
-final class EntrySeal {
+public final class EntrySeal {
 
     private EntrySeal() {}
 
-    static boolean isSealed(Entry entry, Instant now) {
+    public static boolean isSealed(Entry entry, Instant now) {
         return isSealed(entry.getUnlockDate(), now);
     }
 
-    static boolean isSealed(Instant unlockDate, Instant now) {
+    public static boolean isSealed(Instant unlockDate, Instant now) {
         return unlockDate != null && unlockDate.isAfter(now);
     }
 }
