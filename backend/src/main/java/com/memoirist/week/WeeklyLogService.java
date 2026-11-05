@@ -88,13 +88,14 @@ public class WeeklyLogService {
     }
 
     /**
-     * Replaces what the user may set on the week, which for now is its title (a {@code PUT}). The week is a managed
-     * entity, so Hibernate writes the one {@code UPDATE} at commit, and none when the title is the same.
+     * Replaces what the user may set on the week, which is its title and its soundtrack (a {@code PUT}). The week is a
+     * managed entity, so Hibernate writes the one {@code UPDATE} at commit, and none when nothing differs.
      */
     public WeeklyLogResponse update(UUID logId, WeeklyLogUpdateRequest request) {
         UUID userId = currentUser.currentUserId();
         WeeklyLog week = find(logId, userId);
         week.setTitle(request.title());
+        week.setSoundtrack(request.soundtrack());
         return buildOne(week, userId);
     }
 

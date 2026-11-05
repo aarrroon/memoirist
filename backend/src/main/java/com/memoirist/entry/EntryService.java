@@ -50,8 +50,10 @@ import tools.jackson.databind.JsonNode;
  * </ul>
  *
  * <p>Tags are set here, from the {@code tagIds} of a create or an update (D-26); {@code TagService} makes and renames
- * the tags themselves. Reply targets are set here too (D-33); soundtracks are set by task 3.14, and the entry's media by
- * {@code MediaService} (task 3.6). This class doesn't change those: the mapper only reads them, and {@code delete}
+ * the tags themselves. Reply targets are set here too (D-33), and so is the soundtrack (D-35): a Spotify URI whose
+ * format the request record has already checked, stored as it came and hidden by the mapper while the entry is sealed.
+ * The entry's media are set by {@code MediaService} (task 3.6). This class doesn't change those: the mapper only
+ * reads them, and {@code delete}
  * hands an empty entry to {@link EntryErasure}.
  */
 @Service
@@ -134,6 +136,7 @@ public class EntryService {
                 id, user.getId(), weeks.findOrCreate(user.getId(), date).getId(), date);
         entry.setTemplateId(request.templateId());
         entry.setReplyToEntryId(request.replyToEntryId());
+        entry.setSoundtrack(request.soundtrack());
         entry.setTitle(request.title());
         setContent(entry, request.contentJson());
         entry.setDateUnknown(Boolean.TRUE.equals(request.dateUnknown()));
@@ -197,6 +200,7 @@ public class EntryService {
         }
         entry.setTemplateId(request.templateId());
         entry.setReplyToEntryId(request.replyToEntryId());
+        entry.setSoundtrack(request.soundtrack());
         entry.setTitle(request.title());
         setContent(entry, request.contentJson());
         // The same set leaves the collection untouched; a different one makes Hibernate insert and delete just the

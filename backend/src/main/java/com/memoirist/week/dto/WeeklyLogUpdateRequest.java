@@ -1,17 +1,22 @@
 package com.memoirist.week.dto;
 
+import com.memoirist.music.SpotifyUri;
 import jakarta.validation.constraints.Size;
 
 /**
  * The body of {@code PUT /api/v1/weekly-logs/{logId}}: a full replace of what the user may set on a week (API_CONTRACT,
- * Weekly logs). A week's Eras follow from their dates and can't be set here (D-22), and its soundtrack is added in
- * task 3.14, so until then a {@code soundtrack} in the body is ignored like any other field the endpoint doesn't know.
+ * Weekly logs), which is its title and its soundtrack. A week's Eras follow from their dates and can't be set here
+ * (D-22), and every other field the endpoint doesn't know is ignored.
  *
- * <p>Being a full replace, a {@code title} that is left out, {@code null} or only spaces clears the title.
+ * <p>Being a full replace, a {@code title} that is left out, {@code null} or only spaces clears the title, and a
+ * {@code soundtrack} that is left out or {@code null} clears the soundtrack.
  *
  * @param title up to 200 characters once stripped of spaces at both ends; {@code null} for no title
+ * @param soundtrack a Spotify track, album or playlist URI (D-35), or {@code null} for none; anything else is
+ *     {@code 400} ({@code fieldErrors.soundtrack})
  */
-public record WeeklyLogUpdateRequest(@Size(max = 200) String title) {
+public record WeeklyLogUpdateRequest(
+        @Size(max = 200) String title, @SpotifyUri String soundtrack) {
 
     public WeeklyLogUpdateRequest {
         title = cleaned(title);

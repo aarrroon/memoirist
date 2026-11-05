@@ -343,9 +343,6 @@ class EntryUpdateTest extends EntryApiTest {
         User alice = aUser();
         User bob = aUser();
         String id = createEntryId(alice, json("title", "Mine"));
-        jdbc.sql("UPDATE entries SET soundtrack = 'spotify:track:1a2B3c4D5e6F7g8H9i0J1k' WHERE id = :id")
-                .param("id", UUID.fromString(id))
-                .update();
         Map<String, Object> before = row(id);
 
         bodyMap(put(
@@ -366,14 +363,11 @@ class EntryUpdateTest extends EntryApiTest {
                                 "contentText",
                                 "text the client wrote itself",
                                 "dateUnknown",
-                                true,
-                                "soundtrack",
-                                null))
+                                true))
                 .expectStatus()
                 .isOk());
 
         assertThat(row(id)).as("nothing changed, so not even the version moved").isEqualTo(before);
-        assertThat(row(id)).containsEntry("soundtrack", "spotify:track:1a2B3c4D5e6F7g8H9i0J1k");
     }
 
     // Whose entry it is

@@ -83,6 +83,7 @@ public class EraService {
         Era era = new Era(id, user.getId(), request.title(), request.startDate());
         era.setDescription(request.description());
         era.setEndDate(request.endDate());
+        era.setSoundtrack(request.soundtrack());
         era.setPinnedInFeed(request.pinnedInFeed());
         return CreateResult.created(EraMapper.toResponse(eras.saveAndFlush(era)));
     }
@@ -125,6 +126,7 @@ public class EraService {
         era.setDescription(request.description());
         era.setStartDate(request.startDate());
         era.setEndDate(request.endDate());
+        era.setSoundtrack(request.soundtrack());
         era.setPinnedInFeed(request.pinnedInFeed());
         return EraMapper.toResponse(eras.saveAndFlush(era));
     }

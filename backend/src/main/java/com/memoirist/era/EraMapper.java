@@ -20,6 +20,7 @@ final class EraMapper {
                 era.getDescription(),
                 era.getStartDate(),
                 era.getEndDate(),
+                era.getSoundtrack(),
                 era.isPinnedInFeed(),
                 era.getCreatedAt(),
                 era.getUpdatedAt());
@@ -45,6 +46,7 @@ final class EraMapper {
                 era.getDescription(),
                 era.getStartDate(),
                 era.getEndDate(),
+                era.getSoundtrack(),
                 era.isPinnedInFeed(),
                 era.getCreatedAt(),
                 era.getUpdatedAt(),

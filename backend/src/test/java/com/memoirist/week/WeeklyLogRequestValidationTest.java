@@ -37,12 +37,12 @@ class WeeklyLogRequestValidationTest {
     }
 
     private static Set<ConstraintViolation<WeeklyLogUpdateRequest>> violations(String title) {
-        return validator.validate(new WeeklyLogUpdateRequest(title));
+        return validator.validate(new WeeklyLogUpdateRequest(title, null));
     }
 
     @Test
     void aTitleIsStrippedOfSpacesAtBothEnds() {
-        assertThat(new WeeklyLogUpdateRequest("  Grampians Trip Week \t\n").title())
+        assertThat(new WeeklyLogUpdateRequest("  Grampians Trip Week \t\n", null).title())
                 .isEqualTo("Grampians Trip Week");
     }
 
@@ -50,7 +50,7 @@ class WeeklyLogRequestValidationTest {
     @NullSource
     @ValueSource(strings = {"", " ", "   ", "\t\n"})
     void noTitleAnEmptyTitleAndATitleOfOnlySpacesAllMeanNoTitle(String title) {
-        assertThat(new WeeklyLogUpdateRequest(title).title()).isNull();
+        assertThat(new WeeklyLogUpdateRequest(title, null).title()).isNull();
         assertThat(violations(title)).isEmpty();
     }
 

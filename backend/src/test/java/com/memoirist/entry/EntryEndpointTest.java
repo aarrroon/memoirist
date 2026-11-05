@@ -377,8 +377,6 @@ class EntryEndpointTest extends EntryApiTest {
                         "text the client wrote itself",
                         "previewLine",
                         "a preview the client wrote",
-                        "soundtrack",
-                        "spotify:track:1a2B3c4D5e6F7g8H9i0J1k",
                         "contentJson",
                         doc("The real words")));
 

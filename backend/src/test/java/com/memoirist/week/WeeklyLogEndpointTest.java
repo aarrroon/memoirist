@@ -342,8 +342,6 @@ class WeeklyLogEndpointTest extends WeekApiTest {
                                 true,
                                 "startDate",
                                 "2020-01-06",
-                                "soundtrack",
-                                "spotify:track:1a2B3c4D5e6F7g8H9i0J1k",
                                 "eras",
                                 List.of(),
                                 "userId",
@@ -358,9 +356,6 @@ class WeeklyLogEndpointTest extends WeekApiTest {
         assertThat(row.get("title")).isEqualTo("Only this");
         assertThat(row.get("is_closed")).isEqualTo(false);
         assertThat(row.get("start_date").toString()).isEqualTo(W3);
-        assertThat(row.get("soundtrack"))
-                .as("soundtracks arrive with task 3.14")
-                .isNull();
         assertThat(row.get("user_id")).isEqualTo(alice.getId());
         assertThat((long) row(entryId).get("version")).as("no entry changed").isEqualTo(versionBefore);
     }

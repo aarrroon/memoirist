@@ -11,7 +11,7 @@ import java.util.UUID;
  *
  * @param title {@code null} until the user names the week
  * @param closed the JSON name is {@code isClosed}
- * @param soundtrack a Spotify URI, or {@code null}; nothing can set one until task 3.14
+ * @param soundtrack a Spotify URI (D-35), or {@code null}
  * @param eras every Era whose dates overlap the week: pinned first, then the latest start (D-22). Empty for a week in
  *     no Era, never {@code null}
  * @param entries the week's entries, oldest memory date first, then oldest written first, so the week reads as a

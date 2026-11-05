@@ -220,7 +220,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - a birthday in the future is `400`
     - a sealed reply is redacted like any entry
 
-- [ ] **3.14 Soundtracks and Spotify search** (D-35, `/new-endpoint`)
+- [x] **3.14 Soundtracks and Spotify search** (D-35, `/new-endpoint`)
   - **Read:** D-29, D-35, API_CONTRACT §Entries, §Weekly logs, §Eras and §Music.
   - **Do:**
     - `soundtrack` (a checked Spotify URI) on entries, weeks and Eras.

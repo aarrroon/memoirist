@@ -73,7 +73,7 @@ class EraEndpointTest {
                 .contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
                 .expectBody(Map.class)
                 .value(body -> {
-                    // Exactly these keys: no soundtrack or cover until tasks 3.14 and 3.15, and no userId.
+                    // Exactly these keys: no cover until task 3.15, and no userId.
                     assertThat(body.keySet())
                             .containsExactlyInAnyOrder(
                                     "id",
@@ -81,6 +81,7 @@ class EraEndpointTest {
                                     "description",
                                     "startDate",
                                     "endDate",
+                                    "soundtrack",
                                     "pinnedInFeed",
                                     "createdAt",
                                     "updatedAt");
@@ -183,7 +184,7 @@ class EraEndpointTest {
     }
 
     @Test
-    void aSoundtrackAndACoverInTheBodyAreIgnoredUntilTheirTasks() {
+    void aCoverInTheBodyIsIgnoredUntilItsTask() {
         User alice = aUser();
 
         post(
@@ -191,18 +192,17 @@ class EraEndpointTest {
                         json(
                                 "title", "Uni",
                                 "startDate", "2025-02-24",
-                                "soundtrack", "spotify:track:1a2B3c4D5e6F7g8H9i0J1k",
                                 "coverMediaId", UUID.randomUUID().toString()))
                 .expectStatus()
                 .isCreated()
                 .expectBody(Map.class)
-                .value(body -> assertThat(body.keySet()).doesNotContain("soundtrack", "cover", "coverMediaId"));
+                .value(body -> assertThat(body.keySet()).doesNotContain("cover", "coverMediaId"));
 
-        Map<String, Object> row = jdbc.sql("SELECT soundtrack, cover_media_id FROM eras WHERE user_id = :id")
+        Map<String, Object> row = jdbc.sql("SELECT cover_media_id FROM eras WHERE user_id = :id")
                 .param("id", alice.getId())
                 .query()
                 .singleRow();
-        assertThat(row).containsEntry("soundtrack", null).containsEntry("cover_media_id", null);
+        assertThat(row).containsEntry("cover_media_id", null);
     }
 
     @Test
@@ -483,6 +483,7 @@ class EraEndpointTest {
                                     "description",
                                     "startDate",
                                     "endDate",
+                                    "soundtrack",
                                     "pinnedInFeed",
                                     "createdAt",
                                     "updatedAt");
@@ -533,6 +534,7 @@ class EraEndpointTest {
                             "description",
                             "startDate",
                             "endDate",
+                            "soundtrack",
                             "pinnedInFeed",
                             "createdAt",
                             "updatedAt",

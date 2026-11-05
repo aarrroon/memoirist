@@ -36,6 +36,8 @@ cd frontend && npm ci && npm run dev                                       # tas
 
 Open http://localhost:5173. In Phase 1 there's no login; you're the seeded dev user automatically.
 
+**Spotify search is optional.** Soundtracks pasted as Spotify links work with nothing set up. To turn on search, create an app at https://developer.spotify.com/dashboard (any name; no redirect URI is needed, because the server uses the client credentials flow and no Spotify user logs in), copy its *Client ID* and *Client secret* into `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` in `.env`, and restart the backend. Spotify gives new apps a small quota and the developer account must keep Spotify Premium (D-35); without the settings, or when Spotify says no, `POST /api/v1/music/search` answers `503 music-search-unavailable` and the app offers paste-a-link instead. The tests never use the settings.
+
 ## 3. Services and ports
 
 | Service | URL | Notes |
@@ -159,6 +161,7 @@ Personal, uncommitted settings go in `.claude/settings.local.json` or `CLAUDE.lo
 | S3 calls fail with `InvalidAccessKeyId` or `SignatureDoesNotMatch` | The client's keys differ from SeaweedFS's. SeaweedFS reads them from `.env` when its container is created: after editing `.env`, run `docker compose up -d`, which recreates it with the new keys (the old ones stop working), and restart the backend if it's running, so both sides use the new keys |
 | Backend fails with a Flyway checksum error | A migration was changed after your local database applied it. If it's committed, revert it and add a new migration instead. If it was never committed, you can keep editing it, but your local database no longer matches: reset it with `docker compose down -v`, which deletes all local data. (Line endings don't matter: Flyway's checksum ignores LF versus CRLF.) |
 | Backend fails "schema-validation: missing column" | Entity and migrations disagree. Add a migration; don't change `ddl-auto` |
+| `POST /api/v1/music/search` answers `503 music-search-unavailable` (task 3.14) | `detail` tells which cause. *Music search isn't set up on this server*: `SPOTIFY_CLIENT_ID` or `SPOTIFY_CLIENT_SECRET` in `.env` is empty (restart after editing). *Spotify isn't answering searches right now*: Spotify refused the login (wrong id or secret, or the developer account lost Premium), is rate-limiting a new app (`429`), or couldn't be reached. The log line has the exception classes (for example `HttpClientErrorException$TooManyRequests`) and no message: search words are never logged, so there is no URL to look at |
 | Photos don't load after the tab sat open a while | Presigned links expire after 60 minutes; refocusing the tab refetches them. If they still fail, check SeaweedFS is running |
 | `./gradlew: Permission denied` | `gradlew` lost its executable bit (Git on Windows doesn't track it unless told to). Run `chmod +x gradlew` locally; to fix it for everyone, `git update-index --chmod=+x backend/gradlew` and commit |
 | `./gradlew: /bin/sh^M: bad interpreter` | Line endings: run `git add --renormalize .` (`.gitattributes` keeps `gradlew` as LF) |

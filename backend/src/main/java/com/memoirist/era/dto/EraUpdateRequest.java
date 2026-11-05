@@ -2,6 +2,7 @@ package com.memoirist.era.dto;
 
 import com.memoirist.era.EraDates;
 import com.memoirist.era.ValidEraDates;
+import com.memoirist.music.SpotifyUri;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
@@ -14,6 +15,8 @@ import java.time.LocalDate;
  * @param title 1 to 150 characters once stripped
  * @param description up to 5000 characters, or {@code null} for none
  * @param endDate {@code null} means the Era is ongoing
+ * @param soundtrack a Spotify track, album or playlist URI (D-35), or {@code null} for none; anything else is
+ *     {@code 400} ({@code fieldErrors.soundtrack})
  */
 @ValidEraDates
 public record EraUpdateRequest(
@@ -21,6 +24,7 @@ public record EraUpdateRequest(
         @Size(max = 5000) String description,
         @NotNull LocalDate startDate,
         LocalDate endDate,
+        @SpotifyUri String soundtrack,
         Boolean pinnedInFeed)
         implements EraDates {
 

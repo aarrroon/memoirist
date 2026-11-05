@@ -15,6 +15,7 @@ public record EraDetailResponse(
         String description,
         LocalDate startDate,
         LocalDate endDate,
+        String soundtrack,
         boolean pinnedInFeed,
         Instant createdAt,
         Instant updatedAt,
