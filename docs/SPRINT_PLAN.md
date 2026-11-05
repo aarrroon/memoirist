@@ -210,7 +210,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - "the same day" follows the user's timezone
     - another user's entries never appear
 
-- [ ] **3.13 Loot Drop replies and the birthday** (D-33, `/new-endpoint`)
+- [x] **3.13 Loot Drop replies and the birthday** (D-33, `/new-endpoint`)
   - **Read:** D-10, D-33, API_CONTRACT §Users and §Entries.
   - **Do:** `birthday` on `GET` and `PATCH /users/me`; `replyToEntryId` on `POST` and `PUT /entries`; `replyToEntryId` and `replyIds` on `Entry`.
   - **Done when:** tests prove:

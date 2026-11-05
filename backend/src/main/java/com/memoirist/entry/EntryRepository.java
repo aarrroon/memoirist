@@ -54,6 +54,19 @@ public interface EntryRepository extends Repository<Entry, UUID> {
     Optional<Entry> findForUpdateByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
 
     /**
+     * The same lookup, with the row locked <em>for sharing</em> until the transaction ends ({@code SELECT ... FOR
+     * SHARE}). It is how a reply checks its target (D-33): any number of replies can look at the same Loot Drop at the
+     * same time, but a delete or an erase of it ({@code FOR NO KEY UPDATE}) waits until the reply has been written, and
+     * a reply that arrives after the erase finds nothing. Without it, the erase could land between the check and the
+     * insert and the foreign key would fail with a {@code 500}. Tags are checked the same way (task 3.8).
+     *
+     * <p>Needs a running transaction. Like every entry finder it leaves out Recently deleted entries.
+     */
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("select e from Entry e where e.id = :id and e.userId = :userId")
+    Optional<Entry> findAndLockByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
+
+    /**
      * Whether any entry has this id, <em>any user's, Recently deleted included</em>: native SQL, so Hibernate's
      * {@code @SQLRestriction} doesn't hide the deleted ones. The one lookup that isn't scoped to a user, and only for
      * the client supplied {@code id} of a create (D-12, D-30): the service asks it after the user-scoped lookup found

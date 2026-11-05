@@ -47,37 +47,39 @@ class UserUpdateRequestTest {
 
     @Test
     void anEmptyRequestIsValid() {
-        assertThat(violations(new UserUpdateRequest(null, null))).isEmpty();
+        assertThat(violations(new UserUpdateRequest(null, null, null))).isEmpty();
     }
 
     @Test
     void theNameIsStrippedBeforeItIsChecked() {
-        assertThat(new UserUpdateRequest("  Sam \t", null).displayName()).isEqualTo("Sam");
+        assertThat(new UserUpdateRequest("  Sam \t", null, null).displayName()).isEqualTo("Sam");
     }
 
     @ParameterizedTest(name = "\"{0}\" is empty once stripped")
     @ValueSource(strings = {"", " ", "   ", "\t\n  "})
     void aNameOfOnlySpacesIsTooShort(String name) {
-        assertThat(violations(new UserUpdateRequest(name, null)))
+        assertThat(violations(new UserUpdateRequest(name, null, null)))
                 .containsOnlyKeys("displayName")
                 .containsEntry("displayName", "size must be between 1 and 100");
     }
 
     @Test
     void aHundredCharactersAreFineAndAHundredAndOneAreNot() {
-        assertThat(violations(new UserUpdateRequest("a".repeat(100), null))).isEmpty();
-        assertThat(violations(new UserUpdateRequest("a".repeat(101), null))).containsOnlyKeys("displayName");
+        assertThat(violations(new UserUpdateRequest("a".repeat(100), null, null)))
+                .isEmpty();
+        assertThat(violations(new UserUpdateRequest("a".repeat(101), null, null)))
+                .containsOnlyKeys("displayName");
     }
 
     @Test
     void spacesAroundAHundredCharactersDoNotCount() {
-        assertThat(violations(new UserUpdateRequest("  " + "a".repeat(100) + "  ", null)))
+        assertThat(violations(new UserUpdateRequest("  " + "a".repeat(100) + "  ", null, null)))
                 .isEmpty();
     }
 
     @Test
     void aWrongZoneAndAWrongNameAreBothReported() {
-        assertThat(violations(new UserUpdateRequest("", "Mars/Olympus_Mons")))
+        assertThat(violations(new UserUpdateRequest("", "Mars/Olympus_Mons", null)))
                 .containsOnlyKeys("displayName", "timezone")
                 .containsEntry("timezone", "must be an IANA time zone, such as Australia/Melbourne");
     }

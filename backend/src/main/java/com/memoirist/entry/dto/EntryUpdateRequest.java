@@ -11,13 +11,13 @@ import tools.jackson.databind.JsonNode;
 
 /**
  * The body of {@code PUT /api/v1/entries/{entryId}} (API_CONTRACT, Entries): a full replace of what the user can
- * edit. A {@code templateId}, {@code title} or {@code contentJson} that is left out is cleared; {@code version} and
+ * edit. A {@code templateId}, {@code title}, {@code contentJson} or {@code replyToEntryId} that is left out is cleared; {@code version} and
  * {@code entryDate} are required.
  *
  * <p>{@code version} is the one the client last read (D-23). The service compares it with the stored one and never
  * copies it onto the entry. {@code dateUnknown} is not a field: the server clears it when the date changes and no
- * client sets it on an update (D-34). {@code soundtrack} and {@code replyToEntryId} arrive with tasks 3.14 and 3.13, and
- * are ignored until then, so an update leaves the entry's soundtrack and reply target as they are.
+ * client sets it on an update (D-34). {@code soundtrack} arrives with task 3.14 and is ignored until then, so an update
+ * leaves the entry's soundtrack as it is.
  *
  * <p>{@code tagIds} is required, unlike the other optional fields, because a full replace that forgot it would quietly
  * strip every tag the entry has. {@code []} is how a client says "no tags" (the same reason {@code subheadings} is
@@ -30,6 +30,8 @@ import tools.jackson.databind.JsonNode;
  * @param contentJson a TipTap document, or {@code null} for no caption
  * @param tagIds the user's own tags (D-26): the whole set the entry will have, at most {@value Entry#MAX_TAGS} items as
  *     sent. A {@code null} item is reported by its position, such as {@code tagIds[1]}
+ * @param replyToEntryId the user's own opened Loot Drop this entry answers (D-33), or {@code null} for none. Checked
+ *     only when it changes, so an entry can still be edited after its target has been sealed again
  */
 public record EntryUpdateRequest(
         @NotNull @PositiveOrZero Long version,
@@ -42,7 +44,9 @@ public record EntryUpdateRequest(
 
         JsonNode contentJson,
 
-        @NotNull @Size(max = Entry.MAX_TAGS) List<@NotNull UUID> tagIds) {
+        @NotNull @Size(max = Entry.MAX_TAGS) List<@NotNull UUID> tagIds,
+
+        UUID replyToEntryId) {
 
     public EntryUpdateRequest {
         title = EntryText.title(title);

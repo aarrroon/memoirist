@@ -6,6 +6,8 @@ import com.jayway.jsonpath.JsonPath;
 import com.memoirist.Fixtures;
 import com.memoirist.IntegrationTest;
 import com.memoirist.SqlLog;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -68,13 +70,15 @@ class UserEndpointTest {
                 .contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
                 .expectBody(Map.class)
                 .value(body -> {
-                    // Exactly these keys: no createdAt/updatedAt, and no birthday until task 3.13.
-                    assertThat(body.keySet()).containsExactlyInAnyOrder("id", "email", "displayName", "timezone");
+                    // Exactly these keys: no createdAt/updatedAt. The birthday is always there, null until it is set.
+                    assertThat(body.keySet())
+                            .containsExactlyInAnyOrder("id", "email", "displayName", "timezone", "birthday");
                     assertThat(body)
                             .containsEntry("id", alice.getId().toString())
                             .containsEntry("email", alice.getEmail())
                             .containsEntry("displayName", "Alice")
-                            .containsEntry("timezone", "Australia/Melbourne");
+                            .containsEntry("timezone", "Australia/Melbourne")
+                            .containsEntry("birthday", null);
                 });
     }
 
@@ -559,13 +563,168 @@ class UserEndpointTest {
         client.get().uri("/api/v1/users").exchange().expectStatus().isNotFound();
     }
 
+    // PATCH: the birthday (D-33)
+
+    @Test
+    void aNewUserHasNoBirthdayAndTheAnswerSaysSo() {
+        User alice = aUser("Alice");
+
+        client.get()
+                .uri(ME)
+                .header(HEADER, alice.getId().toString())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(Map.class)
+                .value(body -> assertThat(body).containsKey("birthday").containsEntry("birthday", null));
+    }
+
+    @Test
+    void patchSetsTheBirthdayAndGetShowsItAsADate() {
+        User alice = aUser("Alice");
+
+        patch(alice.getId(), Map.of("birthday", "1990-05-17"))
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.birthday")
+                .isEqualTo("1990-05-17")
+                .jsonPath("$.displayName")
+                .isEqualTo("Alice");
+
+        assertThat(birthdayOf(alice.getId())).isEqualTo("1990-05-17");
+        client.get()
+                .uri(ME)
+                .header(HEADER, alice.getId().toString())
+                .exchange()
+                .expectBody()
+                .jsonPath("$.birthday")
+                .isEqualTo("1990-05-17");
+    }
+
+    @Test
+    void aMissingBirthdayLeavesItAloneAndANullRemovesIt() {
+        // The three states of D-33 in one story: set, leave alone (field missing), remove (field null).
+        User alice = aUser("Alice");
+        patch(alice.getId(), Map.of("birthday", "1990-05-17")).expectStatus().isOk();
+
+        patch(alice.getId(), Map.of("displayName", "Alice Smith"))
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.birthday")
+                .isEqualTo("1990-05-17");
+        assertThat(birthdayOf(alice.getId())).isEqualTo("1990-05-17");
+
+        patchRaw(alice.getId(), "{\"birthday\":null}")
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.birthday")
+                .isEmpty()
+                .jsonPath("$.displayName")
+                .isEqualTo("Alice Smith");
+        assertThat(birthdayOf(alice.getId())).isNull();
+    }
+
+    @Test
+    void removingABirthdayThatIsNotThereRunsNoUpdate() {
+        User alice = aUser("Alice");
+
+        try (SqlLog sql = SqlLog.capture()) {
+            patchRaw(alice.getId(), "{\"birthday\":null}").expectStatus().isOk();
+
+            assertThat(sql.statementsStartingWith("update")).isEmpty();
+        }
+    }
+
+    @Test
+    void theBirthdayCanBeChangedAlongsideTheOtherFields() {
+        User alice = aUser("Alice");
+
+        try (SqlLog sql = SqlLog.capture()) {
+            patch(alice.getId(), Map.of("displayName", "Al", "timezone", "UTC", "birthday", "2001-02-03"))
+                    .expectStatus()
+                    .isOk();
+
+            assertThat(sql.statementsStartingWith("update users")).hasSize(1);
+        }
+        assertThat(row(alice.getId())).containsEntry("display_name", "Al").containsEntry("timezone", "UTC");
+        assertThat(birthdayOf(alice.getId())).isEqualTo("2001-02-03");
+    }
+
+    @Test
+    void aBirthdayInTheFutureIs400AndNothingChanges() {
+        User alice = aUser("Alice");
+        // Two days ahead of UTC is still tomorrow or later in the most easterly zone (UTC+14), so this is the future
+        // wherever the user lives, and the test doesn't depend on what time it runs.
+        String future = LocalDate.now(ZoneOffset.UTC).plusDays(2).toString();
+
+        patch(alice.getId(), Map.of("displayName", "Alice Smith", "birthday", future))
+                .expectStatus()
+                .isBadRequest()
+                .expectBody(String.class)
+                .value(body -> {
+                    assertThat(JsonPath.<String>read(body, "$.type"))
+                            .isEqualTo("urn:memoirist:problem:validation-failed");
+                    assertThat(JsonPath.<String>read(body, "$.fieldErrors.birthday"))
+                            .isEqualTo("must not be after today");
+                    assertThat(body).doesNotContain(future);
+                });
+
+        // All or nothing: the name in the same request was not saved either.
+        assertThat(row(alice.getId())).containsEntry("display_name", "Alice");
+        assertThat(birthdayOf(alice.getId())).isNull();
+    }
+
+    @Test
+    void aBirthdayBefore1900Is400() {
+        User alice = aUser("Alice");
+
+        patch(alice.getId(), Map.of("birthday", "1899-12-31"))
+                .expectStatus()
+                .isBadRequest()
+                .expectBody()
+                .jsonPath("$.fieldErrors.birthday")
+                .isEqualTo("must not be before 1900-01-01");
+
+        assertThat(birthdayOf(alice.getId())).isNull();
+    }
+
+    @ParameterizedTest(name = "the birthday {0} is 400 malformed-request")
+    @ValueSource(strings = {"\"not-a-date\"", "\"1990-02-30\"", "\"17/05/1990\"", "true", "{}"})
+    void aBirthdayThatIsNotADateIs400(String json) {
+        User alice = aUser("Alice");
+
+        patchRaw(alice.getId(), "{\"birthday\":" + json + "}")
+                .expectStatus()
+                .isBadRequest()
+                .expectBody()
+                .jsonPath("$.type")
+                .isEqualTo("urn:memoirist:problem:malformed-request");
+
+        assertThat(birthdayOf(alice.getId())).isNull();
+    }
+
+    @Test
+    void patchAsBobNeverTouchesAlicesBirthday() {
+        User alice = aUser("Alice");
+        User bob = aUser("Bob");
+        patch(alice.getId(), Map.of("birthday", "1990-05-17")).expectStatus().isOk();
+
+        patch(bob.getId(), Map.of("birthday", "2000-01-01")).expectStatus().isOk();
+
+        assertThat(birthdayOf(alice.getId())).isEqualTo("1990-05-17");
+        assertThat(birthdayOf(bob.getId())).isEqualTo("2000-01-01");
+    }
+
     // PATCH: the body can't reach anything else
 
     @Test
-    void aPatchCannotChangeAnythingButTheTwoFields() {
+    void aPatchCannotChangeAnythingButTheThreeFields() {
         // TODO(human) PRACTICE: Prove the endpoint is safe against "mass assignment": a client adds fields the
-        //   contract doesn't list ("email", "id", "createdAt", "birthday") next to a legal one. Send them, then check
-        //   in the database that only the legal field changed, and that the response still has the same four keys.
+        //   contract doesn't list ("email", "id", "createdAt", "updatedAt") next to a legal one. Send them, then check
+        //   in the database that only the legal field changed, and that the response still has the same five keys.
         // Hint: Jackson skips JSON properties that the request record doesn't have, so the check is about what the
         //   record leaves out. Read the row back with JdbcClient rather than trusting the response, and use a second
         //   user's email as one of the values: that would also hit the UNIQUE constraint if it were applied.
@@ -577,11 +736,12 @@ class UserEndpointTest {
         body.put("email", bob.getEmail());
         body.put("id", UUID.randomUUID().toString());
         body.put("createdAt", "1999-01-01T00:00:00Z");
-        body.put("birthday", "1990-05-17");
+        body.put("updatedAt", "1999-01-01T00:00:00Z");
         Map<String, Object> before = row(alice.getId());
 
         patch(alice.getId(), body).expectStatus().isOk().expectBody(Map.class).value(response -> {
-            assertThat(response.keySet()).containsExactlyInAnyOrder("id", "email", "displayName", "timezone");
+            assertThat(response.keySet())
+                    .containsExactlyInAnyOrder("id", "email", "displayName", "timezone", "birthday");
             assertThat(response)
                     .containsEntry("id", alice.getId().toString())
                     .containsEntry("email", alice.getEmail())
@@ -629,6 +789,13 @@ class UserEndpointTest {
                     assertThat(JsonPath.<Integer>read(
                                     body, "$.components.schemas.UserUpdateRequest.properties.displayName.minLength"))
                             .isEqualTo(1);
+                    // The birthday is described as a date (or null), not as the object BirthdayChange is in Java.
+                    assertThat(JsonPath.<String>read(
+                                    body, "$.components.schemas.UserUpdateRequest.properties.birthday.format"))
+                            .isEqualTo("date");
+                    assertThat(JsonPath.<String>read(
+                                    body, "$.components.schemas.UserResponse.properties.birthday.format"))
+                            .isEqualTo("date");
                 });
     }
 
@@ -673,6 +840,15 @@ class UserEndpointTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(json)
                 .exchange();
+    }
+
+    /** The birthday column as text ({@code 1990-05-17}), or null: read as text so the test doesn't depend on a Java type. */
+    private String birthdayOf(UUID userId) {
+        return (String) jdbc.sql("SELECT birthday::text AS birthday FROM users WHERE id = :id")
+                .param("id", userId)
+                .query()
+                .singleRow()
+                .get("birthday");
     }
 
     private Map<String, Object> row(UUID userId) {

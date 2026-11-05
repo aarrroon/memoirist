@@ -8,6 +8,7 @@ import com.memoirist.media.MediaSummary;
 import com.memoirist.tag.Tag;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /**
@@ -47,10 +48,10 @@ public class EntryMapper {
      * with everything private left out.
      */
     public EntryResponse toResponse(Entry entry, Instant now) {
-        return EntrySeal.isSealed(entry, now) ? sealed(entry) : open(entry);
+        return EntrySeal.isSealed(entry, now) ? sealed(entry) : open(entry, now);
     }
 
-    private EntryResponse open(Entry entry) {
+    private EntryResponse open(Entry entry, Instant now) {
         return new EntryResponse(
                 entry.getId(),
                 entry.getWeeklyLogId(),
@@ -62,8 +63,7 @@ public class EntryMapper {
                 tagsOf(entry),
                 entry.getSoundtrack(),
                 entry.getReplyToEntryId(),
-                // Replies are recorded from task 3.13 on; until then no entry has one.
-                List.of(),
+                replyIdsOf(entry, now),
                 entry.getCreatedAt(),
                 entry.getUpdatedAt(),
                 entry.getUnlockDate(),
@@ -130,6 +130,26 @@ public class EntryMapper {
         return entry.getTags().stream()
                 .sorted(Tag.BY_NAME)
                 .map(tag -> new EntryTagResponse(tag.getId(), tag.getName(), TAG_SOURCE_USER))
+                .toList();
+    }
+
+    /**
+     * The ids of the replies to an opened Loot Drop, oldest first (D-33). Three rules, each from the seal (D-10):
+     * <ul>
+     *   <li>An entry that was never sealed has no replies (a reply can only answer an opened Loot Drop), so it is not
+     *       even asked, and no query runs for the ordinary entries of a feed.
+     *   <li>A reply that is itself still sealed is left out until it opens, as every other count and list leaves a
+     *       sealed entry out. It is decided by {@link EntrySeal}, like everywhere else.
+     *   <li>A reply in Recently deleted never reaches this list ({@code @SQLRestriction} on the collection).
+     * </ul>
+     */
+    private static List<UUID> replyIdsOf(Entry entry, Instant now) {
+        if (entry.getUnlockDate() == null) {
+            return List.of();
+        }
+        return entry.getReplies().stream()
+                .filter(reply -> !EntrySeal.isSealed(reply, now))
+                .map(Entry::getId)
                 .toList();
     }
 

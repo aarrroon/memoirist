@@ -41,8 +41,8 @@ import tools.jackson.databind.JsonNode;
  *
  * <p><b>Foreign keys are plain ids</b> ({@code userId}, {@code weeklyLogId}, {@code templateId},
  * {@code replyToEntryId}), not associations, because nothing walks them: services compare ids and look the other
- * side up through its own user-scoped repository. The two real associations are the ones read together with the
- * entry, {@link #getMedia()} and {@link #getTags()}.
+ * side up through its own user-scoped repository. The real associations are the ones read together with the
+ * entry: {@link #getMedia()}, {@link #getTags()} and (read-only) {@link #getReplies()}.
  */
 @Entity
 @Table(name = "entries")
@@ -152,6 +152,22 @@ public class Entry extends TimestampedEntity {
             inverseJoinColumns = @JoinColumn(name = "tag_id"))
     @BatchSize(size = 50)
     private Set<Tag> tags = new HashSet<>();
+
+    /**
+     * The entries that answer this one (D-33): those whose {@code reply_to_entry_id} is this entry's id, oldest first.
+     * Read-only from here ({@code insertable = false, updatable = false}): a reply is linked by setting its own
+     * {@link #setReplyToEntryId}, and this list only reads the same column the other way round.
+     *
+     * <p>{@code @SQLRestriction} on this class applies to the collection too, so a reply in Recently deleted is
+     * left out (and is back once it is restored). The list holds every reply, sealed ones included; the mapper decides
+     * which to show (D-10). One query loads the replies of up to 50 entries at once, and only when an opened Loot Drop
+     * asks: {@code EntryMapper} doesn't touch it for an entry that was never sealed.
+     */
+    @OneToMany(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reply_to_entry_id", insertable = false, updatable = false)
+    @OrderBy("createdAt ASC, id ASC")
+    @BatchSize(size = 50)
+    private List<Entry> replies = new ArrayList<>();
 
     protected Entry() {}
 
@@ -285,6 +301,14 @@ public class Entry extends TimestampedEntity {
     /** The entry's media in carousel order. Loads them on first use, so call it inside the service's transaction. */
     public List<Media> getMedia() {
         return Collections.unmodifiableList(media);
+    }
+
+    /**
+     * The entries that reply to this one, oldest first, sealed ones included. Loads them on first use, so call it
+     * inside the service's transaction. Only {@code EntryMapper} reads it, and it decides which to show.
+     */
+    public List<Entry> getReplies() {
+        return Collections.unmodifiableList(replies);
     }
 
     /** The entry's tags. Loads them on first use, so call it inside the service's transaction. */

@@ -50,7 +50,7 @@ import tools.jackson.databind.JsonNode;
  * </ul>
  *
  * <p>Tags are set here, from the {@code tagIds} of a create or an update (D-26); {@code TagService} makes and renames
- * the tags themselves. Soundtracks and reply targets are set by tasks 3.14 and 3.13, and the entry's media by
+ * the tags themselves. Reply targets are set here too (D-33); soundtracks are set by task 3.14, and the entry's media by
  * {@code MediaService} (task 3.6). This class doesn't change those: the mapper only reads them, and {@code delete}
  * hands an empty entry to {@link EntryErasure}.
  */
@@ -98,10 +98,11 @@ public class EntryService {
      * is not applied again).
      *
      * @throws NotFoundException if the request names a user who isn't there (the first thing every create checks), or
-     *     a template that isn't the user's
+     *     a template, tag or reply target that isn't the user's
      * @throws ConflictException if the {@code id} belongs to another user's entry, or to one of the user's own entries
      *     in Recently deleted (restore that one instead, D-30)
-     * @throws ValidationFailedException if the date is after today or before 1900-01-01, or the content breaks a rule
+     * @throws ValidationFailedException if the date is after today or before 1900-01-01, the content breaks a rule, or
+     *     the reply target is not a Loot Drop that has opened
      * @throws com.memoirist.common.PayloadTooLargeException if the content is over 200 KB
      */
     public CreateResult<EntryResponse> create(EntryCreateRequest request) {
@@ -127,10 +128,12 @@ public class EntryService {
         checkContent(request.contentJson());
         checkTemplate(request.templateId(), user.getId());
         List<Tag> tagsToLink = requireOwnedTags(request.tagIds(), user.getId());
+        requireReplyTarget(request.replyToEntryId(), id, user.getId(), now);
 
         Entry entry = new Entry(
                 id, user.getId(), weeks.findOrCreate(user.getId(), date).getId(), date);
         entry.setTemplateId(request.templateId());
+        entry.setReplyToEntryId(request.replyToEntryId());
         entry.setTitle(request.title());
         setContent(entry, request.contentJson());
         entry.setDateUnknown(Boolean.TRUE.equals(request.dateUnknown()));
@@ -151,8 +154,8 @@ public class EntryService {
      * <p>The checks run in this order, and the first to fail answers: the entry is the user's ({@code 404}), it isn't
      * sealed ({@code 409 entry-sealed}, before the tags are looked at, so a sealed entry can't be used to find out
      * whether a tag id exists), the client has seen its latest version ({@code 409 entry-stale}), then the new values
-     * are valid ({@code 400}, or {@code 404} for a template or tag that isn't theirs). Nothing is written until all
-     * have passed.
+     * are valid ({@code 400}, or {@code 404} for a template, tag or reply target that isn't theirs). Nothing is written
+     * until all have passed. A left-out {@code replyToEntryId} unlinks the entry from the Loot Drop it answered.
      */
     public EntryResponse update(UUID entryId, EntryUpdateRequest request) {
         Entry entry = find(entryId);
@@ -175,6 +178,12 @@ public class EntryService {
             checkTemplate(request.templateId(), userId);
         }
         List<Tag> newTags = requireOwnedTags(request.tagIds(), userId);
+        boolean replyChanged = !Objects.equals(request.replyToEntryId(), entry.getReplyToEntryId());
+        if (replyChanged) {
+            // Only a target the user is changing is checked, as with the template: an entry whose Loot Drop was sealed
+            // again, or moved to Recently deleted, after it was written can still be edited with its link as it is.
+            requireReplyTarget(request.replyToEntryId(), entryId, userId, now);
+        }
 
         // Find the new week BEFORE touching the entry. Finding it runs a native INSERT, and Hibernate flushes pending
         // changes before a native query, so a setter called first would be written by its own UPDATE and the
@@ -187,6 +196,7 @@ public class EntryService {
             entry.setDateUnknown(false);
         }
         entry.setTemplateId(request.templateId());
+        entry.setReplyToEntryId(request.replyToEntryId());
         entry.setTitle(request.title());
         setContent(entry, request.contentJson());
         // The same set leaves the collection untouched; a different one makes Hibernate insert and delete just the
@@ -330,6 +340,31 @@ public class EntryService {
             throw new NotFoundException("Tag");
         }
         return found;
+    }
+    // └── END ANSWER ▲ ──
+
+    // TODO(human) PRACTICE: Write requireReplyTarget: a reply may answer only the user's own Loot Drop that has opened.
+    //   Three different failures, three different answers: someone else's (or a missing, or a deleted) entry, an entry
+    //   that is still sealed, and an entry that was never sealed. Decide which are 404 and which are 400, why the
+    //   first group must look identical, and what an entry replying to itself should get. Think too about what could
+    //   happen to the target between your check and the insert, and what the finder you call does about it.
+    // Hint: D-33, security.md (Ownership) and EntrySeal. The finder only returns the user's own live entries, and takes
+    //   a shared lock on the row until the transaction ends. "Opened" is "has an unlock date, and it is not after now";
+    //   use EntrySeal so this agrees with the mapper. A null target means no reply, so nothing to check.
+    // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+    private void requireReplyTarget(UUID targetId, UUID entryId, UUID userId, Instant now) {
+        if (targetId == null) {
+            return;
+        }
+        if (targetId.equals(entryId)) {
+            throw new ValidationFailedException("replyToEntryId", "an entry can't reply to itself");
+        }
+        Entry target =
+                entries.findAndLockByIdAndUserId(targetId, userId).orElseThrow(() -> new NotFoundException("Entry"));
+        if (target.getUnlockDate() == null || EntrySeal.isSealed(target, now)) {
+            // The same words for both: from outside, "sealed" and "never sealed" must not be told apart (D-10).
+            throw new ValidationFailedException("replyToEntryId", "must be one of your Loot Drops that has opened");
+        }
     }
     // └── END ANSWER ▲ ──
 

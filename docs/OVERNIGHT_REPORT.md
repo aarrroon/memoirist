@@ -39,7 +39,7 @@
 | 3.10 Opened Loot Drops | done | *Sprint 3.10: Add the Opened strip and mark-seen* | `GET /entries/opened` (unlocked, unseen Loot Drops, latest opened first, at most 20, plain array of EntrySummary rows) and `POST /entries/{id}/mark-seen` (one conditional UPDATE, 204 and repeatable, 409 while sealed, 404 for another user's or deleted entries; leaves version and updatedAt alone). No migration; 41 new tests, 1254 pass. [Journal](build-journal/sprint-3/3.10-opened-loot-drops.md) |
 | 3.11 Recently deleted | done | *Sprint 3.11: Add restore, erase and the 30-day sweep* | `GET /entries/deleted` (page of 10, up to 50, sealed rows locked), `POST .../restore` (back as it was, version +1) and `.../erase`; `RecentlyDeletedSweeper.sweep()` erases entries deleted over 30 days ago with their files, one transaction each, and a daily 16:00 UTC `@Scheduled` job only calls it. No migration; 75 new tests, 1329 pass. [Journal](build-journal/sprint-3/3.11-recently-deleted.md) |
 | 3.12 On this day | done | *Sprint 3.12: Add the On this day strip* | `GET /entries/on-this-day`: the user's entries from today's day and month in earlier years, newest year first, at most 20, as EntrySummary rows; sealed and deleted entries never appear; 29 February shows on 28 February in non-leap years; "today" follows the user's time zone. No migration; 46 new tests, 1375 pass. [Journal](build-journal/sprint-3/3.12-on-this-day.md) |
-| 3.13 Loot Drop replies and the birthday | pending | | | |
+| 3.13 Loot Drop replies and the birthday | done | *Sprint 3.13: Add Loot Drop replies and the birthday* | `birthday` on `GET`/`PATCH /users/me` (missing leaves, `null` removes, a date sets; future or before 1900 is 400); `replyToEntryId` on `POST`/`PUT /entries` (own opened Loot Drop only: 404 missing/foreign/deleted, 400 sealed or never sealed) and `replyIds` on an opened Loot Drop. No migration; 56 new tests, 1431 pass. [Journal](build-journal/sprint-3/3.13-replies-and-birthday.md) |
 | 3.14 Soundtracks and Spotify search | pending | | | |
 | 3.15 Era covers | pending | | | |
 | 3.16 Local sample content | pending | | | |
@@ -244,6 +244,16 @@ Made instead of asking, each from a documented default or the doc that wins (D-2
 | 185 | 3.12 | Contract silent on entries with no title, caption or media | An empty entry with an earlier memory date is listed with null fields, like the timeline |
 | 186 | 3.12 | DATABASE_SCHEMA SQL block is a copy of the V1 migration | Left unchanged: no schema change; the index note is in TECH_STACK |
 | 187 | 3.12 | Task brief (today is 31 October) vs the machine clock (1 November, Melbourne) | Tests use the fixed test clock; the live run used the real clock, so its entries were dated 1 November |
+| 188 | 3.13 | API_CONTRACT says birthday is `date or null`; 3.2 says missing or null is left alone | For birthday only: missing leaves it, `null` removes it, a date sets it. The one three-state field; the contract now says so |
+| 189 | 3.13 | API_CONTRACT sets no lower bound for a birthday | Not after today (user's zone after the request) and not before 1900-01-01, the entry floor (D-09) |
+| 190 | 3.13 | Jackson 3 makes a missing `Optional` component `Optional.empty()`; JsonNullable would be a new dependency | Own small `BirthdayChange` type with a `ValueDeserializer`; no dependency added |
+| 191 | 3.13 | API_CONTRACT (another user's target 404, sealed 400) vs security.md (missing or not owned is 404) | Missing, foreign and Recently deleted targets are one 404; sealed and never-sealed share one 400 message; a reply to itself is 400; longer loops are allowed and documented |
+| 192 | 3.13 | PUT is a full replace; the templateId precedent checks only a changed value | PUT clears `replyToEntryId` when left out and checks the target only when it changes; a sealed entry's PUT is 409 first |
+| 193 | 3.13 | D-10: sealed entries stay out of every list | A still-sealed or Recently deleted reply is left out of the Loot Drop's `replyIds`; ordered by createdAt then id |
+| 194 | 3.13 | D-33 deleting either leaves the other vs D-30 soft delete and the V1 `ON DELETE SET NULL` key | Moving a Loot Drop to Recently deleted keeps the reply's link; erasing it (or an empty one deleted at once) sets the link to null |
+| 195 | 3.13 | 3.8 precedent (FOR SHARE on tags); TECH_STACK says replyIds comes from one query | Target read with FOR SHARE; `replyIds` from a lazy `@BatchSize(50)` list, one more statement only on pages with an opened Loot Drop (FeedQueryCountTest 5 to 6) |
+| 196 | 3.13 | Existing mass-assignment tests sent a random `replyToEntryId` | Removed from those bodies; it is an editable field now and a random id is 404 |
+| 197 | 3.13 | Task brief date (31 October) vs machine clock (5 November this sitting) | Tests use the fixed test clock |
 
 ## Needs attention
 - **GitGuardian fails on PR #1, a false positive** (Sprint 1 close-out). Its *Security Checks* flag `docker-compose.yml` line 15 (commit `3447288`) as a "Generic Password", but the line is `POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}`, a Compose placeholder that reads the value from `.env`. No password is in the repo, and `.env` was never committed. **Fix:** in GitGuardian's dashboard, resolve incident 39228980 as a false positive, then re-run the check. Later PRs may be flagged the same way wherever a password is read from `.env` by name; GitGuardian's ignore settings can stop that, which is your call.
@@ -383,6 +393,11 @@ Made instead of asking, each from a documented default or the doc that wins (D-2
 - **Performance note** (task 3.12): if a user ever has tens of thousands of entries, add a functional index on `(user_id, extract(month ...), extract(day ...))` in a new migration; `OnThisDayIndexTest` records today's plan.
 - **Practice blocks** (task 3.12): `OnThisDay.java:25-42` and `OnThisDayEndpointTest.java:189-211`, answers in place.
 - **Correction**: the note under "Nullable date parameters" that tasks 3.9 and 3.12 hit the same thing does not apply to 3.12; none of its query parameters is nullable.
+- **Task 3.13 (replies and the birthday): nothing failing** (1431 tests pass, no README changes, no setup; JsonNullable was skipped for a small own type). Spec review: Pass with notes, four minor findings ([journal section 9](build-journal/sprint-3/3.13-replies-and-birthday.md#9-review)); two journal fixes made.
+- **Reply loops** (task 3.13): A answering B while B answers A is allowed; API_CONTRACT tells clients to stop at an id already seen. Say if you want a walk added.
+- **Weak race test** (task 3.13): the threaded test in `EntryReplyTest` passed with the lock removed, so it is a smoke test; `EntryReplyLockTest` is the real proof and fails without `@Lock`.
+- **Bare JSON number as a date** (task 3.13): Jackson reads it as an epoch-day count for every date in the API; noted in the contract, not changed.
+- **Practice blocks** (task 3.13): `UserService.java:85-101`, `EntryService.java:346-367` and `EntryReplyLockTest.java:50-75`, answers in place.
 
 ## Questions for the morning
 - **Keep or swap two build choices from task 2.1?** (spec review finding 2, [journal §9](build-journal/sprint-2/2.1-spring-boot-project.md#9-review)). No doc named either before the task, and the builder recorded both in TECH_STACK §2 itself:

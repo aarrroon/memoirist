@@ -122,7 +122,8 @@ class EntryController {
     @Operation(
             summary = "Create an entry",
             description = "Filed into the week of its memory date, which is created if it is the first entry in it."
-                    + " Every field is optional: media are uploaded afterwards.")
+                    + " Every field is optional: media are uploaded afterwards. replyToEntryId makes it a reply to one of"
+                    + " the user's own Loot Drops that has opened (D-33).")
     @ApiResponse(responseCode = "201", description = "The new entry")
     @ApiResponse(
             responseCode = "200",
@@ -131,12 +132,14 @@ class EntryController {
     @ApiResponse(
             responseCode = "400",
             description =
-                    "validation-failed with fieldErrors (title, entryDate, contentJson, tagIds), or malformed-request"
-                            + " (unreadable JSON, a bad X-Dev-User-Id)")
+                    "validation-failed with fieldErrors (title, entryDate, contentJson, tagIds, replyToEntryId: the"
+                            + " target is sealed or was never sealed), or malformed-request (unreadable JSON, a bad"
+                            + " X-Dev-User-Id)")
     @ApiResponse(
             responseCode = "404",
             description =
-                    "not-found: the header names a user who doesn't exist, templateId isn't the user's, or a tag in tagIds isn't")
+                    "not-found: the header names a user who doesn't exist, templateId isn't the user's, or a tag in tagIds"
+                            + " or the replyToEntryId target isn't (another user's, missing or in Recently deleted)")
     @ApiResponse(
             responseCode = "409",
             description = "conflict: the id belongs to another user's entry, or to one in Recently deleted")
@@ -163,18 +166,20 @@ class EntryController {
 
     @PutMapping("/{entryId}")
     @Operation(
-            summary = "Replace an entry's date, template, title, caption and tags",
-            description = "A full replace: a field that is left out is cleared. version must be the one last read."
+            summary = "Replace an entry's date, template, title, caption, tags and reply target",
+            description = "A full replace: a field that is left out is cleared (a left-out replyToEntryId unlinks the"
+                    + " reply). version must be the one last read."
                     + " A new date moves the entry to the matching week and clears dateUnknown.")
     @ApiResponse(responseCode = "200", description = "The entry as saved, with the next version")
     @ApiResponse(
             responseCode = "400",
-            description = "validation-failed with fieldErrors (version, entryDate, title, contentJson, tagIds),"
-                    + " or malformed-request (unreadable JSON, a bad id)")
+            description = "validation-failed with fieldErrors (version, entryDate, title, contentJson, tagIds,"
+                    + " replyToEntryId: sealed, never sealed, or the entry itself), or malformed-request"
+                    + " (unreadable JSON, a bad id)")
     @ApiResponse(
             responseCode = "404",
             description = "not-found: no such entry, it is another user's, it is in Recently deleted,"
-                    + " templateId isn't the user's, or a tag in tagIds isn't")
+                    + " templateId isn't the user's, or a tag in tagIds or the replyToEntryId target isn't")
     @ApiResponse(
             responseCode = "409",
             description = "entry-sealed: the entry is a sealed Loot Drop; or entry-stale: version is not the stored"

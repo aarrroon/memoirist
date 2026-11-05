@@ -8,6 +8,7 @@ final class UserMapper {
     private UserMapper() {}
 
     static UserResponse toResponse(User user) {
-        return new UserResponse(user.getId(), user.getEmail(), user.getDisplayName(), user.getTimezone());
+        return new UserResponse(
+                user.getId(), user.getEmail(), user.getDisplayName(), user.getTimezone(), user.getBirthday());
     }
 }

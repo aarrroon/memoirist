@@ -18,6 +18,9 @@ import java.util.UUID;
 @Table(name = "users")
 public class User extends TimestampedEntity {
 
+    /** The earliest birthday the API accepts, the same day as the earliest memory date (D-09). */
+    public static final LocalDate EARLIEST_BIRTHDAY = LocalDate.of(1900, 1, 1);
+
     @Column(name = "email", nullable = false, length = 255)
     private String email;
 

@@ -262,8 +262,9 @@ class FeedQueryCountTest extends WeekApiTest {
 
             assertThat(beforeCount).as("still sealed: weeks, Eras, entries").isEqualTo(3);
             assertThat(atCount)
-                    .as("open at the instant: weeks, Eras, entries, media, tags")
-                    .isEqualTo(5);
+                    .as(
+                            "open at the instant: weeks, Eras, entries, media, tags, and the Loot Drop's replies (task 3.13)")
+                    .isEqualTo(6);
             assertThat(sql.statements())
                     .as("the queries use the same rule as the mapper, so the entry's media comes from the join")
                     .filteredOn(statement -> statement.matches(".*\\bjoin media\\b.*"))

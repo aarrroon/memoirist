@@ -19,7 +19,8 @@ import tools.jackson.databind.JsonNode;
  * {@code version} are not private and stay.
  *
  * @param locked JSON name {@code isLocked}
- * @param replyIds empty until task 3.13 can record a reply
+ * @param replyIds the ids of the replies to an opened Loot Drop (D-33), oldest first; a reply that is itself still sealed
+ *     is left out until it opens, and an entry that was never sealed has none
  * @param media in carousel order; each {@code fileUrl} is presigned for this response
  */
 public record EntryResponse(
