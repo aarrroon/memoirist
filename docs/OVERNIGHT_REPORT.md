@@ -50,7 +50,7 @@
 |---|---|---|---|---|
 | 1. Setup and local infrastructure | `phase-1-sprint-1` | `phase-1` | [#1](https://github.com/aarrroon/memoirist/pull/1) | Ready for review (not a draft). Its GitGuardian check fails on a false positive, see *Needs attention* |
 | 2. Backend foundation | `phase-1-sprint-2` | `phase-1-sprint-1` | [#2](https://github.com/aarrroon/memoirist/pull/2) | Ready for review (not a draft). Stacked on #1, so it shows only this sprint's diff: merge #1 first, then retarget this one with `gh pr edit 2 --base phase-1`. CI passes on the pull request (run 41062443059, 219 tests) and GitGuardian passes |
-| 3. Phase 1 API | `phase-1-sprint-3` | `phase-1-sprint-2` | | |
+| 3. Phase 1 API | `phase-1-sprint-3` | `phase-1-sprint-2` | [#3](https://github.com/aarrroon/memoirist/pull/3) | Ready for review (not a draft). Stacked on #2, so it shows only this sprint's diff: merge #1 and #2 first, then retarget this one with `gh pr edit 3 --base phase-1`. CI was green on every task commit from 3.15 on |
 
 ## Assumptions
 Made instead of asking, each from a documented default or the doc that wins (D-27). Settle any you disagree with using `/record-decision`.
