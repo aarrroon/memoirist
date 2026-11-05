@@ -73,7 +73,7 @@ class EraEndpointTest {
                 .contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
                 .expectBody(Map.class)
                 .value(body -> {
-                    // Exactly these keys: no cover until task 3.15, and no userId.
+                    // Exactly these keys: no coverMediaId, and no userId.
                     assertThat(body.keySet())
                             .containsExactlyInAnyOrder(
                                     "id",
@@ -82,9 +82,11 @@ class EraEndpointTest {
                                     "startDate",
                                     "endDate",
                                     "soundtrack",
+                                    "cover",
                                     "pinnedInFeed",
                                     "createdAt",
                                     "updatedAt");
+                    assertThat(body.get("cover")).isNull();
                     assertThat(UUID.fromString(body.get("id").toString())).isNotNull();
                     assertThat(body)
                             .containsEntry("title", "Monash Double Degree Era")
@@ -181,28 +183,6 @@ class EraEndpointTest {
 
         assertThat(first).isNotEqualTo(second);
         assertThat(countEras(alice)).isEqualTo(2);
-    }
-
-    @Test
-    void aCoverInTheBodyIsIgnoredUntilItsTask() {
-        User alice = aUser();
-
-        post(
-                        alice,
-                        json(
-                                "title", "Uni",
-                                "startDate", "2025-02-24",
-                                "coverMediaId", UUID.randomUUID().toString()))
-                .expectStatus()
-                .isCreated()
-                .expectBody(Map.class)
-                .value(body -> assertThat(body.keySet()).doesNotContain("cover", "coverMediaId"));
-
-        Map<String, Object> row = jdbc.sql("SELECT cover_media_id FROM eras WHERE user_id = :id")
-                .param("id", alice.getId())
-                .query()
-                .singleRow();
-        assertThat(row).containsEntry("cover_media_id", null);
     }
 
     @Test
@@ -484,6 +464,7 @@ class EraEndpointTest {
                                     "startDate",
                                     "endDate",
                                     "soundtrack",
+                                    "cover",
                                     "pinnedInFeed",
                                     "createdAt",
                                     "updatedAt");
@@ -535,6 +516,7 @@ class EraEndpointTest {
                             "startDate",
                             "endDate",
                             "soundtrack",
+                            "cover",
                             "pinnedInFeed",
                             "createdAt",
                             "updatedAt",

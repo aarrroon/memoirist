@@ -1,8 +1,11 @@
 package com.memoirist.media;
 
+import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
@@ -27,6 +30,33 @@ public interface MediaRepository extends Repository<Media, UUID> {
     void delete(Media media);
 
     Optional<Media> findByIdAndEntryUserId(UUID id, UUID userId);
+
+    /**
+     * The same lookup with the media row locked <em>for sharing</em> until the transaction ends, and its entry loaded
+     * with it. It is how an Era checks its cover (D-36): any number of Eras can look at the same photo at once, but
+     * deleting that photo, or erasing its entry, waits until the Era has been written. Without the lock the delete
+     * could land between the check and the insert and the foreign key would fail with a {@code 500}.
+     *
+     * <p>Needs a running transaction. The entry's Recently deleted filter applies to the join, so the media of a
+     * deleted entry is not found (D-30).
+     */
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("""
+            select m from Media m join fetch m.entry e
+            where m.id = :id and e.userId = :userId
+            """)
+    Optional<Media> findAndLockByIdAndEntryUserId(@Param("id") UUID id, @Param("userId") UUID userId);
+
+    /**
+     * Several of the user's media items at once, each with its entry loaded (one query, whatever the number): the
+     * covers of a list of Eras. Those whose entry is in Recently deleted, or is someone else's, are not in the answer.
+     * Like every finder here it does not check the seal; the caller decides what a sealed entry may show.
+     */
+    @Query("""
+            select m from Media m join fetch m.entry e
+            where m.id in :ids and e.userId = :userId
+            """)
+    List<Media> findAllWithEntryByIdInAndUserId(@Param("ids") Collection<UUID> ids, @Param("userId") UUID userId);
 
     List<Media> findByEntryIdAndEntryUserIdOrderByDisplayOrderAsc(UUID entryId, UUID userId);
 

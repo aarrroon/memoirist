@@ -3,6 +3,7 @@ package com.memoirist.era;
 import com.memoirist.era.dto.EraDetailResponse;
 import com.memoirist.era.dto.EraResponse;
 import com.memoirist.era.dto.EraWeekResponse;
+import com.memoirist.media.dto.MediaResponse;
 import com.memoirist.week.WeeklyLog;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +14,8 @@ final class EraMapper {
 
     private EraMapper() {}
 
-    static EraResponse toResponse(Era era) {
+    /** {@code cover} is what {@link EraCovers} decided may be shown, or {@code null}: the mapper never looks at media. */
+    static EraResponse toResponse(Era era, MediaResponse cover) {
         return new EraResponse(
                 era.getId(),
                 era.getTitle(),
@@ -21,6 +23,7 @@ final class EraMapper {
                 era.getStartDate(),
                 era.getEndDate(),
                 era.getSoundtrack(),
+                cover,
                 era.isPinnedInFeed(),
                 era.getCreatedAt(),
                 era.getUpdatedAt());
@@ -30,7 +33,8 @@ final class EraMapper {
      * The Era and the weeks it holds, newest first as they come. {@code entryCounts} maps a week's id to how many of
      * its entries count; a week with none isn't in the map and shows {@code 0}.
      */
-    static EraDetailResponse toDetail(Era era, List<WeeklyLog> weeks, Map<UUID, Long> entryCounts) {
+    static EraDetailResponse toDetail(
+            Era era, MediaResponse cover, List<WeeklyLog> weeks, Map<UUID, Long> entryCounts) {
         List<EraWeekResponse> weekResponses = weeks.stream()
                 .map(week -> new EraWeekResponse(
                         week.getId(),
@@ -47,6 +51,7 @@ final class EraMapper {
                 era.getStartDate(),
                 era.getEndDate(),
                 era.getSoundtrack(),
+                cover,
                 era.isPinnedInFeed(),
                 era.getCreatedAt(),
                 era.getUpdatedAt(),

@@ -48,9 +48,13 @@ class EraController {
             description = "The user already has an Era with this id: the stored Era, unchanged")
     @ApiResponse(
             responseCode = "400",
-            description = "validation-failed with fieldErrors (title, description, startDate, endDate),"
-                    + " or malformed-request (unreadable JSON, a bad X-Dev-User-Id)")
-    @ApiResponse(responseCode = "404", description = "not-found: the header names a user who doesn't exist")
+            description = "validation-failed with fieldErrors (title, description, startDate, endDate, soundtrack,"
+                    + " coverMediaId: a voice note, or a photo from a sealed Loot Drop), or malformed-request"
+                    + " (unreadable JSON, a bad X-Dev-User-Id)")
+    @ApiResponse(
+            responseCode = "404",
+            description = "not-found: the header names a user who doesn't exist, or the cover photo isn't the user's"
+                    + " or is in Recently deleted")
     @ApiResponse(responseCode = "409", description = "conflict: the id belongs to another user's Era")
     @ApiResponse(responseCode = "415", description = "unsupported-media-type: the body is not application/json")
     ResponseEntity<EraResponse> create(@Valid @RequestBody EraCreateRequest request) {
@@ -72,7 +76,7 @@ class EraController {
             summary = "One Era with the weeks its dates overlap",
             description = "entryCount counts only the entries inside the Era's dates, leaving out sealed entries and"
                     + " entries in Recently deleted.")
-    @ApiResponse(responseCode = "200", description = "The Era and its weeks, newest first")
+    @ApiResponse(responseCode = "200", description = "The Era, its cover and its weeks, newest first")
     @ApiResponse(responseCode = "400", description = "malformed-request: the id is not a UUID")
     @ApiResponse(responseCode = "404", description = "not-found: no such Era, or it is another user's")
     EraDetailResponse get(@PathVariable UUID eraId) {
@@ -82,12 +86,17 @@ class EraController {
     @PutMapping("/{eraId}")
     @Operation(
             summary = "Replace an Era",
-            description = "A full replace: a field that is left out is reset. New dates apply to every week at once.")
+            description = "A full replace: a field that is left out is reset, the cover included. New dates apply to"
+                    + " every week at once.")
     @ApiResponse(responseCode = "200", description = "The Era as saved")
     @ApiResponse(
             responseCode = "400",
-            description = "validation-failed with fieldErrors, or malformed-request (unreadable JSON, a bad id)")
-    @ApiResponse(responseCode = "404", description = "not-found: no such Era, or it is another user's")
+            description = "validation-failed with fieldErrors (coverMediaId: a voice note, or a photo from a sealed"
+                    + " Loot Drop), or malformed-request (unreadable JSON, a bad id)")
+    @ApiResponse(
+            responseCode = "404",
+            description = "not-found: no such Era, or it is another user's, or the cover photo isn't the user's or is"
+                    + " in Recently deleted")
     @ApiResponse(responseCode = "415", description = "unsupported-media-type: the body is not application/json")
     EraResponse update(@PathVariable UUID eraId, @Valid @RequestBody EraUpdateRequest request) {
         return eras.update(eraId, request);

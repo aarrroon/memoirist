@@ -59,8 +59,9 @@ class EraRequestValidationTest {
     private static TreeMap<String, String> violations(
             String title, String description, LocalDate start, LocalDate end) {
         TreeMap<String, String> create =
-                violations(new EraCreateRequest(null, title, description, start, end, null, false));
-        TreeMap<String, String> update = violations(new EraUpdateRequest(title, description, start, end, null, false));
+                violations(new EraCreateRequest(null, title, description, start, end, null, null, false));
+        TreeMap<String, String> update =
+                violations(new EraUpdateRequest(title, description, start, end, null, null, false));
         assertThat(update)
                 .as("a PUT body follows the same rules as a POST body")
                 .isEqualTo(create);
@@ -142,9 +143,9 @@ class EraRequestValidationTest {
 
     @Test
     void theTitleIsStrippedAndThenMeasured() {
-        assertThat(new EraCreateRequest(null, "  Uni Days \t", null, START, null, null, false).title())
+        assertThat(new EraCreateRequest(null, "  Uni Days \t", null, START, null, null, null, false).title())
                 .isEqualTo("Uni Days");
-        assertThat(new EraUpdateRequest("  Uni Days ", null, START, null, null, false).title())
+        assertThat(new EraUpdateRequest("  Uni Days ", null, START, null, null, null, false).title())
                 .isEqualTo("Uni Days");
         assertThat(violations("  " + "t".repeat(150) + "  ", null, START, null)).isEmpty();
     }
@@ -169,15 +170,15 @@ class EraRequestValidationTest {
     @ParameterizedTest(name = "\"{0}\" becomes no description")
     @ValueSource(strings = {"", " ", "\t\n  "})
     void aDescriptionWithNothingLeftAfterStrippingBecomesNull(String description) {
-        assertThat(new EraCreateRequest(null, "Uni", description, START, null, null, false).description())
+        assertThat(new EraCreateRequest(null, "Uni", description, START, null, null, null, false).description())
                 .isNull();
-        assertThat(new EraUpdateRequest("Uni", description, START, null, null, false).description())
+        assertThat(new EraUpdateRequest("Uni", description, START, null, null, null, false).description())
                 .isNull();
     }
 
     @Test
     void aDescriptionIsStrippedButItsInnerWhitespaceIsKept() {
-        assertThat(new EraCreateRequest(null, "Uni", "  First line.\n\nSecond line.  ", START, null, null, false)
+        assertThat(new EraCreateRequest(null, "Uni", "  First line.\n\nSecond line.  ", START, null, null, null, false)
                         .description())
                 .isEqualTo("First line.\n\nSecond line.");
     }

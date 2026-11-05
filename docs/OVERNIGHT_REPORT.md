@@ -41,7 +41,7 @@
 | 3.12 On this day | done | *Sprint 3.12: Add the On this day strip* | `GET /entries/on-this-day`: the user's entries from today's day and month in earlier years, newest year first, at most 20, as EntrySummary rows; sealed and deleted entries never appear; 29 February shows on 28 February in non-leap years; "today" follows the user's time zone. No migration; 46 new tests, 1375 pass. [Journal](build-journal/sprint-3/3.12-on-this-day.md) |
 | 3.13 Loot Drop replies and the birthday | done | *Sprint 3.13: Add Loot Drop replies and the birthday* | `birthday` on `GET`/`PATCH /users/me` (missing leaves, `null` removes, a date sets; future or before 1900 is 400); `replyToEntryId` on `POST`/`PUT /entries` (own opened Loot Drop only: 404 missing/foreign/deleted, 400 sealed or never sealed) and `replyIds` on an opened Loot Drop. No migration; 56 new tests, 1431 pass. [Journal](build-journal/sprint-3/3.13-replies-and-birthday.md) |
 | 3.14 Soundtracks and Spotify search | done | *Sprint 3.14: Add soundtracks and Spotify search* | `soundtrack` (checked Spotify URI) on entries, weeks and Eras, hidden on a sealed entry; `POST /music/search` against a stubbed Spotify (cached app token, at most 10 results, 503 `music-search-unavailable`), search words in no log line. No migration; 105 new tests, 1536 pass. [Journal](build-journal/sprint-3/3.14-soundtracks-and-spotify.md) |
-| 3.15 Era covers | pending | | | |
+| 3.15 Era covers | done | *Sprint 3.15: Add Era covers* | `coverMediaId` on `POST` and `PUT /eras` and a presigned `cover` on every Era response; image from the user's own entries (400 sealed or voice note, 404 foreign, missing or deleted), checked under a row lock, hidden while sealed or deleted, cleared when the photo goes. No migration; 23 new tests, 1558 pass. [Journal](build-journal/sprint-3/3.15-era-covers.md) |
 | 3.16 Local sample content | pending | | | |
 | 3.17 API review | pending | | | |
 
@@ -262,6 +262,14 @@ Made instead of asking, each from a documented default or the doc that wins (D-2
 | 203 | 3.14 | TECH_STACK 'tokens until it expires' | Cached token dropped 60 s before expiry, and on a 401 (if still the same token) |
 | 204 | 3.14 | D-35: search is optional; storage settings are required | `SpotifyProperties` is optional: the app starts with the settings empty and the 503 appears at the first search. Blank counts as missing |
 | 205 | 3.14 | Task brief date (31 October) vs machine clock (5 November this sitting) | Tests use the fixed test clock (Saturday 31 October); the journal's times come from `date` |
+| 206 | 3.15 | API_CONTRACT 'an image' and D-36 'photo' | Any media item that is not a voice note can be a cover (photo and diary-page photo); a voice note is 400 with `fieldErrors.coverMediaId` |
+| 207 | 3.15 | API_CONTRACT names only photos from sealed entries as 400 | The seal check runs before the voice-note check, so a sealed voice note gets the same 400 words as a sealed photo (D-10) |
+| 208 | 3.15 | API_CONTRACT presigned cover on the Era vs the smaller week `eras` shape | `WeekEraResponse` has no cover; the feed header can use `GET /eras` (task 4.14) |
+| 209 | 3.15 | API_CONTRACT (PUT is a full replace) vs D-36 (cover hidden while sealed or deleted) | A PUT that leaves `coverMediaId` out clears it, even when the cover is hidden and the client cannot know the id. Written in API_CONTRACT; see Needs attention |
+| 210 | 3.15 | 3.13 precedent (reply target checked only on change) | A PUT checks the cover only when it differs from the stored one, so an Era with a hidden cover stays editable when the same id is sent |
+| 211 | 3.15 | 3.8 and 3.13 precedent (FOR SHARE on referenced rows) | The cover photo is read with `PESSIMISTIC_READ` joined to its entry; a simultaneous delete or erase waits, then `ON DELETE SET NULL` clears the cover. The entry row is locked too (docs say so) |
+| 212 | 3.15 | API_CONTRACT 'detail never repeats an id' | `instance` is the request path; `detail` and `fieldErrors` never hold the media id (tested) |
+| 213 | 3.15 | Task brief date (31 October) vs machine clock (5 November) | Tests use the fixed test clock (Saturday 31 October); journal times come from `date` |
 
 ## Needs attention
 - **GitGuardian fails on PR #1, a false positive** (Sprint 1 close-out). Its *Security Checks* flag `docker-compose.yml` line 15 (commit `3447288`) as a "Generic Password", but the line is `POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}`, a Compose placeholder that reads the value from `.env`. No password is in the repo, and `.env` was never committed. **Fix:** in GitGuardian's dashboard, resolve incident 39228980 as a false positive, then re-run the check. Later PRs may be flagged the same way wherever a password is read from `.env` by name; GitGuardian's ignore settings can stop that, which is your call.
@@ -412,6 +420,9 @@ Made instead of asking, each from a documented default or the doc that wins (D-2
 - **Free text may leak at DEBUG elsewhere** (task 3.14): bean validation on the search query made Spring log the rejected words at DEBUG; fixed for music search only. Entry titles and captions likely have the same exposure at DEBUG; I didn't check or change them.
 - **Older tests changed** (task 3.14): "soundtrack ignored until 3.14" no longer holds, so tests in `EntryEndpointTest`, `EntryUpdateTest`, `WeeklyLogEndpointTest` and `EraEndpointTest` were updated.
 - **Practice blocks** (task 3.14): `MusicSearchService.java:137-148` and `MusicSearchServiceTest.java:197`, answers in place.
+- **Decision for you: a PUT while an Era's cover is hidden clears it** (task 3.15, [journal section 9](build-journal/sprint-3/3.15-era-covers.md#9-review), finding 1). The client sees `cover: null` and cannot name the id, so a title edit sent as a full PUT removes the cover for good. Built to the contract. Rule on it before task 4.14 (client resends a stored id, or a missing `coverMediaId` keeps a hidden cover) and record it in D-36.
+- **Task 3.15 (Era covers): nothing failing** (1558 tests pass, 23 new; spec review: Pass with notes, three minor findings; the lock-scope docs wording was fixed, the rest noted in the journal). No README changes, no dependency skipped, no setup.
+- **Practice blocks** (task 3.15): `EraCovers.java:48` and `EraService.java:179`, answers in place.
 
 ## Questions for the morning
 - **Keep or swap two build choices from task 2.1?** (spec review finding 2, [journal §9](build-journal/sprint-2/2.1-spring-boot-project.md#9-review)). No doc named either before the task, and the builder recorded both in TECH_STACK §2 itself:

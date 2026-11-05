@@ -234,7 +234,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - the token is fetched once and reused
     - search terms appear in none of our URLs and in no log line, including `RestClient` request logging (the call to Spotify itself carries them, over HTTPS)
 
-- [ ] **3.15 Era covers** (D-36)
+- [x] **3.15 Era covers** (D-36)
   - **Read:** D-10, D-30, D-36, API_CONTRACT §Eras.
   - **Do:** `coverMediaId` on `POST` and `PUT /eras`, and a presigned `cover` on the Era shape.
   - **Done when:** tests prove:

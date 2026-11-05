@@ -1,5 +1,6 @@
 package com.memoirist.era.dto;
 
+import com.memoirist.media.dto.MediaResponse;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -16,6 +17,7 @@ public record EraDetailResponse(
         LocalDate startDate,
         LocalDate endDate,
         String soundtrack,
+        MediaResponse cover,
         boolean pinnedInFeed,
         Instant createdAt,
         Instant updatedAt,

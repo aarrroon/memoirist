@@ -12,9 +12,6 @@ import java.util.UUID;
  * The body of {@code POST /api/v1/eras} (API_CONTRACT, Eras). {@code id} is the client's own UUID, so a retry of the
  * same request finds the Era it already made (D-12); leave it out and the server picks one.
  *
- * <p>There is no field for {@code coverMediaId} yet (task 3.15): a body that names it is read as if it did not,
- * because Jackson skips properties the record doesn't have.
- *
  * <p>The text is cleaned in the constructor, before it is validated: the title and description lose the spaces at
  * both ends, and a description with nothing left becomes {@code null}. {@code pinnedInFeed} defaults to
  * {@code false}, so it is never {@code null} in the record. It is a {@code Boolean} so that a missing or {@code null}
@@ -25,6 +22,8 @@ import java.util.UUID;
  * @param endDate {@code null} means the Era is ongoing
  * @param soundtrack a Spotify track, album or playlist URI (D-35), or {@code null} for none; anything else is
  *     {@code 400} ({@code fieldErrors.soundtrack})
+ * @param coverMediaId one of the user's own photos for the Era's cover (D-36), or {@code null} for none; the service
+ *     checks it, because that needs the database and the clock
  */
 @ValidEraDates
 public record EraCreateRequest(
@@ -34,6 +33,7 @@ public record EraCreateRequest(
         @NotNull LocalDate startDate,
         LocalDate endDate,
         @SpotifyUri String soundtrack,
+        UUID coverMediaId,
         Boolean pinnedInFeed)
         implements EraDates {
 
