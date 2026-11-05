@@ -277,10 +277,10 @@ CREATE INDEX idx_entries_user_date ON entries (user_id, entry_date DESC);
 CREATE INDEX idx_entries_template ON entries (template_id);
 CREATE INDEX idx_entries_pending_unlock ON entries (unlock_date)
     WHERE unlock_date IS NOT NULL AND unlock_notified = FALSE;
--- Opened Loot Drops the user hasn't seen yet (D-10). Serves GET /entries/opened: the planner reads it backwards by unlock_date (task 3.10).
+-- Opened Loot Drops the user hasn't seen yet (D-10).
 CREATE INDEX idx_entries_opened_unseen ON entries (user_id, unlock_date)
     WHERE unlock_date IS NOT NULL AND unlock_seen_at IS NULL;
--- Recently deleted: its list, restore, erase and the daily sweep (D-30, task 3.11).
+-- Recently deleted: its list and the daily sweep (D-30).
 CREATE INDEX idx_entries_deleted ON entries (user_id, deleted_at)
     WHERE deleted_at IS NOT NULL;
 -- Replies to an opened Loot Drop (D-33).

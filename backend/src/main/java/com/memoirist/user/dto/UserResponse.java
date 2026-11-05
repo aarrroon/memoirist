@@ -1,5 +1,6 @@
 package com.memoirist.user.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -11,4 +12,9 @@ import java.util.UUID;
  * @param birthday the day the user was born, or {@code null} when they haven't set one (D-33); it is always in the
  *     answer, as {@code null}, so a client can tell "not set" from "not sent"
  */
-public record UserResponse(UUID id, String email, String displayName, String timezone, LocalDate birthday) {}
+public record UserResponse(
+        UUID id,
+        String email,
+        String displayName,
+        String timezone,
+        @Schema(nullable = true) LocalDate birthday) {}

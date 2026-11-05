@@ -2,6 +2,7 @@ package com.memoirist.week.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.memoirist.entry.dto.EntryResponse;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -20,10 +21,10 @@ import java.util.UUID;
  */
 public record WeeklyLogResponse(
         UUID id,
-        String title,
+        @Schema(nullable = true) String title,
         LocalDate startDate,
         LocalDate endDate,
         @JsonProperty("isClosed") boolean closed,
-        String soundtrack,
+        @Schema(nullable = true) String soundtrack,
         List<WeekEraResponse> eras,
         List<EntryResponse> entries) {}

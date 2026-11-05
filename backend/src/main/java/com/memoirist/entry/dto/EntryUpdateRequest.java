@@ -2,6 +2,7 @@ package com.memoirist.entry.dto;
 
 import com.memoirist.entry.Entry;
 import com.memoirist.music.SpotifyUri;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -44,7 +45,7 @@ public record EntryUpdateRequest(
 
         @Size(min = 1, max = Entry.MAX_TITLE_LENGTH) String title,
 
-        JsonNode contentJson,
+        @Schema(nullable = true) JsonNode contentJson,
 
         @NotNull @Size(max = Entry.MAX_TAGS) List<@NotNull UUID> tagIds,
 

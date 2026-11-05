@@ -1,6 +1,7 @@
 package com.memoirist.era.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -13,7 +14,7 @@ import java.util.UUID;
  */
 public record EraWeekResponse(
         UUID id,
-        String title,
+        @Schema(nullable = true) String title,
         LocalDate startDate,
         LocalDate endDate,
         @JsonProperty("isClosed") boolean closed,

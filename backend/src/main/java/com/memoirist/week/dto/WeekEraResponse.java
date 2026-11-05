@@ -1,5 +1,6 @@
 package com.memoirist.week.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -10,4 +11,9 @@ import java.util.UUID;
  * @param endDate {@code null} when the Era is ongoing
  * @param pinnedInFeed whether the user pinned it to win in the feed (D-22)
  */
-public record WeekEraResponse(UUID id, String title, LocalDate startDate, LocalDate endDate, boolean pinnedInFeed) {}
+public record WeekEraResponse(
+        UUID id,
+        String title,
+        LocalDate startDate,
+        @Schema(nullable = true) LocalDate endDate,
+        boolean pinnedInFeed) {}

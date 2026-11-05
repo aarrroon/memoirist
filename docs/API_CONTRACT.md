@@ -11,7 +11,7 @@
 | Instants | ISO-8601 UTC with `Z`, e.g. `2026-10-25T10:20:00Z` |
 | Calendar dates | `YYYY-MM-DD`, meaning the user's local calendar day |
 | IDs | UUID strings |
-| Docs | Swagger UI at `/swagger-ui.html`; one OpenAPI tag per resource (Users, Eras, Templates, Tags, Feed, Weekly Logs, Entries, Media, Music) |
+| Docs | Swagger UI at `/swagger-ui.html`; one OpenAPI tag per resource (Users, Eras, Templates, Tags, Feed, Weekly Logs, Entries, Media, Music). `/v3/api-docs` follows this file (see *The OpenAPI document*, below) |
 
 ### Who is the current user?
 - **Never** send a user ID in a body, query string or path.
@@ -61,6 +61,15 @@ What every error response promises (task 2.6, `common/GlobalExceptionHandler`):
 - **Spring's own errors keep their status.** An unknown path is `404 not-found`, a wrong method `405 method-not-allowed`, never `500`. A status that isn't in the table (none is expected) keeps Spring's `about:blank` type, which RFC 9457 defines for "no more to say than the status".
 - **`entry-stale` has two causes with one answer:** the service saw a `version` that differs from the stored one (older or newer), or the versions matched but another request committed first and the database refused the update.
 - **A file far over 25 MB may end in a dropped connection instead of a `413`.** The server rejects the upload as soon as the limit is passed, but it won't read more than about 2 MB of a rejected body just to answer politely (`server.tomcat.max-swallow-size`). A file a little over the limit gets the `413`. Clients check the size first (`.claude/rules/frontend.md`), so this is only a safety net.
+
+### The OpenAPI document (task 3.17)
+`/v3/api-docs` is the machine-readable form of this file, and the frontend's types are generated from it (task 4.2). It promises:
+- **Endpoints and tags.** Exactly the Phase 1 endpoints in the tables below, each under its resource's tag, with a summary. Every endpoint documents `400` (a malformed `X-Dev-User-Id` is possible on any call), `404` when its path names a resource, and `415` when it reads a JSON body, besides its own errors.
+- **Errors.** Every `4xx` and `5xx` response is `application/problem+json` with the `Problem` schema: `type`, `title`, `status`, `detail`, `instance` and `timestamp` always, `fieldErrors` on `validation-failed`. The `405`, `406` and `500` answers are global and are not listed on each endpoint.
+- **Successes** are `application/json`.
+- **Required and null.** Every field of a response (`*Response` schemas and a Music result) is always sent, so it is `required`; one that can be `null` (a sealed entry's private fields, an ongoing Era's `endDate`, an unset `birthday`, ...) is also typed as allowing `null`. A request field is required only where this file says so.
+- **A caption** (`contentJson`) is a `TipTapDocument` (an object), or `null`; what is allowed inside it is the server's check (D-05), not the schema's.
+- **The `X-Dev-User-Id` header** is not in the document: it works only in the `local` and `test` profiles (see above).
 
 ### Pagination
 Every paged endpoint takes `?page=0&size=10` (`size` max 50, unless the endpoint says otherwise) and returns:

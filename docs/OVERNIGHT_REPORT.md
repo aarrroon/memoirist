@@ -43,7 +43,7 @@
 | 3.14 Soundtracks and Spotify search | done | *Sprint 3.14: Add soundtracks and Spotify search* | `soundtrack` (checked Spotify URI) on entries, weeks and Eras, hidden on a sealed entry; `POST /music/search` against a stubbed Spotify (cached app token, at most 10 results, 503 `music-search-unavailable`), search words in no log line. No migration; 105 new tests, 1536 pass. [Journal](build-journal/sprint-3/3.14-soundtracks-and-spotify.md) |
 | 3.15 Era covers | done | *Sprint 3.15: Add Era covers* | `coverMediaId` on `POST` and `PUT /eras` and a presigned `cover` on every Era response; image from the user's own entries (400 sealed or voice note, 404 foreign, missing or deleted), checked under a row lock, hidden while sealed or deleted, cleared when the photo goes. No migration; 23 new tests, 1558 pass. [Journal](build-journal/sprint-3/3.15-era-covers.md) |
 | 3.16 Local sample content | done | *Sprint 3.16: Add local sample content* | `SampleContentSeeder`, a local-profile `ApplicationRunner` behind `memoirist.sample-content=true` (`MEMOIRIST_SAMPLE_CONTENT`): fills an empty dev journal with 3 Eras, 4 tags, a template, 11 entries over 6 weeks and 6 generated PNGs; skips itself if the dev user owns anything. No API or schema change; 29 new tests, 1587 pass. [Journal](build-journal/sprint-3/3.16-local-sample-content.md) |
-| 3.17 API review | pending | | | |
+| 3.17 API review | done | *Sprint 3.17: Align /v3/api-docs with the API contract* | The 37 endpoints and 9 tags already matched the contract; the schemas did not, so errors are now `application/problem+json` with a `Problem` schema, successes `application/json`, `contentJson` is a nullable `TipTapDocument`, and every response field is required with 30 marked nullable. `ApiDocsContractTest` (9 tests) keeps it true; 1596 tests pass. [Journal](build-journal/sprint-3/3.17-api-review.md) |
 
 ## Pull requests
 | Sprint | Branch | Base | PR | State |
@@ -277,6 +277,12 @@ Made instead of asking, each from a documented default or the doc that wins (D-2
 | 218 | 3.16 | Services need an HTTP request (CurrentUserProvider) | The seeder writes through repositories, WeekService and StorageService; captions are checked with EntryContentValidator, and tests read everything back through the real API |
 | 219 | 3.16 | D-23 (unlock at 09:00 in the user's zone) | Sample unlock dates (sealed +60 days, opened letter -5 days) are set at 09:00 in the user's zone, counted from the injected Clock |
 | 220 | 3.16 | Task brief date (31 October) vs machine clock (5 November) | Sample dates count back from the injected Clock's today; tests use the fixed test clock |
+| 221 | 3.17 | API_CONTRACT shows nullability only in JSON examples | A response field is nullable if the contract says it can be null or its column allows null; `EntrySummary.photoCount` and `voiceNoteCount` are integer-or-null (a sealed row hides them); `UserResponse.email` is not nullable |
+| 222 | 3.17 | API_CONTRACT lists the global 405, 406 and 500 once | The document lists only the codes an endpoint's own code can answer |
+| 223 | 3.17 | Contract silent on operation ids | Springdoc ids (`get_1`, `update_4`) left alone; task 4.2 may want to look at them |
+| 224 | 3.17 | Non-negotiable 7 (X-Dev-User-Id only in local and test) | The header stays out of the OpenAPI document; API_CONTRACT says so |
+| 225 | 3.17 | sync-docs: fix the stale side | Media types, error schema, required and nullable fields were code drift (code fixed); two comment lines in DATABASE_SCHEMA's V1 SQL block were doc drift (doc fixed, D-16) |
+| 226 | 3.17 | Task brief date (31 October) vs machine clock (5 November) | New tests use the fixed test clock; journal times come from `date` and are approximate |
 
 ## Needs attention
 - **GitGuardian fails on PR #1, a false positive** (Sprint 1 close-out). Its *Security Checks* flag `docker-compose.yml` line 15 (commit `3447288`) as a "Generic Password", but the line is `POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}`, a Compose placeholder that reads the value from `.env`. No password is in the repo, and `.env` was never committed. **Fix:** in GitGuardian's dashboard, resolve incident 39228980 as a false positive, then re-run the check. Later PRs may be flagged the same way wherever a password is read from `.env` by name; GitGuardian's ignore settings can stop that, which is your call.
@@ -433,6 +439,9 @@ Made instead of asking, each from a documented default or the doc that wins (D-2
 - **Optional: sample content for the local app** (task 3.16): add `MEMOIRIST_SAMPLE_CONTENT=true` to your own `.env` (or start with `--memoirist.sample-content=true`) to fill an empty local journal. Off by default; the local database was left empty.
 - **Task 3.16 (Local sample content): nothing failing** (1587 tests pass, 29 new; spec review: Pass with notes, five minor findings; the 09:00 unlock time and two journal facts were fixed, the rest noted in the journal). No README changes, no dependency skipped. The manual-run cleanup also deleted two empty `weekly_logs` rows that existed before (harmless; the feed hides empty weeks).
 - **Practice blocks** (task 3.16): `SampleContentSeeder.java:167` and `SampleContentSeederTest.java:321`, answers in place.
+- **Task 3.17 (API review): nothing failing** (1596 tests pass, 9 new; spec review: Pass with notes, four minor findings, all noted in the [journal](build-journal/sprint-3/3.17-api-review.md#9-review)). No README changes, no dependency skipped, no setup.
+- **For task 4.2** (task 3.17): operation ids such as `get_1` and `update_4` are valid but unhelpful if used by id. A new response record must end in `Response` (or be `MusicResult`) to get the all-fields-required rule, and a nullable field needs `@Schema(nullable = true)` plus a null case in `ApiDocsContractTest`'s data.
+- **Still to write** (Sprint 3): the Sprint 3 README and its row in `build-journal/README.md`.
 
 ## Questions for the morning
 - **Keep or swap two build choices from task 2.1?** (spec review finding 2, [journal §9](build-journal/sprint-2/2.1-spring-boot-project.md#9-review)). No doc named either before the task, and the builder recorded both in TECH_STACK §2 itself:

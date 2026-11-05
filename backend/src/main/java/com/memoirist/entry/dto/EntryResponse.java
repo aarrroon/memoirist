@@ -2,6 +2,7 @@ package com.memoirist.entry.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.memoirist.media.dto.MediaResponse;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -27,17 +28,19 @@ public record EntryResponse(
         UUID id,
         UUID weeklyLogId,
         LocalDate entryDate,
-        UUID templateId,
-        String title,
-        JsonNode contentJson,
-        String contentText,
+        @Schema(nullable = true) UUID templateId,
+        @Schema(nullable = true) String title,
+
+        @Schema(nullable = true) JsonNode contentJson,
+
+        @Schema(nullable = true) String contentText,
         List<EntryTagResponse> tags,
-        String soundtrack,
-        UUID replyToEntryId,
+        @Schema(nullable = true) String soundtrack,
+        @Schema(nullable = true) UUID replyToEntryId,
         List<UUID> replyIds,
         Instant createdAt,
         Instant updatedAt,
-        Instant unlockDate,
+        @Schema(nullable = true) Instant unlockDate,
         @JsonProperty("isLocked") boolean locked,
         boolean dateUnknown,
         long version,

@@ -1,6 +1,7 @@
 package com.memoirist.era.dto;
 
 import com.memoirist.media.dto.MediaResponse;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -13,11 +14,11 @@ import java.util.UUID;
 public record EraDetailResponse(
         UUID id,
         String title,
-        String description,
+        @Schema(nullable = true) String description,
         LocalDate startDate,
-        LocalDate endDate,
-        String soundtrack,
-        MediaResponse cover,
+        @Schema(nullable = true) LocalDate endDate,
+        @Schema(nullable = true) String soundtrack,
+        @Schema(nullable = true) MediaResponse cover,
         boolean pinnedInFeed,
         Instant createdAt,
         Instant updatedAt,
