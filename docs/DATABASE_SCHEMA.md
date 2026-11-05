@@ -42,8 +42,8 @@
 | id | UUID | PK |
 | email | VARCHAR(255) | NOT NULL UNIQUE |
 | display_name | VARCHAR(100) | NOT NULL DEFAULT 'Time Traveler' |
-| timezone | VARCHAR(64) | NOT NULL DEFAULT 'Australia/Melbourne'. IANA zone, validated with `ZoneId.of` |
-| birthday | DATE | NULL. Optional; not after today (service check). Powers the *next birthday* unlock suggestion (D-33) and is the yearly letter's default day (D-32) |
+| timezone | VARCHAR(64) | NOT NULL DEFAULT 'Australia/Melbourne'. IANA region name, checked by `@IanaTimeZone` against `ZoneId.getAvailableZoneIds()` (offsets such as `+10:00` are refused; the longest name is 32 characters) |
+| birthday | DATE | NULL. Optional; not after today in the user's zone and not before 1900-01-01 (service check, task 3.13). Powers the *next birthday* unlock suggestion (D-33) and is the yearly letter's default day (D-32) |
 | created_at, updated_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() |
 
 ### `eras`
@@ -68,7 +68,7 @@ A user-named chapter of life. It holds every week its dates overlap and shows th
 | id | UUID | PK |
 | user_id | UUID | NOT NULL → users ON DELETE CASCADE |
 | name | VARCHAR(100) | NOT NULL |
-| subheadings | JSONB | NOT NULL DEFAULT '[]'. Array of strings (up to 20 items, each up to 200 characters, enforced in the service). CHECK that it is an array |
+| subheadings | JSONB | NOT NULL DEFAULT '[]'. Array of strings (up to 20 items, each up to 200 characters, enforced when the request is read, task 3.4: the limits are constants on `Template`). CHECK that it is an array |
 | created_at, updated_at | TIMESTAMPTZ | |
 
 ### `weekly_logs`
@@ -100,13 +100,13 @@ One Instagram-style post. `user_id` is duplicated from the week so ownership che
 | content_text | TEXT | NOT NULL DEFAULT ''. Plain text derived from `content_json` by the server |
 | preview_line | VARCHAR(120) | NULL. Derived by the server when content is saved: the first non-empty line that isn't a heading, or the first heading if there's nothing else (D-24) |
 | soundtrack | VARCHAR(100) | NULL. A Spotify URI; hidden while sealed (D-35) |
-| reply_to_entry_id | UUID | NULL → entries ON DELETE SET NULL. The user's own opened Loot Drop that this entry answers (service check, D-33) |
+| reply_to_entry_id | UUID | NULL → entries ON DELETE SET NULL. The user's own opened Loot Drop that this entry answers (service check, D-33). Erasing the Loot Drop clears it; moving the Loot Drop to Recently deleted does not |
 | unlock_date | TIMESTAMPTZ | NULL. Sealed while `unlock_date > now()` (D-10) |
 | unlock_notified | BOOLEAN | NOT NULL DEFAULT FALSE. Set by the background unlock job (unlock emails in Phase 2, refreshing AI results in Phase 4) |
-| unlock_seen_at | TIMESTAMPTZ | NULL. When the user saw the opened Loot Drop in the *Opened* strip; cleared whenever the entry is sealed (D-10) |
+| unlock_seen_at | TIMESTAMPTZ | NULL. When the user saw the opened Loot Drop in the *Opened* strip; cleared whenever the entry is sealed (D-10). Written only by `mark-seen`, with a conditional bulk `UPDATE` that does not raise `version` or move `updated_at` (task 3.10) |
 | deleted_at | TIMESTAMPTZ | NULL. Set when the entry is deleted: it waits in Recently deleted, hidden everywhere else, until it is restored or erased. A daily sweep erases it 30 days later (D-30) |
 | date_unknown | BOOLEAN | NOT NULL DEFAULT FALSE. The memory date is a guess (a photo-dump photo with no date of its own); cleared when the date is changed (D-34) |
-| version | BIGINT | NOT NULL DEFAULT 0. Optimistic lock, mapped with `@Version`; a stale `PUT` is `409 entry-stale` (D-23) |
+| version | BIGINT | NOT NULL DEFAULT 0. Optimistic lock, mapped with `@Version`; a stale `PUT` is `409 entry-stale` (D-23). Raised by one for each request that changes the row (an edit, a seal, a delete into Recently deleted, a restore); a `PUT` that changes nothing writes nothing; `mark-seen` writes only `unlock_seen_at` with its own `UPDATE` and leaves `version` and `updated_at` alone (task 3.10) |
 | created_at, updated_at | TIMESTAMPTZ | |
 
 ### `media`
@@ -115,15 +115,15 @@ Carousel items (images and voice notes) belonging to an entry.
 | Column | Type | Constraints and notes |
 |---|---|---|
 | id | UUID | PK |
-| entry_id | UUID | NOT NULL → entries ON DELETE CASCADE. Delete the stored objects in the service *before* the cascade (TECH_STACK §2 Storage) |
+| entry_id | UUID | NOT NULL → entries ON DELETE CASCADE. Read the object keys *before* the cascade removes the rows, and delete the stored files after the commit: `EntryErasure` does both (TECH_STACK §2 Storage) |
 | object_key | VARCHAR(512) | NOT NULL UNIQUE. `users/{userId}/entries/{entryId}/{mediaId}.{ext}` |
 | media_type | VARCHAR(100) | NOT NULL. One of the D-17 MIME types |
 | purpose | VARCHAR(20) | NOT NULL DEFAULT 'PHOTO'. `PHOTO`, or `PAGE_SCAN` for a photo of a paper diary page, which must be an image. Checked in the service like `media_type`, so a new purpose needs no migration (D-20) |
-| display_order | INTEGER | NOT NULL, ≥ 0. UNIQUE `(entry_id, display_order)` DEFERRABLE INITIALLY DEFERRED, so a reorder can swap positions in one transaction |
+| display_order | INTEGER | NOT NULL, ≥ 0. UNIQUE `(entry_id, display_order)` DEFERRABLE INITIALLY DEFERRED, so a reorder, a delete that closes a gap and an insert in the middle can pass through a moment of repeated positions inside one transaction. The service keeps an entry's values as `0, 1, 2, …` with no gap, under a lock on the entry's row (task 3.6) |
 | file_size_bytes | BIGINT | NOT NULL, > 0, ≤ 25 MB (service check) |
 | uploaded_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() |
 
-At most 20 media items per entry (service check, D-17).
+At most 20 media items per entry (service check, D-17). The checks of an upload are in API_CONTRACT (Media).
 
 ### `tags`
 The user's own categories for entries (D-26).
@@ -136,7 +136,7 @@ The user's own categories for entries (D-26).
 | created_at, updated_at | TIMESTAMPTZ | |
 
 ### `entry_tags`
-Links entries to tags. Owned through `entries`; the service checks the tag belongs to the same user. At most 20 tags per entry (service check).
+Links entries to tags. Owned through `entries`; `EntryService` checks that every tag in a request belongs to the entry's user (`404` otherwise) and takes a share lock on them (`SELECT ... FOR SHARE`), so a tag deleted at the same moment can't break the foreign key. At most 20 tags per entry: the `tagIds` of the entry requests are limited to 20 as sent (task 3.8); the database does not enforce it.
 
 | Column | Type | Constraints and notes |
 |---|---|---|
@@ -311,14 +311,15 @@ Each Phase 1 table has one JPA entity, in the feature package named in [TECH_STA
 | `users` | `User` | `TimestampedEntity` | |
 | `eras` | `Era` | `TimestampedEntity` | `cover_media_id` is a plain `UUID` |
 | `templates` | `Template` | `TimestampedEntity` | `subheadings` is a `List<String>` with `@JdbcTypeCode(SqlTypes.JSON)` |
-| `weekly_logs` | `WeeklyLog` | `TimestampedEntity` | `is_closed` is the field `closed`; `start_date` and `end_date` are never updated |
+| `weekly_logs` | `WeeklyLog` | `TimestampedEntity` | `is_closed` is the field `closed`; `start_date` and `end_date` are never updated; `@DynamicUpdate`, so an `UPDATE` writes only the columns that changed (the title and the closed flag are saved by separate requests and the row has no `@Version`) |
 | `entries` | `Entry` | `TimestampedEntity` | `content_json` is a Jackson 3 `JsonNode` (`@JdbcTypeCode(SqlTypes.JSON)`); `version` is `@Version` (D-23); `@SQLRestriction("deleted_at IS NULL")` hides Recently deleted entries (D-30); `media` and `tags` below |
 | `media` | `Media` | `BaseEntity` | No `created_at` or `updated_at` (D-12); `uploaded_at` is `@CreationTimestamp`; `entry` is a `LAZY` `@ManyToOne`; `purpose` and `media_type` are strings checked in the service |
-| `tags` | `Tag` | `TimestampedEntity` | |
-| `entry_tags` | no entity | | `Entry.tags` is a `@ManyToMany` through this table. Hibernate writes only `entry_id` and `tag_id`, so `source` (`'USER'`) and `created_at` come from their column defaults. Phase 4 needs an `EntryTag` entity to record `'AI'` |
+| `tags` | `Tag` | `TimestampedEntity` | `Tag.BY_NAME` is the list order, sorted in Java (`NameCollation`, shared with templates). `TagRepository.insertIfAbsent` is a native `INSERT ... ON CONFLICT (user_id, lower(name)) DO NOTHING` (the create path); the lookup by name is `lower(name) = lower(:name)`, the expression of `uq_tags_user_name`; `findAndLockByIdInAndUserId` adds `FOR SHARE`. `EntryRepository.countOpenEntriesByTag` counts the entries per tag, leaving out sealed ones in the query (task 3.8) |
+| `entry_tags` | no entity | | `Entry.tags` is a `@ManyToMany` through this table. Hibernate writes only `entry_id` and `tag_id`, so `source` (`'USER'`) and `created_at` come from their column defaults. The entry owns the collection, so a changed set raises `entries.version` and moves `updated_at`, and an unchanged set writes nothing (tested). Phase 4 needs an `EntryTag` entity to record `'AI'` |
 
-- `user_id`, `weekly_log_id`, `template_id`, `reply_to_entry_id` and `cover_media_id` are plain `UUID` fields, not associations. The only associations are `Entry.media` (`@OneToMany`, `@OrderBy("displayOrder ASC")`, `@BatchSize(50)`, no cascade), `Media.entry` and `Entry.tags` (`@BatchSize(50)`).
-- Deleting an entry (the sweep, or erase) deletes one `entries` row and leaves its `media` rows to the foreign key's `ON DELETE CASCADE` (a test shows Hibernate never touches `media`). Its `entry_tags` rows go by cascade or by a Hibernate `delete from entry_tags` (not asserted by a test; the result is the same).
+- `user_id`, `weekly_log_id`, `template_id`, `reply_to_entry_id` and `cover_media_id` are plain `UUID` fields, not associations. The only associations are `Entry.media` (`@OneToMany`, `@OrderBy("displayOrder ASC")`, `@BatchSize(50)`, no cascade), `Media.entry`, `Entry.tags` (`@BatchSize(50)`) and `Entry.replies` (task 3.13: a read-only `@OneToMany` on the same `reply_to_entry_id` column, `insertable = false, updatable = false`, so the link is still written through the plain field).
+- **Reading Recently deleted (task 3.11).** `Entry` hides its deleted rows from JPQL and derived queries, so the five reads of them are native queries in `EntryRepository`: one entry (`findDeletedByIdAndUserId`), the same locked with `FOR NO KEY UPDATE` for restore and erase (`findDeletedForUpdateByIdAndUserId`), a page of the user's list (`findDeletedPageByUserId`, `deleted_at DESC, id DESC`), the ids older than a cutoff across all users (`findDeletedIdsBefore`, the only one with no `user_id`: the sweep has no request) and one entry still older than the cutoff, locked with `FOR NO KEY UPDATE SKIP LOCKED` (`findDeletedForSweep`). The two by-id reads and `findDeletedForSweep` look up by primary key, and the user's page is served by the partial index `idx_entries_deleted`. The sweep's id list (`findDeletedIdsBefore`) has no `user_id`, so it cannot seek on that index, which leads with `user_id`; it reads the small partial index, which holds only deleted rows (never more than about 30 days of them, as the sweep erases the rest), and needs no index of its own. No `EXPLAIN` was recorded for these queries. The lock does not change the row, so it neither raises `version` nor moves `updated_at`; restoring does both, as it is an ordinary save of the entity.
+- Deleting an entry (the sweep, or erase) deletes one `entries` row and leaves its `media` rows to the foreign key's `ON DELETE CASCADE` (a test shows Hibernate never touches `media`). A query that finds an entry's media rows through the entry, JPQL or a derived finder, also applies the entry's `@SQLRestriction`, so it finds none for an entry in Recently deleted; `EntryErasure` reads the keys with a native query for that reason (task 3.6). Its `entry_tags` rows go by cascade or by a Hibernate `delete from entry_tags` (not asserted by a test; the result is the same). Deleting a *tag* is only `delete from tags`: `Tag` has no collection of entries, so the `entry_tags` rows go by the foreign key's cascade and no entry row is written (`TagEndpointTest` asserts both).
 - A text column that the schema constrains in length (`VARCHAR(150)` for a title) is only checked by the database and the service; the entity records the length for readers but Hibernate doesn't enforce it.
 
 ---

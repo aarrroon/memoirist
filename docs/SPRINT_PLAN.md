@@ -110,7 +110,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 ### Sprint 3: Phase 1 API
 
-- [ ] **3.1 Storage service**
+- [x] **3.1 Storage service**
   - **Read:** TECH_STACK §2 (Storage), D-03, D-17.
   - **Do:**
     - `StorageService`: put, delete and presign, with `S3Client` using `endpoint` and `S3Presigner` using `public-endpoint`.
@@ -119,12 +119,12 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - After-commit object deletion.
   - **Done when:** a Testcontainers test (SeaweedFS) uploads, presigns (URL host = public endpoint; GET returns the bytes) and deletes.
 
-- [ ] **3.2 `/users/me`**
+- [x] **3.2 `/users/me`**
   - **Read:** D-07, API_CONTRACT §Users.
   - **Also decide:** what a well-formed `X-Dev-User-Id` naming a user who isn't there does when a create inserts a row (foreign key error or `404`); see API_CONTRACT (Who is the current user?).
   - **Done when:** tests prove GET and PATCH work; an unknown timezone returns `400`; a `displayName` that is blank or over 100 characters returns `400`. (`birthday` is task 3.13.)
 
-- [ ] **3.3 Eras CRUD** (`/new-endpoint`)
+- [x] **3.3 Eras CRUD** (`/new-endpoint`)
   - **Read:** D-22, API_CONTRACT §Eras.
   - **Done when:** every row of API_CONTRACT §Eras works and is tested (soundtracks are tested in 3.14 and covers in 3.15), including:
     - another user's era returns `404`
@@ -134,10 +134,10 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - `GET /eras/{id}` counts only the entries inside its dates, so an Era from Saturday to Sunday doesn't count the rest of the week; sealed entries and entries in Recently deleted aren't counted (D-10, D-30)
     - a week's `eras` list puts pinned Eras first, then the latest start (D-22)
 
-- [ ] **3.4 Templates CRUD** (`/new-endpoint`)
+- [x] **3.4 Templates CRUD** (`/new-endpoint`)
   - **Done when:** every row of §Templates works and is tested; subheading limits are enforced.
 
-- [ ] **3.5 Entries: create, read, update, delete, seal, redaction**
+- [x] **3.5 Entries: create, read, update, delete, seal, redaction**
   - **Read:** D-05, D-08, D-09, D-10, D-12, D-30, API_CONTRACT §Entries.
   - **Do:** `WeekCalendar` (weeks always start on Monday, D-08), `EntryContentValidator`, `ContentTextExtractor`, `EntryMapper` (the only Entry→DTO path), and `EntryService` seal rules.
   - **Done when:** tests prove:
@@ -155,26 +155,26 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - another user's entry returns `404`
     - replaying an existing ID returns `200`; another user's ID, or one in Recently deleted, returns `409`
 
-- [ ] **3.6 Media**
+- [x] **3.6 Media**
   - **Read:** API_CONTRACT §Media, D-17, D-20.
   - **Do:** upload (type, size, count and `purpose` checks), reorder (deferrable unique), delete with gap closing, and stored-file cleanup when an entry is erased (D-30).
   - **Done when:** tests cover the `415`, `413`, item-limit and sealed (`409`) cases; a `PAGE_SCAN` that isn't an image (`415`) and an unknown purpose (`400`); a reorder swap; and stored objects disappearing after deleting a media item and after erasing an entry, while deleting an entry keeps them (D-30).
 
-- [ ] **3.7 Weekly logs and feed**
+- [x] **3.7 Weekly logs and feed**
   - **Read:** API_CONTRACT §Feed and §Weekly logs, TECH_STACK §2 (Weeks and the feed), D-22.
   - **Done when:**
     - the feed and week detail (`GET /weekly-logs/{id}`) show sealed entries redacted (D-10)
     - the feed returns only non-empty weeks, newest first, with their Eras and redacted entries; entries in Recently deleted don't count, so a week whose entries are all deleted is left out (D-30)
     - the query count for a page doesn't grow with the number of entries or media (assert with Hibernate statistics)
     - PUT (the title), close and reopen work
-    - a week's `eras` are every Era whose dates overlap it, latest start first, and change as soon as an Era's dates change (D-22)
+    - a week's `eras` are every Era whose dates overlap it, pinned first and then latest start, via `WeekEras.of` (built in 3.3), and change as soon as an Era's dates change (D-22)
 
-- [ ] **3.8 Tags** (`/new-endpoint`)
+- [x] **3.8 Tags** (`/new-endpoint`)
   - **Read:** D-10, D-26, API_CONTRACT §Tags and §Entries.
   - **Do:** tag CRUD; `tagIds` on `POST` and `PUT /entries`; `tags` on `Entry` through `EntryMapper`.
   - **Done when:** tests prove tags are scoped to the user; names are unique ignoring case (creating a duplicate returns the existing tag); renaming to an existing name is `409`; deleting a tag untags its entries; more than 20 tags is `400`; another user's tag ID is `404`; a sealed entry's tags are hidden and can't be changed (`409`); and `entryCount` doesn't count sealed entries.
 
-- [ ] **3.9 Entry list for the timeline**
+- [x] **3.9 Entry list for the timeline**
   - **Read:** D-10, D-24, D-25, API_CONTRACT §EntrySummary and `GET /entries`.
   - **Do:** `GET /entries` with paging and an optional `tagId`, returning `EntrySummary` rows with `title`, `previewLine`, media counts, `firstMediaKind` and tags.
   - **Done when:** tests prove:
@@ -185,14 +185,14 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - a sealed entry's title, preview, counts, media kind and tags are hidden
     - the query count per page doesn't grow with the number of entries
 
-- [ ] **3.10 Opened Loot Drops**
+- [x] **3.10 Opened Loot Drops**
   - **Read:** D-10, API_CONTRACT §Entries.
   - **Do:** `GET /entries/opened` and `POST /entries/{entryId}/mark-seen`; sealing an entry clears `unlock_seen_at`.
   - **Done when:** tests with a fixed `Clock` prove an entry appears once its unlock time passes, disappears after mark-seen, appears again after being sealed and unlocking again, and never appears while sealed (mark-seen returns `409`); another user's entry returns `404`.
 
-- [ ] **3.11 Recently deleted** (D-30, `/new-endpoint`)
+- [x] **3.11 Recently deleted** (D-30, `/new-endpoint`)
   - **Read:** D-30, API_CONTRACT §Entries.
-  - **Do:** `GET /entries/deleted`, `POST /entries/{entryId}/restore` and `/erase`, and a sweep that erases entries deleted more than 30 days ago, with their stored files. The sweep is a service method that is safe to repeat; a daily `@Scheduled` job only calls it, so Sprint 5 can start it another way (Q5).
+  - **Do:** (erase and the sweep must call `EntryErasure.erase(entry)` inside a transaction, and read an entry's media with native queries only: TECH_STACK Storage, DATABASE_SCHEMA entity notes.) `GET /entries/deleted`, `POST /entries/{entryId}/restore` and `/erase`, and a sweep that erases entries deleted more than 30 days ago, with their stored files. The sweep is a service method that is safe to repeat; a daily `@Scheduled` job only calls it, so Sprint 5 can start it another way (Q5).
   - **Done when:** tests with a fixed `Clock` prove:
     - a deleted entry is left out of the feed, its week, the timeline, tag counts and filters, and the Opened strip, and comes back in all of them when restored
     - restoring keeps its media, tags and seal, and a sealed entry stays redacted in the list
@@ -200,7 +200,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - an empty entry is erased at once and never listed
     - restore and erase return `404` for an entry that isn't in Recently deleted, or is another user's
 
-- [ ] **3.12 On this day** (D-32, `/new-endpoint`)
+- [x] **3.12 On this day** (D-32, `/new-endpoint`)
   - **Read:** D-10, D-30, D-32, API_CONTRACT §Entries.
   - **Do:** `GET /entries/on-this-day`: the user's entries from the same day and month in earlier years, newest year first, as `EntrySummary` rows.
   - **Done when:** tests with a fixed `Clock` prove:
@@ -210,7 +210,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - "the same day" follows the user's timezone
     - another user's entries never appear
 
-- [ ] **3.13 Loot Drop replies and the birthday** (D-33, `/new-endpoint`)
+- [x] **3.13 Loot Drop replies and the birthday** (D-33, `/new-endpoint`)
   - **Read:** D-10, D-33, API_CONTRACT §Users and §Entries.
   - **Do:** `birthday` on `GET` and `PATCH /users/me`; `replyToEntryId` on `POST` and `PUT /entries`; `replyToEntryId` and `replyIds` on `Entry`.
   - **Done when:** tests prove:
@@ -220,7 +220,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - a birthday in the future is `400`
     - a sealed reply is redacted like any entry
 
-- [ ] **3.14 Soundtracks and Spotify search** (D-35, `/new-endpoint`)
+- [x] **3.14 Soundtracks and Spotify search** (D-35, `/new-endpoint`)
   - **Read:** D-29, D-35, API_CONTRACT §Entries, §Weekly logs, §Eras and §Music.
   - **Do:**
     - `soundtrack` (a checked Spotify URI) on entries, weeks and Eras.
@@ -234,7 +234,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - the token is fetched once and reused
     - search terms appear in none of our URLs and in no log line, including `RestClient` request logging (the call to Spotify itself carries them, over HTTPS)
 
-- [ ] **3.15 Era covers** (D-36)
+- [x] **3.15 Era covers** (D-36)
   - **Read:** D-10, D-30, D-36, API_CONTRACT §Eras.
   - **Do:** `coverMediaId` on `POST` and `PUT /eras`, and a presigned `cover` on the Era shape.
   - **Done when:** tests prove:
@@ -242,12 +242,12 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - the cover is hidden while its entry is sealed or in Recently deleted
     - removing the photo clears the cover
 
-- [ ] **3.16 Local sample content**
+- [x] **3.16 Local sample content**
   - **Read:** D-11, TECH_STACK §2 (Profiles).
   - **Do:** a seeder that runs only in the `local` profile, behind a property (for example `memoirist.sample-content=true`). It creates overlapping Eras, tags, a template and a few weeks of entries: one started from the template, a backdated diary page, a photo-only entry, a sealed Loot Drop, an entry with a soundtrack and an entry in Recently deleted, and one Era has a cover. A few generated placeholder images are uploaded through `StorageService`. Running it twice changes nothing.
   - **Done when:** on an empty local database with the property on, `GET /feed` returns the sample content, and a test proves the seeder bean doesn't exist in the `test` profile.
 
-- [ ] **3.17 API review**
+- [x] **3.17 API review**
   - **Do:** run `/sync-docs`; check that every endpoint has its tag and documented error responses in Swagger.
   - **Done when:** no drift remains between `/v3/api-docs` and API_CONTRACT.md.
 
@@ -377,7 +377,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 - [ ] **5.3 Share links.** Hashed tokens, expiry and revoke; a public read-only view with redaction. **Done when:** a test proves a share link to a week containing a sealed entry never exposes that entry's content or media.
 - [ ] **5.4 PDF export of a week** (per Q4).
 - [ ] **5.5 Account export and deletion** (per Q3), including stored files.
-- [ ] **5.6 Production deploy.** Neon, R2 (private bucket), Render (Docker, health check `/actuator/health`), Vercel (with an `/api` rewrite), environment secrets. **Done when:** the deployed app passes the Playwright smoke test.
+- [ ] **5.6 Production deploy.** Neon, R2 (private bucket), Render (Docker, health check `/actuator/health`), Vercel (with an `/api` rewrite), environment secrets. **Read:** TECH_STACK §2 (Storage). **Also check against the real R2 bucket** (handed on from 3.1): whether uploads work with and without the `WHEN_REQUIRED` checksum setting in `StorageConfiguration`, and whether R2 needs `S3Configuration.chunkedEncodingEnabled(false)`. **Done when:** the deployed app passes the Playwright smoke test and a photo uploads, presigns and deletes against R2.
 - [ ] **5.7 Unlock emails** (D-10). An email when a Loot Drop opens, on by default with a setting to turn it off. It needs the email service from Q2 and the job approach from Q5. **Done when:** a test with a fixed `Clock` sends one email per unlocked entry, never before it unlocks and never twice.
 - [ ] **5.8 Installable app** (D-31; ask before adding `vite-plugin-pwa`, D-13). A web app manifest, icons and a service worker that caches the app shell, so memoirist installs to the home screen and opens full-screen. Offline writing stays in Phase 5. **Done when:** Chrome's install check passes on the deployed app, and it installs and opens full-screen on an Android phone and through Safari's *Add to Home Screen* on an iPhone.
 - [ ] **5.9 App lock** (D-37; the mechanism comes from Q2). An optional lock in Settings: it locks after a few minutes in the background and unlocks with the device's fingerprint, face or passcode (WebAuthn) or a PIN. **Done when:** with the lock on, coming back after the timeout shows only the lock screen until it's unlocked; nothing from the journal shows behind it; and turning it off removes it.

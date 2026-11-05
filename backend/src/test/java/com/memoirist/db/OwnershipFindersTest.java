@@ -97,8 +97,8 @@ class OwnershipFindersTest {
 
         assertThat(templates.findByIdAndUserId(template.getId(), alice.getId())).isPresent();
         assertThat(templates.findByIdAndUserId(template.getId(), bob.getId())).isEmpty();
-        assertThat(templates.findByUserIdOrderByNameAsc(bob.getId())).isEmpty();
-        assertThat(templates.findByUserIdOrderByNameAsc(alice.getId())).hasSize(1);
+        assertThat(templates.findByUserId(bob.getId())).isEmpty();
+        assertThat(templates.findByUserId(alice.getId())).hasSize(1);
     }
 
     @Test
@@ -128,9 +128,10 @@ class OwnershipFindersTest {
 
         assertThat(tags.findByIdAndUserId(work.getId(), alice.getId())).isPresent();
         assertThat(tags.findByIdAndUserId(work.getId(), bob.getId())).isEmpty();
-        assertThat(tags.findByUserIdOrderByNameAsc(alice.getId()))
+        assertThat(tags.findByUserId(alice.getId()))
+                .as("only Alice's two tags, not Bob's Work")
                 .extracting(Tag::getName)
-                .containsExactly("Family", "Work");
+                .containsExactlyInAnyOrder("Family", "Work");
         assertThat(tags.findByIdInAndUserId(List.of(work.getId(), family.getId(), bobsWork.getId()), alice.getId()))
                 .as("Bob's tag id in the list is dropped, so the service sees one id missing and answers 404")
                 .extracting(Tag::getId)

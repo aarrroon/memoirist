@@ -7,6 +7,14 @@ spring:
       - classpath:db/migration
       - classpath:db/seed-local
 
+  jpa:
+    properties:
+      hibernate:
+        # Hibernate counts the statements it prepares, so a test can assert how many queries a request made (the feed's
+        # "the count doesn't grow with the number of entries", FeedQueryCountTest). Off outside the test profile: this
+        # file never ships, and the counters cost a little on every statement.
+        generate_statistics: true
+
 # Test values. The host is reserved and never resolves (RFC 2606), so a test that forgets to start its own storage
 # fails everywhere instead of quietly using the SeaweedFS that Compose runs on a developer's machine.
 storage:
@@ -24,3 +32,9 @@ management:
     health:
       # Name each health check (db, diskSpace, …) in /actuator/health, so a test can see the database was checked.
       show-components: always
+
+# The daily Recently deleted sweep (RecentlyDeletedSweepJob) never starts by itself in a test: "-" is Spring's disabled
+# cron. The tests that are about the sweep call RecentlyDeletedSweeper.sweep() themselves, on a clock they move.
+memoirist:
+  recently-deleted:
+    sweep-cron: "-"
