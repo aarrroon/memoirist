@@ -56,7 +56,7 @@ com.memoirist
 ├── entry/         # Entry, EntryService + EntryController (create, read, edit, delete, seal: task 3.5), EntryListService (the list rows, task 3.9), EntryMapper (the ONLY Entry→DTO path), EntryContentValidator + ContentTextExtractor, EntrySeal (the one definition of sealed), opened Loot Drops (task 3.10), RecentlyDeletedService + RecentlyDeletedSweeper + RecentlyDeletedSweepJob (restore, erase and the 30-day sweep, task 3.11, D-30), `OnThisDay` (the day rule) and On this day in `EntryListService` (task 3.12, D-32), Loot Drop replies (D-33)
 ├── media/
 ├── storage/       # StorageService, StorageProperties, local bucket bootstrap
-└── dev/           # local-profile-only sample content (task 3.16)
+└── dev/           # SampleContentSeeder + PlaceholderImages: sample content for the dev user, local profile and memoirist.sample-content=true only (task 3.16)
 ```
 
 Each feature folder contains:
@@ -88,7 +88,7 @@ Exact versions are pinned in `backend/build.gradle.kts`, and Gradle's own in `ba
 ### Profiles
 | Profile | Used for | Notable settings |
 |---|---|---|
-| `local` | Running on your machine against Docker Compose | Imports `../.env`; Flyway locations `db/migration` + `db/seed-local`; dev-header user provider; creates the bucket at startup if missing (`BucketBootstrap`; the app stops if storage can't be reached); optional sample content (task 3.16) |
+| `local` | Running on your machine against Docker Compose | Imports `../.env`; Flyway locations `db/migration` + `db/seed-local`; dev-header user provider; creates the bucket at startup if missing (`BucketBootstrap`; the app stops if storage can't be reached); optional sample content: `SampleContentSeeder` (task 3.16), only with `memoirist.sample-content=true` (`.env`: `MEMOIRIST_SAMPLE_CONTENT`) |
 | `test` | Testcontainers integration tests | Same Flyway locations as `local`; dev-header provider |
 | `prod` | Phase 2 deployment | Flyway `db/migration` only; JWT provider; R2 settings from the environment |
 
@@ -98,6 +98,8 @@ Exact versions are pinned in `backend/build.gradle.kts`, and Gradle's own in `ba
 - `src/test/resources/application-test.yml` holds the test values. It stays out of the app's jar. The database comes from Testcontainers, so it sets no datasource.
 - `prod` (Phase 2) then needs no mapping: its environment provides the same variable names.
 - **Precedence**, highest first: command-line arguments, Java system properties (`-D`), the OS environment, `.env`, the profile file, `application.yml`. A list such as `spring.flyway.locations` is replaced by the profile's, never merged with the shorter list below it.
+
+**Sample content (task 3.16, `dev/`):** `SampleContentSeeder` is an `ApplicationRunner` that exists only with `@Profile("local")` and `memoirist.sample-content=true` (`application-local.yml` reads it from `MEMOIRIST_SAMPLE_CONTENT`, default `false`). It writes for the dev user through repositories, `WeekService` and `StorageService`, not through the services, because those ask `CurrentUserProvider` for the caller and a startup job has no request; it validates its captions with `EntryContentValidator` and the tests read the result back through the API. It stores the generated pictures first (`PlaceholderImages`, `java.awt` PNGs with no text, so no font is needed), under keys made from name-based UUIDs, then writes every row in one transaction. It does nothing when the dev user owns any entry (Recently deleted included, found with SQL because `@SQLRestriction` hides them from JPA), Era, tag or template, so running it twice changes nothing. Dates are counted back from the user's today. It calls `BucketBootstrap.ensureBucket()` first, because two runners have no promised order.
 
 ### Cross-cutting rules (details in `.claude/rules/`)
 - **Time:**

@@ -11,3 +11,8 @@ spring:
     locations:
       - classpath:db/migration
       - classpath:db/seed-local
+
+# Sample content for building the UI (task 3.16, docs/DEVELOPMENT.md). Off unless MEMOIRIST_SAMPLE_CONTENT=true is in .env,
+# the environment or the command line (--memoirist.sample-content=true). SampleContentSeeder exists only when this is true.
+memoirist:
+  sample-content: ${MEMOIRIST_SAMPLE_CONTENT:false}

@@ -242,7 +242,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - the cover is hidden while its entry is sealed or in Recently deleted
     - removing the photo clears the cover
 
-- [ ] **3.16 Local sample content**
+- [x] **3.16 Local sample content**
   - **Read:** D-11, TECH_STACK §2 (Profiles).
   - **Do:** a seeder that runs only in the `local` profile, behind a property (for example `memoirist.sample-content=true`). It creates overlapping Eras, tags, a template and a few weeks of entries: one started from the template, a backdated diary page, a photo-only entry, a sealed Loot Drop, an entry with a soundtrack and an entry in Recently deleted, and one Era has a cover. A few generated placeholder images are uploaded through `StorageService`. Running it twice changes nothing.
   - **Done when:** on an empty local database with the property on, `GET /feed` returns the sample content, and a test proves the seeder bean doesn't exist in the `test` profile.
