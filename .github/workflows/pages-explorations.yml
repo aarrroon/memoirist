@@ -1,0 +1,42 @@
+# Temporary: publishes the design explorations to GitHub Pages. It runs only when started by hand
+# (Actions > Publish design explorations > Run workflow). Remove this file and turn Pages off when the
+# review is over. Actions are pinned to commit SHAs, as in ci.yml.
+name: Publish design explorations
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-explorations
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Check out the branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      # The whole explorations folder goes up, not just round-2: the round 2 pages load ../../shared/,
+      # and the relative paths only work when the folder keeps its shape.
+      - name: Upload the explorations folder
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: docs/design/explorations
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
