@@ -41,6 +41,7 @@ paths:
 - **Voice notes:** `MediaRecorder` with the first supported of `audio/webm;codecs=opus` and `audio/mp4`.
 
 ## Styling and accessibility
+- One design system (D-40): its tokens, limits and after-every-fix check are in `design.md`, which loads with this file. Tokens only; no hex value, font name or one-off size in a component.
 - Tailwind v4 uses a CSS-first config (`@theme` in `src/index.css`); there is no `tailwind.config.js`. Import Motion from `motion/react`.
 - Honour `prefers-reduced-motion`.
 - Every interactive element is reachable by keyboard and has an accessible name. The carousel works with arrow keys. Contrast meets WCAG AA.

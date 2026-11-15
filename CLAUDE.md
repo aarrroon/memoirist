@@ -15,30 +15,44 @@ A private journaling PWA: an Instagram-style feed of your own entries that files
 
 ## Current focus
 **Phase 1, Sprint 4. Next task: 4.1** (Scaffold the frontend).
+- Sprints 1–3 are built: the whole Phase 1 API (37 endpoints, about 1,600 tests). `frontend/` doesn't exist until task 4.1.
 - Progress is tracked by the checkboxes in `docs/SPRINT_PLAN.md`. Update this line when a task is ticked; a Stop hook checks it.
 - Build only what the current phase needs. Don't add tables, endpoints or libraries from later phases.
 
+## How it's built
+- **Backend:** Spring Boot 4.1 on Java 25, one package per feature. A request goes `XController` (HTTP only) → `XService` (transaction, ownership, rules, mapping to DTO records) → `XRepository` (user-scoped finders only).
+- **Data:** Postgres 17, changed only by Flyway migrations (`ddl-auto=validate`). Files go to S3-style storage (SeaweedFS locally, R2 in Phase 2) through `StorageService` only; the database holds object keys.
+- **Errors:** services throw the domain exceptions in `common/`; one `GlobalExceptionHandler` turns them into RFC 9457 problems (`urn:memoirist:problem:<suffix>`).
+- **Frontend (Sprint 4):** React 19, Vite, TypeScript, Tailwind v4. API types are generated from `/v3/api-docs`; TanStack Query owns server data; Zustand holds UI state only. The library list is D-13.
+- **Tests:** mostly integration tests against real Postgres (Testcontainers); CI runs `./gradlew build` on every push to `main` or `phase-*`.
+
 ## Repo layout
-| Path | What | Created in |
-|---|---|---|
-| `backend/` | Spring Boot 4 API, Java 25, Gradle Kotlin DSL, package `com.memoirist` | Sprint 2 |
-| `frontend/` | React 19 + Vite + TypeScript + Tailwind v4 | Sprint 4 |
-| `docker-compose.yml` | Postgres 17 (pgvector image) on :5432; SeaweedFS S3 on :8333 (filer UI :8888) | Sprint 1 (task 1.3) |
-| `docs/` | Specs (see doc map below) | — |
-| `.claude/` | `settings.json`, path-scoped `rules/`, `skills/`, `agents/`, `hooks/` | — |
+| Path | What |
+|---|---|
+| `backend/src/main/java/com/memoirist/<feature>/` | `common`, `user`, `era`, `template`, `tag`, `music`, `week`, `entry`, `media`, `storage`, `dev`; DTO records in each `dto/` |
+| `backend/src/main/resources/` | `application.yml`, `application-local.yml`, `db/migration/V{n}__*.sql`, `db/seed-local/` (dev user; `local` and `test` only) |
+| `backend/src/test/java/com/memoirist/` | Tests beside the code they test. Shared helpers at the top: `@IntegrationTest`, `Fixtures`, `MutableClockConfiguration`, `SeaweedFsTestConfiguration` |
+| `frontend/` | From task 4.1: `src/api`, `src/features/<feature>`, `src/components/ui`, `src/lib`, `src/stores` |
+| `docker-compose.yml` | Postgres 17 (pgvector image) on :5432; SeaweedFS S3 on :8333 (filer UI :8888) |
+| `docs/` | Specs (doc map below); `build-journal/` records how each task was built; `design/explorations/` holds the design rounds |
+| `.claude/` | `settings.json`, path-scoped `rules/`, `skills/`, `agents/`, `hooks/`, `output-styles/` |
+| `.github/workflows/ci.yml`, `.env.example` | CI (backend job); the names of every environment variable |
 
 ## Commands
-Run these from the repo root in Git Bash on Windows. Each one exists from the sprint shown. The full list, ports and troubleshooting are in `docs/DEVELOPMENT.md`; when a command changes, update both.
+Run these from the repo root in Git Bash on Windows. The full list, ports and troubleshooting are in `docs/DEVELOPMENT.md`; when a command changes, update both.
 
 ```bash
-docker compose up -d                                                      # 1.3: data services
-cd backend && ./gradlew bootRun --args='--spring.profiles.active=local'   # 2.1: API on :8080, /swagger-ui.html
-cd backend && ./gradlew test                                              # 2.1: Testcontainers needs Docker running
-cd backend && ./gradlew spotlessApply                                     # 2.1: format Java
+docker compose up -d                                                      # data services; needed by bootRun, not by the tests
+cd backend && ./gradlew bootRun --args='--spring.profiles.active=local'   # API on :8080, /swagger-ui.html (reads ../.env, so start it in backend/)
+cd backend && ./gradlew test                                              # Testcontainers needs Docker running
+cd backend && ./gradlew test --tests '*EntryEndpointTest'                 # one class
+cd backend && ./gradlew spotlessApply                                     # format Java; run it before build
+cd backend && ./gradlew build                                             # compile, format check, every test: what CI runs (2 to 9 minutes)
 cd frontend && npm run dev                                                # 4.1: :5173, proxies /api to :8080
 cd frontend && npm test && npm run lint && npm run typecheck              # 4.1
 cd frontend && npm run gen:api                                            # 4.2: regenerate API types (backend must be running)
 ```
+Add `--memoirist.sample-content=true` to the `bootRun` arguments to fill an empty dev journal (task 3.16).
 
 ## Doc map: read what the task needs, not everything
 | When you are… | Read |
@@ -52,9 +66,9 @@ cd frontend && npm run gen:api                                            # 4.2:
 | Unsure *how* or *why* something works, or docs disagree | `docs/DECISIONS.md` (wins on how; open questions are at the end) |
 | Working on product behaviour or UX | `docs/PRD.md` (glossary in §3) |
 | Building a screen, or writing an end-to-end test | `docs/USER_FLOWS.md` (draft; flow IDs `F-xx` name the Playwright tests) |
+| Wondering how an earlier task solved something | `docs/build-journal/sprint-N/` (each sprint's README ends with its lessons) |
 
-`docs/product/` is market research. Don't load it for coding.
-`docs/design/` holds design work. Until `docs/design/DESIGN.md` exists, it's only early options (`DIRECTIONS.md`); don't build UI from them.
+`docs/product/` is market research and `docs/marketing/` is a pitch. Don't load them for coding.
 
 ## Non-negotiables
 Details live in `.claude/rules/`, which load when you touch matching files.
@@ -67,14 +81,75 @@ Details live in `.claude/rules/`, which load when you touch matching files.
 7. **`X-Dev-User-Id` works only in the `local` and `test` profiles.**
 8. **Secrets live in `.env`.** Never read it, print it or commit it; `.env.example` lists the variable names.
 
+## Coding rules (the short version of `.claude/rules/`)
+- **Contract first.** Change `docs/API_CONTRACT.md` or `docs/DATABASE_SCHEMA.md` before or with the code. Paths are `/api/v1/<plural>`; `201` create, `200` read or update, `204` delete; `PUT` is a full replace.
+- **Java:** DTOs are records with Jakarta validation. No Lombok, no MapStruct, no scattered `@Value` (use `@ConfigurationProperties` records). Format is palantir-java-format, 4 spaces, 120 columns.
+- **Services** are `@Transactional` (`readOnly = true` for reads) and map to DTOs inside the transaction, because open-in-view is off. Controllers never touch a repository.
+- **Persistence:** every association is `LAZY`; never fetch-join two collections; for a page, load the IDs, then the children with `IN (…)`. Read a row a request refers to with a lock (`FOR SHARE`), so a delete at the same moment gives `404`, not `500`.
+- **Responses:** `PageResponse`, never a Spring `Page`; an out-of-range `size` or `page` is `400`, not a silent clamp. Nothing the client sent comes back in `detail` or `fieldErrors`. Free text the user types goes in request bodies, never in URLs or logs.
+- **Tests:** every endpoint gets the happy path, `400`, `404` for another user's resource, and `409 entry-sealed` where sealing applies. Pure logic gets plain unit tests with a fixed `Clock`.
+- **Frontend:** generated types only (`npm run gen:api`); components use Query hooks, never `fetch`; `staleTime` is 30 minutes or less (presigned URLs last 60); all dates go through `src/lib/time.ts`; TipTap uses StarterKit and Link only.
+- **Comments** say why, and name the decision (D-xx) or task they come from.
+
+## Design rules
+**One design system (D-40): one spacing scale, two typefaces at most, one accent colour.** The checkable rules, the token defaults and the check to run after every fix are in `.claude/rules/design.md`, which loads when you touch `frontend/`. The reasons are in `docs/design/explorations/round-2/AUDIT.md`: the ten things that made the mockups look cheap.
+
+No look is chosen yet: `docs/design/DESIGN.md` doesn't exist, and `docs/design/explorations/` holds two rounds of mockups (feedback in `FEEDBACK.md`). Never copy a mockup into `frontend/`. What is settled:
+- **Spacing:** 4, 8, 12, 16, 24, 32, 48 or 64 px for every padding, margin and gap. One 16 px gutter on phones. Tap targets are at least 44×44 px, and nothing scrolls sideways at 375 px.
+- **Type:** two typefaces at most, seven text sizes, nothing under 12 px, no condensed poster type, no emoji. The pairing isn't chosen.
+- **Colour:** a neutral base and one accent, on actions and Loot Drops only. No orange, no second accent (the Loot Drop uses the accent, and the Spotify mark is black or white), no page filled with saturated colour. Candidate palettes are in `FEEDBACK.md`; none is final.
+- **Light and dark:** each mode is designed on its own, never inverted. Dark is dark grey, not black, with off-white text and a softer accent.
+- **Shape:** two corner radii plus full. Boxes nest two deep at most.
+- **First screen:** on a phone the first entry's photo starts no lower than 35% down the feed, so On this day, the Era and the week stay compact (D-25).
+- **Components:** dialogs, menus, popovers and tabs are shadcn/ui copied into `src/components/ui/` and rewritten to the tokens; icons are `lucide-react` only; capture is a Vaul sheet on phones and a dialog on laptops. One Write button, in the centre of the phone tab bar: a plus or a word, never a pencil, never floating over text. It opens New entry, Photo dump and Diary page.
+- **Loot Drops:** a sealed card has a fixed size and shows only its memory date, opening date and countdown. The page says the opening date once. Its waiting object is one approved drawing: never improvised, never a padlock, pill or capsule (D-39).
+- **Never:** streaks, calendar grids or anything that shows the days with no entry (D-32); film, tape or school-paper props; a fact repeated on one screen; labels that aren't the PRD §3 words (Eras, weeks, entries, Opens, Written).
+- **Also:** contrast is WCAG AA (text 4.5:1; control borders, meaningful graphics and large text 3:1); focus is visible; `prefers-reduced-motion` stops motion; fonts are served by the app; photos load lazily with their space reserved, and are shown whole in the entry view.
+- **Tokens only:** every colour, font, text size and radius is an `@theme` token in `src/index.css`. Never write a hex value, a font name or a one-off size in a component. If a task needs a look that isn't settled, ask.
+
+## Mistakes to avoid
+Each one happened, or nearly did, in Sprints 1–3.
+
+| Mistake | Do this instead |
+|---|---|
+| Copying a Spring Boot 3, Jackson 2 or JUnit 5 example | Boot 4 names: `spring-boot-starter-webmvc`, one `-test` starter per starter, `spring.web.error.*`, `RestTestClient`. Import Jackson 3 from `tools.jackson.databind` (annotations stay in `com.fasterxml.jackson.annotation`). Check context7 first |
+| A new entries query, count or filter that forgets the seal | Write `(e.unlockDate is null or e.unlockDate <= :now)` in the query itself (`unlock_date` in native SQL), and add a test that holds a sealed entry. In Java, `EntrySeal.isSealed` is the one definition |
+| Building an entry response by copying every field, then blanking some | Only `EntryMapper` builds one, from an allow-list of what a sealed entry may show. `EntryMapperIsTheOnlyPathTest` fails otherwise |
+| Forgetting that `Entry` has `@SQLRestriction("deleted_at IS NULL")` | JPQL never sees Recently deleted rows, even through a join. A native query on `entries` adds `deleted_at IS NULL` itself. Erase only through `EntryErasure`, or the files leak |
+| Adding `findById`, answering `403`, or taking a `userId` parameter | Repositories extend the bare `Repository<X, UUID>` and declare only user-scoped finders. Not owned is `404`. Every create calls `UserService.currentUser()` first |
+| "Today" from `Instant.now()`, the JVM's zone or the browser's zone | `LocalDate.now(clock.withZone(userZone))` on the server; `src/lib/time.ts` in the browser |
+| Treating `PUT` as a patch | An omitted field is cleared. Send every field every time: `version`, `tagIds`, `templateId`, `soundtrack`, `replyToEntryId`, and an Era's `coverMediaId` |
+| Fixing a schema error by editing `V1` or changing `ddl-auto` | A new migration (`/new-migration`), with the entity, `DATABASE_SCHEMA.md` and tests in the same change |
+| A response record not named `…Response`, or a nullable field without `@Schema(nullable = true)` | The generated TypeScript types would lie. Add the null case to `ApiDocsContractTest` |
+| H2 or mocks for a database rule, or trusting a test that passed first time | `@IntegrationTest` (real Postgres). Then break the rule on purpose (drop the seal clause, the lock, the user ID) and watch the test go red |
+| Reasoning from memory about a library, a query count or a query plan | Run it, or read the current docs through context7, and quote the output |
+| Logging an exception message, search words, entry text or a presigned URL | Log IDs and exception classes only (`ScrubbedException`). A Postgres error message can contain the whole entry |
+| Editing files with heredocs, `sed`, `perl` or `python3` | Use the Edit and Write tools. Working-tree files are CRLF, so a scripted edit can match nothing without saying so; read the file back |
+| Hand-written API types, `fetch` in a component, or server data in Zustand | `npm run gen:api`, the `openapi-fetch` client and TanStack Query hooks |
+| A one-off size, colour or corner in a component (`p-[13px]`, `text-[15px]`, a hex value), or a drawing improvised in JSX | Tokens only (D-40). The limits, and the check to run after each fix, are in `.claude/rules/design.md` |
+| Choosing silently when docs disagree, a Q-x is open, or a library isn't in D-13 | Stop and ask. Unattended: take the documented default and list it as an assumption |
+
 ## How to work here
 - Start each sprint task with `/implement-task <id>` in a fresh session (or after `/clear`). One task per session. It plans first and waits for approval.
+- Read narrowly: the task's block, the doc sections it names, and the D-entries those mention. Then read the code you will change before you change it.
 - Write tests with the change and run them before saying it's done. Report failures plainly, with output.
 - Ask before adding a dependency, deviating from the docs, or resolving a conflict between docs.
 - Ask the user to decide things as a short list of interactive questions (AskUserQuestion): each option with its trade-offs, and a recommended default based on stated reasons, not guesses. Record the answer with `/record-decision`.
 - When an endpoint, table or decision changes, update its doc in the same change (`/sync-docs` checks the code against the API and schema docs). After the README changes, run `/sync-readme`.
-- Commit only when asked. Use one commit per task, with the message `Sprint <id>: <summary>`.
+- Commit only when asked. Use one commit per task, with the message `Sprint <id>: <summary>` and no attribution lines. Never push to `main` and never force-push.
 - Spring Boot 4, Hibernate 7, Jackson 3, React 19, Tailwind v4 and TipTap 3 are newer than many examples. Check current docs (the context7 MCP) before using an API you're unsure of.
+
+## Before saying a task is done
+1. Every **Done when** item in the task's block was checked by running something, and the decisive output is quoted.
+2. Backend changed: `./gradlew spotlessApply`, then `./gradlew build` ends in `BUILD SUCCESSFUL` (Docker running). Frontend changed: `npm test && npm run lint && npm run typecheck && npm run build` all pass.
+3. Any new list, count, filter or lookup of entries has a test with a sealed entry, a Recently deleted entry and another user's entry in the data.
+4. The test for the main rule was seen to fail when the rule was removed.
+5. Docs changed with the code: `API_CONTRACT.md`, `DATABASE_SCHEMA.md`, `DECISIONS.md`, `TECH_STACK.md`, and `DEVELOPMENT.md` for a command. `/sync-docs` was run after endpoint or schema work.
+6. A screen passes `node docs/design/explorations/tools/audit.mjs <url>` (it loads the page at 375 px and 1440 px), and was looked at in light and dark, used by keyboard, and tried with reduced motion.
+7. No new dependency without approval; new environment variables are in `.env.example`; `git status` shows only files this task meant to change.
+8. The `spec-reviewer` subagent reviewed the change, and its blocker and major findings are fixed.
+9. The task is ticked in `docs/SPRINT_PLAN.md` and the Current focus line above names the next task.
+10. The summary says what changed, what was verified and how, what could not be run, and each practice block (file and line).
 
 ## Learning (the user's goal alongside shipping)
 The user wants to grow as an engineer while building this: better solution choices, new syntax and patterns, and reviewing code they didn't type. Details: `docs/LEARNING.md`.
@@ -96,6 +171,7 @@ The full toolkit, with when to use each, is in `docs/CURRENT_SKILLS.md`. When yo
 - `/record-decision [decision]`: record or update a D-entry, close its Q-x or G-xx, and update every doc that assumed otherwise.
 - `/review-with-me [scope]`: walk the user through a change, then quiz and grade their review.
 - `/teach [topic]`: a short lesson grounded in this codebase, with a tiny exercise.
+- `/ste [question | rewrite text | 90 question]`: answer or rewrite in "STE-80" (80% of ASD-STE100) with a learning frame: why, syntax to recall, design and review views, self-test.
 - `/log-learning [notes]`: add an entry to `docs/LEARNING_LOG.md` and update its skills tracker.
 - `spec-reviewer` subagent: read-only review of a change against the README, specs and rules. Use it after each task.
 - Hooks: a PreToolUse hook blocks edits to committed migrations; a Stop hook flags docs that lag behind the code, the README or the sprint plan; a SessionStart hook prints the next task and anything blocking it.

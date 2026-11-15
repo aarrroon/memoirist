@@ -16,7 +16,7 @@
 1. Build the same 3 screens in each direction (feed, capture modal, sealed Loot Drop card), with realistic sample entries: a Grampians trip, a sealed drop, a photographed diary page.
 2. Compare them side by side, on desktop and at phone width, in light and dark mode.
 3. Pick one, or mix them ("direction 2's fonts with direction 1's cards").
-4. Write `docs/design/DESIGN.md` from the result: colour and type tokens for Tailwind `@theme`, a screen list, states, motion rules, and accessibility checks.
+4. Write `docs/design/DESIGN.md` from the result: colour and type tokens for Tailwind `@theme`, a screen list, states, motion rules, and accessibility checks. It stays inside the limits of D-40: one spacing scale, two typefaces at most and one accent colour (`.claude/rules/design.md`).
 
 ## Ways to generate the mockups
 

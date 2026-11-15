@@ -253,15 +253,17 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 ### Sprint 4: React UI
 
+**Every screen task:** follow `.claude/rules/design.md` (D-40). Before ticking it, run `node docs/design/explorations/tools/audit.mjs <url>` on each screen the task built or changed, and quote the result at phone and laptop width.
+
 - [ ] **4.1 Scaffold the frontend**
-  - **Read:** TECH_STACK §3, D-13.
+  - **Read:** TECH_STACK §3, D-13, D-40.
   - **Do:**
     - Vite + React 19 + TypeScript in `/frontend`.
-    - Tailwind v4 (CSS-first config).
+    - Tailwind v4 (CSS-first config), with the design tokens from `.claude/rules/design.md` in `src/index.css` and Tailwind's default colours, fonts, text sizes, weights, radii and shadows removed (D-40).
     - ESLint + Prettier, Vitest + React Testing Library + MSW.
     - A Vite proxy from `/api` to `:8080`.
     - Scripts: `dev`, `build`, `test`, `lint`, `typecheck`, `gen:api`.
-  - **Done when:** `npm run build`, `npm test`, `npm run lint` and `npm run typecheck` all pass.
+  - **Done when:** `npm run build`, `npm test`, `npm run lint` and `npm run typecheck` all pass; the starter page uses only the tokens and passes the design check (`tools/audit.mjs`) at both widths.
 
 - [ ] **4.2 API client and data layer**
   - **Do:**
@@ -283,6 +285,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Done when:** the feed shows the local sample content (3.16); there are empty, loading and error states; component tests pass.
 
 - [ ] **4.5 Entry card**
+  - **Read:** D-40, Q30 (photo sizes; build its default unless it has been decided).
   - **Do:** an Embla carousel (images and an audio player; keyboard-operable) and a read-only caption rendered from JSON (no `dangerouslySetInnerHTML`).
   - **Done when:** component tests cover image-only, caption-only and mixed entries.
 

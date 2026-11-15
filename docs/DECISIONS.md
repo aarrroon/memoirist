@@ -47,6 +47,7 @@ Settled choices for memoirist, and the questions still open.
 | D-37 | App lock | 2026-10-28 | |
 | D-38 | Product metrics: counts only, never content | 2026-10-28 | |
 | D-39 | Hard topics and the AI | 2026-10-28 | |
+| D-40 | One design system for the frontend: one spacing scale, two typefaces at most, one accent colour | 2026-11-14 | 2026-11-15 |
 
 ---
 
@@ -472,6 +473,27 @@ This applies to every AI feature from Phase 4 on: summaries, profiles, Help me t
 
 **Why:** templates like *Spiralling* invite people to write at their lowest, and an AI that reads entries must handle that with care (R-24). The user chose to settle this now, before the AI phase, on 2026-10-28.
 
+## D-40 One design system for the frontend
+The frontend has one design system. Three limits hold whatever the look turns out to be:
+- **One spacing scale:** 4, 8, 12, 16, 24, 32, 48 and 64 px, for every padding, margin and gap.
+- **Two typefaces at most:** one for text and the interface, and at most one more for titles.
+- **One accent colour** in each theme. Everything else is neutral, and photos carry the colour. A Loot Drop uses the accent, not a second colour.
+
+How it works:
+- **Tokens:** every colour, font, text size, weight, radius and shadow is a token in `@theme` in `frontend/src/index.css`. Components use tokens only: no hex values, font names or one-off sizes.
+- **Rules:** `.claude/rules/design.md` holds the checkable rules, the default token values and the limits that follow from these three (seven text sizes, two corner radii, 44 px tap targets, loading targets). It loads whenever a file in `frontend/` is touched, and `spec-reviewer` checks it.
+- **The look:** `docs/design/DESIGN.md` picks the typefaces, the accent and the final values when a direction wins. It stays inside these limits.
+- **Checking:** after each fix to a screen, the page is checked at phone width (375×812) and laptop width (1440×900) with `docs/design/explorations/tools/audit.mjs`, and the user is told what was created, what was changed and why.
+
+**Why:** the round 2 audit ([AUDIT.md](design/explorations/round-2/AUDIT.md), 2026-11-14) measured the five mockups. Each used 23 to 27 different paddings and gaps, 14 to 19 text sizes and 3 to 8 corner radii, and two of the five used two accent colours. Those differences, more than any one colour or font, are what made them look cheap. The user set the three limits on 2026-11-14.
+
+**Consequences:**
+- A palette whose Loot Drop colour differs from its accent is reworked so that one colour does both: Dusk blue's dark mode (a gold Loot Drop on a blue accent) and Black, white and gold (ink actions, a gold Loot Drop). The user chose the answers on 2026-11-15: Dusk blue's Loot Drop takes the blue accent, and gold becomes the accent of Black, white and gold. The values are in `docs/design/explorations/FEEDBACK.md`.
+- Design rounds keep the same limits (`docs/prompts/design-round.md`), so the direction that wins can be built as drawn. The user agreed this on 2026-11-15.
+- Spotify's brand rules allow its mark in green, black or white. memoirist uses black or white, so the accent stays the only colour.
+- shadcn/ui components (D-13) are rewritten to these tokens when they are copied in.
+- Two things the audit found are open questions, not rules: smaller copies of photos (Q29) and stored photo sizes (Q30).
+
 ---
 
 ## Open questions
@@ -504,3 +526,5 @@ Decide each one before the sprint that needs it, then record it with `/record-de
 | Q25 | Writing time and mood: patterns such as "flat on Sunday evenings" need when an entry was really written (`created_at` is wrong for backdated and offline entries) and a mood for each entry | Sprint 8 (mood: Sprint 9) | Offline entries send a client `capturedAt`; Phase 6 adds a per-entry mood as derived AI data, with the usual seal and staleness rules |
 | Q26 | Group Loot Drop dates: if the owner moves the date later, entries added earlier still unlock on the old date; an entry already sealed for longer opens later; and withdrawing doesn't unseal | Sprint 6 | Group views hide content until the later of the entry's and the group's dates; the withdraw dialog says the entry stays sealed |
 | Q28 | Era summaries and partly covered weeks: an Era shows only the entries inside its dates (D-22), but a weekly summary covers the whole week. For a short Era, such as a weekend trip, should the Era summary read the entries inside its dates instead of whole-week summaries? | Sprint 7 | A week the Era covers only partly is read from its entries inside the Era's dates; a week it covers fully uses its weekly summary |
+| Q29 | Smaller copies of photos: the API serves each photo as it was uploaded (about 2 to 3 MB after the browser shrinks it, D-13), even for a 40 px thumbnail. A feed of those can't meet the PRD's 2-second goal on a phone: the round 2 audit measured 10 seconds to the first photo on a slow connection, with photos a fifth of that size (D-40). Make a screen-size copy and a thumbnail at upload (in the browser or on the server), or keep serving the original? | Sprint 5 | Phase 1 serves the original, which is fast on one machine. The frontend loads photos lazily and reserves their space. Decide before going online |
+| Q30 | Photo sizes: `media` stores no width or height, so a screen can't hold a photo's own shape before it loads, and the page jumps (the audit measured a layout shift of 0.23 and 0.26 on two entry screens; good is 0.1 or less). Store each photo's width and height at upload (a migration and a contract change)? | Sprint 4 (task 4.5) | No schema change. Lists crop photos to one fixed shape, and the entry view shows each photo whole inside a fixed frame |

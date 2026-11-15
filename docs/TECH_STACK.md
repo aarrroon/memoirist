@@ -321,6 +321,7 @@ src/
   4. Optionally `POST /entries/{id}/seal` after a confirmation dialog.
 - **Styling:**
   - Tailwind v4 is configured in CSS (`@theme` in `src/index.css`), not `tailwind.config.js`.
+  - One design system (D-40): one spacing scale, two typefaces at most, one accent colour. Every colour, font, text size, radius and shadow is a token in `@theme`, and Tailwind's own defaults for those are removed. The rules and the check are in `.claude/rules/design.md` and `docs/design/explorations/tools/audit.mjs`.
   - Motion is imported from `motion/react` and honours `prefers-reduced-motion`.
 
 ## 4. Database
