@@ -147,4 +147,61 @@
     // Which items the four screens show.
     featured: { entryId: 'e-1024-pinnacle', eraId: 'era-brunswick', lootDropId: 'e-1025-sealed' },
   };
+
+  // ---------- Round 2 additions (round 1 never reads these) ----------
+
+  // The starter template gallery (D-06). Prompts become headings in the editor (F-11). `tpl-trips` is the
+  // template the Pinnacle entry started from.
+  const templates = [
+    { id: 'tpl-trips', name: 'Trip day', prompts: ['Best moment', 'What I want to remember'] },
+    { id: 'tpl-spiralling', name: 'Spiralling check-in', prompts: ['What is on my mind', 'What I can control', 'One kind thing for tomorrow'] },
+    { id: 'tpl-night-out', name: 'Night out', prompts: ['Who was there', 'The best bit'] },
+    { id: 'tpl-letter', name: 'Letter to future me', prompts: ['Dear future me', 'What I hope has changed'] },
+    { id: 'tpl-week', name: 'My week', prompts: ['The highlight', 'What I would do again'] },
+  ];
+
+  // The Write screen, mid-entry: a second entry for today, at 7:42 pm, from the Night out template, before Save
+  // (F-02, F-03, F-11). Not in any week yet, so no count includes it. The seal section is shown open with its
+  // quick dates and none chosen (F-06); helpers.js works the dates out.
+  const draft = entry({
+    id: 'draft-1028-dumplings', entryDate: '2026-10-28', createdAt: null, updatedAt: null, templateId: 'tpl-night-out',
+    title: 'Dumplings and the trip photos',
+    contentJson: doc(
+      heading('Who was there'),
+      p('Mei, Jonno and me, back at the dumpling place on Lygon. ', text('Mei brought every photo from the weekend', 'bold'), ' and we went through all of them, slowly.'),
+      heading('The best bit'),
+      list('Jonno insisting the thermos photo is an album cover', 'Agreeing to go back before Christmas'),
+      p('Already ', text('miss', 'italic'), ' the cold at the top.'),
+    ),
+    tags: [TAGS.friends, TAGS.grampians],
+    soundtrack: { uri: 'spotify:track:0000000000000000000003', kind: 'TRACK', title: 'Avant Gardener', artist: 'Courtney Barnett' },
+    media: [
+      photo('boroka-lookout', 'Lake Bellfield and the valley seen from Boroka Lookout'),
+      photo('grampians-sandstone', 'A honeycombed sandstone overhang on the Wonderland walk'),
+      voiceNote('m-voice-draft', 34, 'Voice note, 34 seconds: the table laughing about the thermos'),
+    ],
+  });
+  window.MEMOIRIST_CONTENT.templates = templates;
+  window.MEMOIRIST_CONTENT.draft = { entry: draft, savedAt: '2026-10-28T08:41:00Z' }; // "Draft saved 7:41 pm" (D-23)
+
+  // The colour palettes agreed for round 2 (FEEDBACK.md) plus Sunset rose (round-2/PLAN.md §2). Designs may tune
+  // values within a family; these are the starting points the colour board and the contrast checks use.
+  const pal = (page, surface, ink, ink2, accent, onAccent, loot) => ({ page, surface, ink, ink2, accent, onAccent, loot });
+  window.MEMOIRIST_CONTENT.palettes = {
+    'dusk-blue': { name: 'Dusk blue',
+      light: pal('#F6F7F9', '#FFFFFF', '#141A26', '#4A5468', '#2F57C8', '#FFFFFF', '#2F57C8'),
+      dark: pal('#11151D', '#1A202B', '#E7EAF0', '#9BA5B5', '#93ACFF', '#10141C', '#EFD9A0') },
+    'bookcloth-green': { name: 'Bookcloth green',
+      light: pal('#F3F5F1', '#FFFFFF', '#1A1F1C', '#53605A', '#2E5A44', '#FFFFFF', '#2E5A44'),
+      dark: pal('#101614', '#18211D', '#E3EAE5', '#9CAAA2', '#93C6A9', '#101614', '#93C6A9') },
+    'ink-red': { name: 'Ink and red',
+      light: pal('#F2F2EF', '#FFFFFF', '#151515', '#57574F', '#C21F2B', '#FFFFFF', '#C21F2B'),
+      dark: pal('#161616', '#202020', '#ECECE8', '#A4A49D', '#F2737A', '#161616', '#F2737A') },
+    'black-gold': { name: 'Black, white and gold',
+      light: pal('#FFFFFF', '#F4F4F3', '#111111', '#5B5B5B', '#111111', '#FFFFFF', '#A87A1E'),
+      dark: pal('#121212', '#1C1C1C', '#EDEDED', '#A3A3A3', '#EDEDED', '#121212', '#E3C06A') },
+    'sunset-rose': { name: 'Sunset rose',
+      light: pal('#F7F4F5', '#FFFFFF', '#1C1619', '#5C5157', '#A8325A', '#FFFFFF', '#A8325A'),
+      dark: pal('#171315', '#221C1F', '#F1E9EC', '#B4A7AD', '#F09DB8', '#1A1216', '#F09DB8') },
+  };
 })();

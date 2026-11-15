@@ -94,7 +94,6 @@ h1, h2, h3 { text-wrap: balance; }
   .main { display: grid; grid-template-columns: minmax(0, 520px) 320px; gap: 64px; justify-content: center; padding: 8px 32px 80px; }
   .rail { display: grid; gap: 28px; align-content: start; position: sticky; top: 24px; padding-top: 30px; }
   .rings { padding: 22px 0 18px; }
-  .feed .week-card--lead { display: none; }   /* the rail shows this week */
 }
 
 .section-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 var(--gutter); }
@@ -122,26 +121,6 @@ h1, h2, h3 { text-wrap: balance; }
 @media (min-width: 1100px) { .era-bar { top: 0; padding: 14px 0; margin-top: 28px; } }
 
 /* Week summary card (D-25) */
-.week-card { margin: 16px var(--gutter) 6px; padding: 18px; border-radius: var(--radius); background: var(--surface); display: grid; gap: 14px; }
-.wc-head { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; align-items: center; }
-.wc-head .ring-art { width: 56px; height: 56px; }
-.wc-head h3 { font-size: 18px; font-weight: 750; line-height: 1.2; }
-.wc-head p { font-size: 13px; color: var(--ink-2); }
-.stats { display: flex; flex-wrap: wrap; gap: 6px; }
-.stats .chip { background: var(--bg); }
-.wc-thumbs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
-.wc-thumbs img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; }
-.bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.bars a, .bars .bar-sealed { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: var(--bg); font-size: 14px; }
-.bars a:hover { background: var(--surface-2); }
-.bar-day { font-size: 12px; font-weight: 700; color: var(--ink-2); }
-.bar-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 550; }
-.bar-icons { display: flex; gap: 4px; color: var(--ink-2); }
-.bar-sealed { color: var(--gold-ink); }
-.bar-sealed .bar-title { display: flex; gap: 6px; align-items: center; font-weight: 600; }
-.wc-foot { font-size: 13px; color: var(--ink-2); }
-.wc-foot a { color: var(--ink); font-weight: 600; }
-@media (min-width: 1100px) { .week-card { margin: 18px 0 6px; } }
 
 /* Posts */
 .post { padding: 18px 0 8px; display: grid; gap: 10px; }
@@ -202,7 +181,6 @@ h1, h2, h3 { text-wrap: balance; }
 .rail-list img, .rail-list .ph { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; background: var(--surface); }
 .rail-list b { display: block; font-size: 14px; font-weight: 650; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .rail-list small { display: block; font-size: 13px; color: var(--ink-2); }
-.rail .week-card { margin: 10px 0 0; }
 
 /* ---------- Entry ---------- */
 .entry { max-width: 1040px; margin: 0 auto; }
@@ -366,18 +344,18 @@ h1, h2, h3 { text-wrap: balance; }
   const plural = (n, one, many = `${one}s`) => `${n.toLocaleString('en-AU')} ${n === 1 ? one : many}`;
   const daysLeft = (u) => (u.countdown.match(/\d+/) || [u.countdown])[0];
 
-  // A week ring: seven arcs, Monday at the top, filled gold on the days written.
-  function ringSvg(days, size = 70) {
+  // The logo mark: a ring of seven arcs, always whole, because days are never tracked (D-32).
+  function ringMark(size = 24) {
     const c = size / 2, r = size / 2 - 3, gap = 7, arc = 360 / 7;
     const pt = (deg) => [c + r * Math.sin((deg * Math.PI) / 180), c - r * Math.cos((deg * Math.PI) / 180)];
-    const paths = days.map((on, i) => {
+    const paths = Array.from({ length: 7 }, (_, i) => {
       const [x1, y1] = pt(i * arc + gap / 2), [x2, y2] = pt((i + 1) * arc - gap / 2);
-      return `<path d="M${x1.toFixed(2)} ${y1.toFixed(2)}A${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" stroke="${on ? '#E5640F' : '#E3E3E3'}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+      return `<path d="M${x1.toFixed(2)} ${y1.toFixed(2)}A${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" stroke="#E5640F" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
     }).join('');
     return M.raw(`<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">${paths}</svg>`);
   }
   const sunrise = (w = 76) => M.raw(`<svg width="${w}" height="${Math.round(w * 0.62)}" viewBox="0 0 76 47" aria-hidden="true"><path d="M16 38a22 22 0 0 1 44 0z" fill="#141414"/><path d="M4 39.5h68" stroke="#141414" stroke-width="3.2" stroke-linecap="round"/><g stroke="#141414" stroke-width="3.2" stroke-linecap="round"><path d="M38 3v8M15.5 10.5l5 5M60.5 10.5l-5 5M4 25h7M65 25h7"/></g></svg>`);
-  const mark = ringSvg([1, 1, 1, 1, 1, 1, 1], 24);
+  const mark = ringMark(24);
 
   function ring({ face, label, count, href = '#feed', fresh = false }) {
     return html`<a class="ring ${fresh ? 'ring--fresh' : ''}" href="${href}">
@@ -435,25 +413,6 @@ h1, h2, h3 { text-wrap: balance; }
   }
   const sound = (st) => html`<button class="sound"><span class="spot">${icon('spotify', { size: 18 })}</span><span>${st.title}, ${st.artist}</span></button>`;
   const tagChips = (tags) => html`<div class="tags">${tags.map((t) => html`<a class="chip" href="#feed">${t.name}</a>`)}</div>`;
-
-  function weekCard(w, { lead = false } = {}) {
-    const s = M.weekStats(w);
-    const stats = [plural(s.entryCount, 'entry', 'entries'), s.photoCount && plural(s.photoCount, 'photo'), s.voiceNoteCount && plural(s.voiceNoteCount, 'voice note'), s.sealedCount && `${s.sealedCount} sealed`].filter(Boolean);
-    return html`<section class="week-card ${lead ? 'week-card--lead' : ''}" aria-label="Summary of ${M.weekLabel(w)}">
-      <div class="wc-head"><span class="ring-art">${ringSvg(s.days, 56)}</span><div><h3>${M.weekLabel(w)}</h3><p>${range(w.startDate, w.endDate)}</p></div></div>
-      <div class="stats">${stats.map((t) => html`<span class="chip">${t}</span>`)}</div>
-      ${s.thumbs.length > 2 ? html`<div class="wc-thumbs">${s.thumbs.slice(0, 6).map((m) => html`<img src="${M.src(m)}" alt="">`)}</div>` : ''}
-      <ul class="bars">${w.entries.map((e) => {
-        if (M.isSealed(e)) {
-          return html`<li><a class="bar-sealed" href="#loot"><span class="bar-day">${date(e.entryDate, 'weekdayShort')}</span><span class="bar-title">${icon('lock', { size: 15, stroke: 2 })}Loot Drop, opens ${M.instant(e.unlockDate, { day: 'numeric', month: 'short', year: 'numeric' })}</span><span></span></a></li>`;
-        }
-        const pics = M.images(e);
-        return html`<li><a href="#entry"><span class="bar-day">${date(e.entryDate, 'weekdayShort')}</span><span class="bar-title">${M.displayTitle(e)}</span>
-          <span class="bar-icons">${pics.length ? icon(pics[0].kind === 'PAGE_SCAN' ? 'page' : 'image', { size: 16 }) : ''}${M.voiceNotes(e).length ? icon('mic', { size: 16 }) : ''}</span></a></li>`;
-      })}</ul>
-      ${w.eras.length > 1 ? html`<p class="wc-foot">Also in ${w.eras.slice(1).map((er) => html`<a href="#era">${er.title}</a>`)}</p>` : ''}
-    </section>`;
-  }
 
   function post(e) {
     if (M.isSealed(e)) {
@@ -567,8 +526,8 @@ h1, h2, h3 { text-wrap: balance; }
             <div class="extras">${sound(e.soundtrack)}<a class="pill pill--soft" href="#era">${icon('calendar', { size: 18 })}Edit Era</a></div>
           </div>
         </div>
-        <nav class="highlights" aria-label="Chapters inside this one">
-          ${p.chaptersInside.map((c) => ring({ days: [1, 1, 1, 1, 1, 1, 1], face: c.cover ? M.cover(c) : null, count: c.title.charAt(0), label: c.title, href: '#era' }))}
+        <nav class="highlights" aria-label="Eras inside this one">
+          ${p.chaptersInside.map((c) => ring({ face: c.cover ? M.cover(c) : null, count: c.title.charAt(0), label: c.title, href: '#era' }))}
         </nav>
         <nav class="tabs" aria-label="Show"><a href="#era" aria-current="page">${icon('layers', { size: 16 })}Weeks</a><a href="#era">${icon('image', { size: 16 })}Photos</a><a href="#era">${icon('tag', { size: 16 })}Tags</a></nav>
         <div class="week-grid">${tiles}</div>
