@@ -10,6 +10,7 @@
 | **Hands-on offer** in `/implement-task` | Before each task, Claude offers one bigger piece for you to write: something you'll use at work, or a pattern you haven't seen. You can say no | Start of every coding task |
 | `/review-with-me` | Walks you through the change, then asks you review questions and grades your answers | After a task, before committing |
 | `/teach [topic]` | A short lesson on something from this codebase, with a tiny exercise | Whenever something confuses you |
+| `/ste [question]` | Answers or rewrites in short, plain "STE-80" sentences, then frames it for learning: why, syntax to recall, design and review views, and a self-test with answers at the end | Any time you want a clear answer you can learn from; no argument rewrites the last answer |
 | `/log-learning` | Adds an entry to your learning log from the session (or from your own notes) | End of a task, a review or a lesson |
 | **[Build journal](build-journal/README.md)** | A step-by-step record of how each task was built: decisions and alternatives, tests, what went wrong, concepts, check-yourself questions. One overview per sprint | Written during overnight runs (or when you ask); study it afterwards |
 

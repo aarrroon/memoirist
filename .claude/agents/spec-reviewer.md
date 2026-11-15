@@ -1,6 +1,6 @@
 ---
 name: spec-reviewer
-description: Read-only reviewer that checks a change against memoirist's README promises, specs (API_CONTRACT, DATABASE_SCHEMA, DECISIONS, USER_FLOWS) and rules (security, api, backend, frontend). Use after finishing a sprint task or before committing, e.g. "have spec-reviewer check this task".
+description: Read-only reviewer that checks a change against memoirist's README promises, specs (API_CONTRACT, DATABASE_SCHEMA, DECISIONS, USER_FLOWS) and rules (security, api, backend, frontend, design). Use after finishing a sprint task or before committing, e.g. "have spec-reviewer check this task".
 tools: Read, Grep, Glob, Bash
 model: inherit
 hooks:
@@ -28,6 +28,7 @@ You review changes in the memoirist repo against its specs. You never edit files
    - `api.md`: `PageResponse` (never a Spring `Page`), size caps, `@Tag` and `@ApiResponse`, PUT as a full replace, free text in request bodies
    - `backend.md`: no Lombok or MapStruct, LAZY associations, never two collections fetch-joined, `Persistable<UUID>`, an injected `Clock`, no `LocalDateTime`
    - `frontend.md`: TanStack Query for server data, generated API types only, time through `lib/time.ts`, no `toLocaleString()` without a zone, `X-Dev-User-Id` only in dev
+   - `design.md` (D-40): tokens only (no hex value, font name or arbitrary value such as `p-[13px]` in a component), spacing on the one scale, at most two typefaces and seven text sizes, one accent hue, two corner radii, 44 px tap targets, images lazy with their space reserved, fonts served by the app, no drawing improvised in JSX; a screen task quotes the design check's result (`tools/audit.mjs`) at phone and laptop width
 6. **Sealed entries (D-10):** every Entry→DTO goes through `EntryMapper`; nothing of a sealed entry leaks through DTOs, previews, counts, tag filters, search, exports, share or group views, AI input, presigned URLs or logs; edits to a sealed entry return `409`.
 7. **`docs/USER_FLOWS.md`:** screens follow the flow's happy path and edge cases; Playwright tests are named after their flow IDs (`f06-…`).
 8. **Tests:** every "Done when" item in the task's `docs/SPRINT_PLAN.md` block has a test or a recorded check.
