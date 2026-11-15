@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>memoirist design directions, 7 to 11</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..800&display=swap">
+<style>
+/* The comparison page for designs 7 to 11: the same journal, the same screens. Quiet on purpose, so the screenshots
+   do the talking. Each board is exported as one image to send; the link bar at the top is for this page only. */
+:root {
+  --ground: #E9EAEA;
+  --board: #FFFFFF;
+  --ink: #161718;
+  --ink-2: #5B5F63;
+  --line: #DDDFE0;
+  --soft: #F3F4F4;
+  --font: 'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); font: 400 16px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
+img { display: block; max-width: 100%; height: auto; }
+a { color: inherit; }
+h1, h2, h3, p, ol, ul, figure { margin: 0; }
+.page { max-width: 1600px; margin: 0 auto; padding: 0 0 80px; display: grid; gap: 32px; }
+.links { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 18px 56px 0; font-size: 15px; color: var(--ink-2); }
+.links a { font-weight: 600; color: var(--ink); }
+.board { background: var(--board); padding: 52px 56px 40px; display: grid; gap: 30px; }
+.num { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 6px; border-radius: 15px; background: var(--ink); color: #FFFFFF; font-size: 15px; font-weight: 700; flex: none; }
+figure { display: grid; gap: 8px; align-content: start; }
+.phone { border-radius: 20px; outline: 1px solid var(--line); }
+.laptop { border-radius: 10px; outline: 1px solid var(--line); }
+figcaption { font-size: 14px; font-weight: 600; color: var(--ink-2); line-height: 1.3; }
+.lede { font-size: 18px; color: var(--ink-2); max-width: 62ch; margin-top: 10px; }
+
+/* Credits close every board */
+.credits { border-top: 1px solid var(--line); padding-top: 18px; columns: 3; column-gap: 32px; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+.credits p { break-inside: avoid; margin-bottom: 4px; }
+.credits b { color: var(--ink); }
+
+/* Overview */
+.intro { display: grid; grid-template-columns: minmax(0, 1fr) 540px; gap: 48px; align-items: start; }
+.intro h1 { font-size: 46px; font-weight: 750; letter-spacing: -.02em; line-height: 1.08; }
+.asks { padding: 20px 24px; background: var(--soft); border-radius: 12px; }
+.asks h2 { font-size: 17px; font-weight: 700; }
+.asks ol { margin-top: 8px; padding-left: 1.3em; display: grid; gap: 5px; font-size: 17px; }
+.asks p { margin-top: 12px; font-size: 16px; font-weight: 650; color: var(--ink); }
+.cols { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 28px 26px; }
+.col { display: grid; gap: 18px; align-content: start; }
+.col-head b { font-size: 21px; font-weight: 700; display: flex; gap: 10px; align-items: center; }
+.col-head small { display: block; font-size: 15px; color: var(--ink-2); margin-top: 6px; line-height: 1.4; min-height: 3em; }
+
+/* Colours */
+.colour-row { display: grid; grid-template-columns: 250px minmax(0, 1fr) minmax(0, 1fr); gap: 36px; padding-top: 26px; border-top: 1px solid var(--line); }
+.colour-name h3 { font-size: 24px; font-weight: 700; letter-spacing: -.01em; line-height: 1.15; }
+.colour-name .mode { font-size: 13px; font-weight: 650; color: var(--ink-2); margin: 16px 0 6px; }
+.colour-name .used { font-size: 15px; color: var(--ink-2); margin-top: 18px; }
+.duo { display: grid; gap: 10px; align-content: start; }
+.duo h4 { margin: 0; font-size: 17px; font-weight: 700; display: flex; gap: 8px; align-items: center; }
+.duo h4 .num { min-width: 26px; height: 26px; font-size: 13px; }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+
+/* Swatches */
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatches span { display: grid; gap: 4px; font-size: 12px; color: var(--ink-2); width: 62px; line-height: 1.25; }
+.swatches i { width: 62px; height: 40px; border-radius: 6px; outline: 1px solid rgba(0, 0, 0, .14); }
+.swatches.small span { width: 38px; font-size: 11px; }
+.swatches.small i { width: 38px; height: 30px; }
+
+/* A design's boards */
+.head { display: grid; grid-template-columns: minmax(0, 1fr) 520px; gap: 48px; align-items: start; }
+.head h2 { font-size: 46px; font-weight: 750; letter-spacing: -.02em; line-height: 1.05; display: flex; gap: 14px; align-items: center; }
+.head h2 .num { min-width: 48px; height: 44px; border-radius: 22px; font-size: 22px; }
+.head h2 small { font-size: 22px; font-weight: 600; color: var(--ink-2); letter-spacing: 0; }
+.idea { font-size: 20px; line-height: 1.45; margin-top: 14px; max-width: 60ch; }
+.facts { display: grid; gap: 12px; padding-top: 6px; }
+.facts p { font-size: 15px; }
+.facts b { font-weight: 650; }
+.phones6 { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; }
+.desks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.sets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 40px; }
+.set { display: grid; gap: 10px; align-content: start; }
+.set h3 { font-size: 17px; font-weight: 700; }
+.set h3 span { font-weight: 500; color: var(--ink-2); }
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.verdict { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 17px; }
+.verdict b { display: block; font-size: 14px; font-weight: 700; color: var(--ink-2); margin-bottom: 2px; }
+
+@media (max-width: 900px) {
+  .page { gap: 16px; }
+  .links { padding: 14px 16px 0; }
+  .board { padding: 28px 16px; gap: 22px; }
+  .intro, .head, .colour-row { grid-template-columns: 1fr; gap: 18px; }
+  .cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .phones6, .three { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .desks, .verdict, .sets { grid-template-columns: 1fr; }
+  .credits { columns: 1; }
+  .head h2, .intro h1 { font-size: 32px; }
+}
+</style>
+</head>
+<body>
+<main class="page" id="page"></main>
+<script>
+(() => {
+  const DESIGNS = [
+    { num: 7, id: 'afterglow', name: 'Afterglow', a: 'Sunset rose', b: 'Black, white and gold',
+      idea: 'Your journal as a familiar photo feed in the soft pink after sunset. Each day gets a big date stamp, and a sealed memory waits as a wrapped parcel with a luggage tag.',
+      suits: 'People who want a familiar, photo-first feed with a warm, friendly feel.',
+      good: 'It feels like a social feed you already know how to use, and the big day stamps plus the wrapped parcel with its swinging tag give it a warm character of its own.',
+      watch: 'It stays close to Instagram, and the pink gift box can read more like a birthday present than a letter to your future self.',
+      fonts: 'Bricolage Grotesque for day stamps, titles and the countdown; Figtree for text.',
+      signature: 'The day stamp: the weekday over a big day number heads the first card of each day, so the stamps form the spine of the week.',
+      swatches: [['#F7F4F5', 'Blush page'], ['#FFFFFF', 'White card'], ['#1C1619', 'Near-black ink'], ['#5C5157', 'Muted plum grey'], ['#A8325A', 'Sunset rose']] },
+    { num: 8, id: 'starlight', name: 'Starlight', a: 'Dusk blue', b: 'Black, white and gold',
+      idea: 'A journal under Melbourne’s evening sky. Every day starts with the real moon, an Era is a constellation of its weeks, and a Loot Drop is a star whose light reaches you on the day it opens.',
+      suits: 'Night-time writers and anyone who likes a quiet, starry diary.',
+      good: 'A calm, familiar feed under a dusk sky: the real moon tells you what kind of evening it is, an Era’s weeks become a constellation, and a sealed memory is a star whose light is still on its way to you.',
+      watch: 'Only 3 of 365 days have passed, so the star’s trail is almost all unlit, and the star can look more like a pretty picture than a countdown until you read “in 362 days”.',
+      fonts: 'Fraunces for titles, with the countdown in italic; Hanken Grotesk for text.',
+      signature: 'The date line with the real moon phase, and the Era page drawing its weeks as a constellation of stars.',
+      swatches: [['#F4F6FA', 'Morning sky page'], ['#141A26', 'Night ink'], ['#2F57C8', 'Dusk blue'], ['#A87A1E', 'Starlight gold'], ['#F0DC9C', 'Pale moon']] },
+    { num: 9, id: 'nightstand', name: 'Nightstand', a: 'Dusk blue', b: 'Sunset rose',
+      idea: 'A familiar photo feed made for night-time. Each week shows a small fan of its photos, and every sealed memory is an hourglass that is barely starting to run.',
+      suits: 'People who write in bed at night and want something familiar and calm.',
+      good: 'It feels like the photo app you already know, just calmer and made for the evening, and its sealed memories are a little hourglass with the sand still waiting at the top.',
+      watch: 'It’s the closest to Instagram of the set: apart from the small fanned photos on each week and the hourglass, it could pass for any tidy social feed.',
+      fonts: 'Outfit for titles; Work Sans for text.',
+      signature: 'The week fan: each week’s header carries up to three tilted, overlapping photos from that week.',
+      swatches: [['#F6F7F9', 'Morning page'], ['#FFFFFF', 'Card white'], ['#141A26', 'Night ink'], ['#2F57C8', 'Dusk blue'], ['#7D6512', 'Hourglass sand']] },
+    { num: 10, id: 'folio', name: 'Folio', a: 'Bookcloth green', b: 'Ink and red',
+      idea: 'Your life laid out like a modern book. The chapter name sits at the top of the page, dates sit in the margin, and a future memory waits as a closed little book wrapped in a paper band that says when it opens.',
+      suits: 'Readers and writers who want a calm, bookish journal.',
+      good: 'It reads like a calm, well-made book, with dates in the margin and a green cloth title page for each life chapter, and it is still as easy to use as a normal photo feed.',
+      watch: 'It is quiet almost to a fault: apart from the green or red buttons and the little sealed book, the screens can feel a bit plain next to the more colourful designs.',
+      fonts: 'Newsreader for titles and entry text; Instrument Sans for buttons and labels.',
+      signature: 'The name of the current Era stays at the top of the page like a book’s running head, and each Era opens on a cloth title page with a contents list of its weeks.',
+      swatches: [['#F3F5F1', 'Paper'], ['#FFFFFF', 'White page'], ['#1A1F1C', 'Ink'], ['#53605A', 'Soft ink'], ['#2E5A44', 'Bookcloth green']] },
+    { num: 11, id: 'keepsake', name: 'Keepsake', a: 'Ink and red', b: 'Bookcloth green',
+      idea: 'Your journal as a tidy box of keepsakes. Every day starts with a big date number, and a sealed memory is a time capsule you could almost pick up.',
+      suits: 'People who like clean, photo-first apps with a bit of character.',
+      good: 'A calm, modern feed where each day opens with its big date number, and the Loot Drop is a little metal time capsule with its opening date printed on the label.',
+      watch: 'The big day numbers and the row of thumbnails above each week take up room, so the newest photo starts about halfway down the phone screen.',
+      fonts: 'Archivo only, with even-width figures for the day numbers and countdowns.',
+      signature: 'Big day numbers: each day of entries opens with its number set large, and each week starts with a row of square thumbnails.',
+      swatches: [['#F2F2EF', 'Paper grey'], ['#FFFFFF', 'White'], ['#151515', 'Ink'], ['#57574F', 'Warm grey'], ['#C21F2B', 'Signal red']] },
+  ];
+
+  // Palette starting points, light and dark (shared/content.js palettes).
+  const PALETTES = [
+    { name: 'Dusk blue', light: [['#F6F7F9', 'Page'], ['#FFFFFF', 'Card'], ['#141A26', 'Ink'], ['#4A5468', 'Soft ink'], ['#2F57C8', 'Accent']],
+      dark: [['#11151D', 'Page'], ['#1A202B', 'Card'], ['#E7EAF0', 'Ink'], ['#93ACFF', 'Accent'], ['#EFD9A0', 'Loot Drop']] },
+    { name: 'Bookcloth green', light: [['#F3F5F1', 'Page'], ['#FFFFFF', 'Card'], ['#1A1F1C', 'Ink'], ['#53605A', 'Soft ink'], ['#2E5A44', 'Accent']],
+      dark: [['#101614', 'Page'], ['#18211D', 'Card'], ['#E3EAE5', 'Ink'], ['#9CAAA2', 'Soft ink'], ['#93C6A9', 'Accent']] },
+    { name: 'Ink and red', light: [['#F2F2EF', 'Page'], ['#FFFFFF', 'Card'], ['#151515', 'Ink'], ['#57574F', 'Soft ink'], ['#C21F2B', 'Accent']],
+      dark: [['#161616', 'Page'], ['#202020', 'Card'], ['#ECECE8', 'Ink'], ['#A4A49D', 'Soft ink'], ['#F2737A', 'Accent']] },
+    { name: 'Black, white and gold', light: [['#FFFFFF', 'Page'], ['#F4F4F3', 'Card'], ['#111111', 'Ink'], ['#5B5B5B', 'Soft ink'], ['#A87A1E', 'Gold']],
+      dark: [['#121212', 'Page'], ['#1C1C1C', 'Card'], ['#EDEDED', 'Ink'], ['#A3A3A3', 'Soft ink'], ['#E3C06A', 'Gold']] },
+    { name: 'Sunset rose', light: [['#F7F4F5', 'Page'], ['#FFFFFF', 'Card'], ['#1C1619', 'Ink'], ['#5C5157', 'Soft ink'], ['#A8325A', 'Accent']],
+      dark: [['#171315', 'Page'], ['#221C1F', 'Card'], ['#F1E9EC', 'Ink'], ['#B4A7AD', 'Soft ink'], ['#F09DB8', 'Accent']] },
+  ];
+
+  const CREDITS = [
+    ['The Pinnacle, Grampians National Park Sunrise', 'Joshua Tagicakibau', 'CC BY-SA 4.0'],
+    ['View of Pinnacle Lookout, Grampians NP', 'DXR', 'CC BY-SA 4.0'],
+    ['Grampians Gariwerd sandstone', 'Neb', 'CC BY-SA 4.0'],
+    ['View over Halls Gap, Grampians, from Boroka Lookout', 'Peter Trenchard', 'CC BY-SA 4.0'],
+    ['View of Grampians from Halls Gap', 'DXR', 'CC BY-SA 4.0'],
+    ['Eastern grey kangaroo, Halls Gap', 'Rexness', 'CC BY-SA 2.0'],
+    ['Campfire and sparks in Anttoora 4', 'kallerna', 'CC BY-SA 3.0'],
+    ['McKenzie Falls, Grampians, Victoria', 'Rexness', 'CC BY-SA 2.0'],
+    ['Flat white coffee with pretty feather pattern', 'GeorgeMichaelFarewell', 'CC BY-SA 4.0'],
+    ['D2-class 5008 tram on Sydney Road, Brunswick', 'Philip Mallis', 'CC BY-SA 2.0'],
+    ['Princes Park, Carlton North', 'Mat Connolley', 'CC BY 2.5'],
+    ['Rosephil Terrace, Fitzroy Street, Fitzroy', 'Rexness', 'CC BY-SA 2.0'],
+    ['Empty bedroom', 'AnemoneProjectors', 'CC BY-SA 2.0'],
+    ['Rows of Desks in Lecture Theatre', 'Paul The Writer', 'CC0'],
+  ];
+
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const src = (d, set, screen, w = 375) => `screenshots/${d.id}/${set}/${screen}-${w}.jpg`;
+  const phone = (d, set, screen, caption, alt) => `<figure><img class="phone" src="${src(d, set, screen)}" width="750" height="1624" alt="${esc(alt || `${d.name}: ${caption} on a phone`)}">${caption ? `<figcaption>${esc(caption)}</figcaption>` : ''}</figure>`;
+  const laptop = (d, set, screen, caption) => `<figure><img class="laptop" src="${src(d, set, screen, 1440)}" width="1440" height="900" alt="${esc(`${d.name}: ${caption}`)}"><figcaption>${esc(caption)}</figcaption></figure>`;
+  const swatches = (list, small) => `<div class="swatches${small ? ' small' : ''}">${list.map(([hex, name]) => `<span><i style="background:${hex}"></i>${esc(name)}</span>`).join('')}</div>`;
+  const num = (d) => `<span class="num">${d.num}</span>`;
+  const credits = `<div class="credits"><p><b>Photos</b>, all from Wikimedia Commons:</p>${CREDITS.map(([t, by, lic]) => `<p>“${esc(t)}” by ${esc(by)}, ${lic}</p>`).join('')}<p>The diary page is drawn for these mockups.</p><p>The journal is invented, and nobody pictured is part of it.</p></div>`;
+
+  const links = `<nav class="links" aria-label="Open a design">Open a design: ${DESIGNS.map((d) => `<a href="directions/${d.id}.html">${d.num} ${esc(d.name)}</a>`).join('')}</nav>`;
+
+  const overview = `<section class="board" id="board-overview">
+    <div class="intro">
+      <div><h1>Five more ways memoirist could look</h1>
+        <p class="lede">memoirist is a private journal that looks like your own photo feed, filed into weeks and life chapters (Eras), with Loot Drops: entries sealed until a future date. Same journal, five new looks, numbered 7 to 11 after the first six. Top to bottom: the feed in light, the feed in dark, a sealed Loot Drop.</p></div>
+      <div class="asks"><h2>Four quick questions</h2>
+        <ol><li>Which would you open at 11pm to write about your day?</li><li>Which Loot Drop makes you most want to seal something?</li><li>Light or dark, and which colours?</li><li>What would you change?</li></ol>
+        <p>Pick your top two, not a ranking of all five.</p></div>
+    </div>
+    <div class="cols">${DESIGNS.map((d) => `<div class="col">
+      <div class="col-head"><b>${num(d)}${esc(d.name)}</b><small>${esc(d.suits)}</small></div>
+      ${phone(d, 'a-light', 'feed', `${d.a}, light`, `${d.name} feed on a phone, light`)}
+      ${phone(d, 'a-dark', 'feed', `${d.a}, dark`, `${d.name} feed on a phone, dark`)}
+      ${phone(d, 'a-light', 'loot', 'Sealed Loot Drop')}
+    </div>`).join('')}</div>
+    ${credits}
+  </section>`;
+
+  const usedOn = (p) => {
+    const out = [];
+    for (const d of DESIGNS) {
+      if (d.a === p.name) out.push([d, 'a']);
+      if (d.b === p.name) out.push([d, 'b']);
+    }
+    return out;
+  };
+  const colours = `<section class="board" id="board-colours">
+    <div><h1 style="font-size:46px;font-weight:750;letter-spacing:-.02em;line-height:1.08">Five colour sets</h1>
+      <p class="lede">Pick colours apart from layouts: any colour set can go on any design. Each one appears here on the two designs that use it, in light and dark.</p></div>
+    ${PALETTES.map((p) => `<div class="colour-row">
+      <div class="colour-name"><h3>${esc(p.name)}</h3>
+        <p class="mode">Light</p>${swatches(p.light, true)}
+        <p class="mode">Dark</p>${swatches(p.dark, true)}
+        <p class="used">On ${usedOn(p).map(([d]) => `${d.num} ${esc(d.name)}`).join(' and ')}</p></div>
+      ${usedOn(p).map(([d, t]) => `<div class="duo"><h4>${num(d)}${esc(d.name)}</h4><div class="two">
+        ${phone(d, `${t}-light`, 'feed', `${d.num} ${d.name}, light`, `${d.name} feed in ${p.name}, light`)}
+        ${phone(d, `${t}-dark`, 'feed', `${d.num} ${d.name}, dark`, `${d.name} feed in ${p.name}, dark`)}
+      </div></div>`).join('')}
+    </div>`).join('')}
+    ${credits}
+  </section>`;
+
+  const A_PHONES = [['feed', 'Feed'], ['feed-sealed', 'A sealed Loot Drop in the feed'], ['entry', 'Entry'], ['era', 'Era'], ['loot', 'Sealed Loot Drop'], ['write', 'Write']];
+  const B_PHONES = [['feed', 'Feed'], ['entry', 'Entry'], ['loot', 'Sealed Loot Drop']];
+  const set3 = (d, set, palette, mode) => `<div class="set"><h3>${esc(palette)} <span>· ${mode}</span></h3><div class="three">${B_PHONES.map(([s, label]) => phone(d, set, s, label, `${d.name}: ${label} in ${palette}, ${mode.toLowerCase()}`)).join('')}</div></div>`;
+
+  const boards = DESIGNS.map((d) => `<section class="board" id="board-${d.num}a">
+    <div class="head">
+      <div><h2>${num(d)}${esc(d.name)}</h2><p class="idea">${esc(d.idea)}</p></div>
+      <div class="facts">
+        ${swatches(d.swatches)}
+        <p><b>Colours:</b> ${esc(d.a)}, light</p>
+        <p><b>Type:</b> ${esc(d.fonts)}</p>
+        <p><b>Its own touch:</b> ${esc(d.signature)}</p>
+        <p><b>Suits:</b> ${esc(d.suits)}</p>
+      </div>
+    </div>
+    <div class="phones6">${A_PHONES.map(([s, label]) => phone(d, 'a-light', s, label)).join('')}</div>
+    <div class="desks">${laptop(d, 'a-light', 'feed', 'Feed on a laptop')}${laptop(d, 'a-light', 'entry', 'Entry on a laptop')}</div>
+    ${credits}
+  </section>
+  <section class="board" id="board-${d.num}b">
+    <div class="head">
+      <div><h2>${num(d)}${esc(d.name)} <small>in the dark, and in other colours</small></h2>
+        <p class="idea">${esc(d.name)} comes in ${esc(d.a)} and in ${esc(d.b)}, each with a light and a dark mode. Any colour set could go on any design.</p></div>
+      <div class="facts"><p><b>Suits:</b> ${esc(d.suits)}</p></div>
+    </div>
+    <div class="sets">
+      ${set3(d, 'a-dark', d.a, 'Dark')}
+      ${set3(d, 'b-light', d.b, 'Light')}
+      ${set3(d, 'b-dark', d.b, 'Dark')}
+      <div class="set"><h3>Write on a laptop <span>· ${esc(d.a)}, light</span></h3>${laptop(d, 'a-light', 'write', 'Writing an entry, with the journal dimmed behind')}</div>
+    </div>
+    <div class="verdict"><p><b>Good</b>${esc(d.good)}</p><p><b>Watch out</b>${esc(d.watch)}</p></div>
+    ${credits}
+  </section>`).join('');
+
+  document.getElementById('page').innerHTML = links + overview + colours + boards;
+})();
+</script>
+</body>
+</html>

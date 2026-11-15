@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>memoirist, Starlight</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,0..100;1,9..144,300..700,0..100&family=Hanken+Grotesk:wght@400..700&display=swap" rel="stylesheet">
+<style>
+/* Starlight: Observatory softened. Dusk instead of midnight, a pale morning sky for light mode,
+   Eras as constellations, a Loot Drop as a star whose light is still travelling. */
+:root {
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-text: 'Hanken Grotesk', system-ui, sans-serif;
+  --r-card: 18px; --r-photo: 16px; --r-thumb: 10px; --r-pill: 999px;
+  --gutter: 16px;
+  --fs-meta: 13px; --fs-ui: 15px; --fs-body: 16px; --fs-text: 17px; --fs-card: 21px; --fs-title: 26px; --fs-count: 40px;
+  --nav-w: 248px;
+  /* theme a, light: a pale morning sky */
+  --page: #F4F6FA; --surface: #FFFFFF; --raised: #E9EEF6; --sky: #E4EAF5; --line: #D6DDEA;
+  --ink: #141A26; --ink2: #4A5468; --accent: #2F57C8; --on-accent: #FFFFFF;
+  --loot: #9A6E14; --loot-mark: #A87A1E; --brand-mark: #A87A1E; --star: #2F57C8; --star-faint: #5D6A82; --trail: #7A869E; --dust: .28;
+  --moon-dark: #6E7B94; --moon-lit: #F0DC9C; --moon-edge: #4A5468; /* dark side 3.1:1 against the lit side, so the phase reads on a pale page */
+  --spotify: #000000; --scrim: rgba(20, 26, 38, .46); --float: 0 12px 32px rgba(20, 26, 38, .18);
+  color-scheme: light;
+}
+[data-theme="a"][data-mode="light"] {
+  --page: #F4F6FA; --surface: #FFFFFF; --raised: #E9EEF6; --sky: #E4EAF5; --line: #D6DDEA;
+  --ink: #141A26; --ink2: #4A5468; --accent: #2F57C8; --on-accent: #FFFFFF;
+  --loot: #9A6E14; --loot-mark: #A87A1E; --brand-mark: #A87A1E; --star: #2F57C8; --star-faint: #5D6A82; --trail: #7A869E; --dust: .28;
+  --moon-dark: #6E7B94; --moon-lit: #F0DC9C; --moon-edge: #4A5468; /* dark side 3.1:1 against the lit side, so the phase reads on a pale page */
+  --spotify: #000000; --scrim: rgba(20, 26, 38, .46); --float: 0 12px 32px rgba(20, 26, 38, .18);
+  color-scheme: light;
+}
+/* theme a, dark: dusk, a grey-blue evening rather than midnight */
+[data-theme="a"][data-mode="dark"] {
+  --page: #161B25; --surface: #1F2531; --raised: #283040; --sky: #10141C; --line: #2E3646;
+  --ink: #E7EAF0; --ink2: #A3ADBD; --accent: #93ACFF; --on-accent: #10141C;
+  --loot: #EFD9A0; --loot-mark: #EFD9A0; --brand-mark: #EFD9A0; --star: #E7EAF0; --star-faint: #8D97AA; --trail: #6C7890; --dust: .6;
+  --moon-dark: #333C4E; --moon-lit: #EFD9A0; --moon-edge: transparent;
+  --spotify: #1DB954; --scrim: rgba(8, 10, 15, .62); --float: 0 14px 36px rgba(0, 0, 0, .42);
+  color-scheme: dark;
+}
+/* theme b, light: black, white and gold */
+[data-theme="b"][data-mode="light"] {
+  --page: #FFFFFF; --surface: #F4F4F3; --raised: #EBEBE9; --sky: #F4F4F3; --line: #E2E2E0;
+  --ink: #111111; --ink2: #5B5B5B; --accent: #111111; --on-accent: #FFFFFF;
+  --loot: #9A6E14; --loot-mark: #A87A1E; --brand-mark: #111111; --star: #111111; --star-faint: #6B6B6B; --trail: #8A8A8A; --dust: .22;
+  --moon-dark: #7A7A76; --moon-lit: #EEE7D2; --moon-edge: #5B5B5B; /* a pale moon, not gold (gold is for Loot Drops); dark side 3.6:1 against it */
+  --spotify: #000000; --scrim: rgba(17, 17, 17, .44); --float: 0 12px 32px rgba(0, 0, 0, .16);
+  color-scheme: light;
+}
+/* theme b, dark: charcoal, never black; gold only on the Loot Drop */
+[data-theme="b"][data-mode="dark"] {
+  --page: #161616; --surface: #202020; --raised: #2A2A2A; --sky: #111111; --line: #2F2F2F;
+  --ink: #EDEDED; --ink2: #A8A8A8; --accent: #EDEDED; --on-accent: #121212;
+  --loot: #E3C06A; --loot-mark: #E3C06A; --brand-mark: #EDEDED; --star: #EDEDED; --star-faint: #9A9A9A; --trail: #6E6E6E; --dust: .55;
+  --moon-dark: #383838; --moon-lit: #E4E2DA; --moon-edge: transparent;
+  --spotify: #1DB954; --scrim: rgba(0, 0, 0, .6); --float: 0 14px 36px rgba(0, 0, 0, .5);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; background: var(--page); }
+body {
+  margin: 0; background: var(--page); color: var(--ink);
+  font: 400 var(--fs-body)/1.5 var(--font-text); overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+html[data-screen="write"] body { overflow: hidden; }
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button, input { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+h1, h2, h3, h4, p, ul, figure { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.display { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-optical-sizing: auto; }
+.meta { font-size: var(--fs-meta); line-height: 1.4; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.icon { flex: none; }
+
+/* ---------- Shell ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20; height: 56px; padding: 0 8px 0 var(--gutter);
+  display: flex; align-items: center; gap: 4px; background: var(--page);
+}
+.wordmark { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; min-height: 44px; }
+.wordmark svg { color: var(--brand-mark); } /* theme b keeps gold for Loot Drops only */
+.topbar-links { margin-left: auto; display: flex; }
+.topbar-links a, .text-btn {
+  min-height: 44px; min-width: 44px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: var(--fs-ui); font-weight: 500; color: var(--ink2); border-radius: var(--r-pill);
+}
+.topbar-links a:hover, .text-btn:hover { color: var(--ink); background: var(--raised); }
+.back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding-right: 12px; font-size: var(--fs-ui); font-weight: 500; }
+.back .icon { margin-left: -2px; }
+.topbar .text-btn { margin-left: auto; }
+
+.sidenav { display: none; }
+.main { padding: 0 var(--gutter) 120px; }
+
+/* ---------- Write button and menu ---------- */
+.write { position: relative; }
+.write-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 22px 0 18px;
+  background: var(--accent); color: var(--on-accent); border-radius: var(--r-pill); font-weight: 600; font-size: var(--fs-ui);
+  transition: transform .15s ease;
+}
+.write-btn:active { transform: scale(.97); }
+.write-btn:focus-visible { outline-offset: 3px; }
+.write-menu {
+  position: absolute; z-index: 40; min-width: 220px; padding: 6px; background: var(--surface); border-radius: 16px; box-shadow: var(--float); /* taste-skill-ignore: a menu floats */
+}
+.write-menu a { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border-radius: 12px; font-weight: 500; }
+.write-menu a:hover, .write-menu a:focus-visible { background: var(--raised); }
+.write-menu .icon { color: var(--ink2); }
+/* Phones and tablets: a tab bar with Write as its centre item, so Write never floats over writing (senior review). */
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line);
+}
+.tabbar a {
+  display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 52px; border-radius: 12px;
+  font-size: 12px; font-weight: 500; color: var(--ink2);
+}
+.tabbar a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+.tabbar .write { justify-self: center; }
+.tabbar .write-btn { min-height: 44px; padding: 0 16px 0 12px; }
+.tabbar .write-menu { left: 50%; transform: translateX(-50%); bottom: 58px; }
+
+/* ---------- Feed ---------- */
+.tonight { display: flex; align-items: center; gap: 12px; padding: 8px 0 20px; }
+.tonight .tn-title { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: 26px; line-height: 1.1; font-weight: 450; letter-spacing: -0.015em; }
+.tonight .meta { margin-top: 2px; }
+.moon { flex: none; }
+.moon .moon-dark { fill: var(--moon-dark); }
+.moon .moon-lit { fill: var(--moon-lit); }
+.moon .moon-edge { fill: none; stroke: var(--moon-edge); stroke-width: 1; } /* drawn just outside the disc, so a thin dark side still shows */
+
+.otd h2 { font-size: var(--fs-ui); font-weight: 600; margin-bottom: 8px; }
+.otd-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.otd-item { min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px; background: var(--surface); border-radius: 14px; }
+.otd-item img { width: 48px; height: 48px; flex: none; object-fit: cover; border-radius: var(--r-thumb); }
+.otd-item > span { min-width: 0; }
+.otd-item b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-weight: 600; font-size: 14px; line-height: 1.3; }
+.otd-item .yr { display: none; }
+.otd-item:hover b { text-decoration: underline; text-underline-offset: 3px; }
+
+.group { margin-top: 24px; }
+.era-bar { display: flex; align-items: center; gap: 12px; padding: 8px 12px 8px 8px; background: var(--surface); border-radius: var(--r-card); }
+.era-bar img, .era-bar .era-sky { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; flex: none; }
+.era-bar .era-sky { background: var(--sky); display: block; }
+.era-sky svg { display: block; width: 100%; height: 100%; }
+.era-sky circle { fill: var(--star-faint); }
+.era-sky path { fill: none; stroke: var(--star-faint); stroke-width: 1; opacity: .7; }
+.era-bar-text { flex: 1; min-width: 0; display: grid; }
+.era-bar-name { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: 19px; font-weight: 500; line-height: 1.2; letter-spacing: -0.01em; }
+.era-bar .icon { color: var(--ink2); }
+.era-bar:hover .era-bar-name { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+
+.week { margin-top: 8px; }
+.week summary {
+  list-style: none; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0; cursor: pointer; border-radius: 12px;
+}
+.week summary::-webkit-details-marker { display: none; }
+.week-name { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: 19px; font-weight: 500; letter-spacing: -0.01em; }
+.week-count { margin-left: auto; color: var(--ink2); font-size: var(--fs-ui); font-variant-numeric: tabular-nums; }
+.week summary .icon { color: var(--ink2); transition: transform .2s ease; }
+.week[open] summary .icon { transform: rotate(90deg); }
+.week-body { padding: 4px 4px 16px; display: grid; gap: 12px; }
+.week-body .meta { font-size: 14px; }
+.thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+.thumbs img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; background: var(--raised); border-radius: var(--r-pill); font-size: 14px; font-weight: 500; }
+
+.cards { display: grid; gap: 36px; margin-top: 12px; }
+.card { display: grid; gap: 10px; }
+.card-day { font-size: var(--fs-meta); font-weight: 600; color: var(--ink2); }
+.card-title { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: var(--fs-card); font-weight: 500; line-height: 1.2; letter-spacing: -0.012em; margin-top: -4px; }
+.card-title a:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.card-text { font-size: var(--fs-body); line-height: 1.55; display: grid; gap: 8px; max-width: 62ch; }
+.card-text ul, .entry-text ul, .editor ul { padding-left: 1.2em; display: grid; gap: 2px; }
+.card-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.tagline { display: inline-flex; align-items: center; gap: 6px; color: var(--ink2); font-size: 14px; }
+
+.photo { border-radius: var(--r-photo); overflow: hidden; background: var(--raised); }
+.photo img { width: 100%; height: 100%; object-fit: cover; }
+.photo.wide { aspect-ratio: 3 / 2; }
+.photo.tall { aspect-ratio: 4 / 5; }
+.mosaic { display: grid; gap: 4px; aspect-ratio: 3 / 2; grid-template-columns: 2fr 1fr; border-radius: var(--r-photo); overflow: hidden; }
+.mosaic img { width: 100%; height: 100%; object-fit: cover; min-height: 0; background: var(--raised); }
+.mosaic img:first-child { grid-row: 1 / -1; }
+.mosaic.n2 { grid-template-columns: 1fr 1fr; }
+
+.voice { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 2px 14px 2px 2px; background: var(--surface); border-radius: var(--r-pill); max-width: 100%; }
+.voice .play { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); flex: none; }
+.voice .play .icon { margin-left: 2px; }
+.wave { display: flex; align-items: center; gap: 2px; height: 26px; width: 150px; min-width: 0; }
+.wave i { flex: 1; min-width: 1.5px; max-width: 3px; background: var(--ink2); border-radius: 2px; }
+.voice .meta { font-size: 14px; }
+
+.sound { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: var(--fs-ui); }
+.sound .spotify { color: var(--spotify); display: inline-flex; }
+.sound b { font-weight: 600; }
+.sound .text-btn { padding: 0 10px; }
+
+/* the sealed Loot Drop card: a fixed size, three facts only */
+.sealed {
+  display: flex; align-items: center; gap: 16px; height: 124px; padding: 12px 16px 12px 12px; overflow: hidden;
+  background: var(--surface); border-radius: var(--r-card);
+}
+.sealed-sky { width: 100px; height: 100px; flex: none; border-radius: 12px; background: var(--sky); }
+.sealed-sky svg { width: 100%; height: 100%; display: block; }
+.sealed-facts { display: grid; gap: 2px; min-width: 0; }
+.sealed-opens { font-size: var(--fs-ui); font-weight: 600; }
+.sealed-count { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-style: italic; font-size: 24px; line-height: 1.2; color: var(--loot); font-weight: 450; }
+.sealed:hover .sealed-opens { text-decoration: underline; text-underline-offset: 3px; }
+
+/* shared star bits */
+.trail-rest { fill: none; stroke: var(--trail); stroke-width: 1.4; stroke-dasharray: 2 5; stroke-linecap: round; }
+.trail-lit { fill: none; stroke: var(--loot-mark); stroke-width: 2.2; stroke-linecap: round; }
+.light-front { fill: var(--loot-mark); }
+.light-halo { fill: var(--loot-mark); opacity: .22; }
+.star-shape { fill: var(--loot-mark); }
+.star-ray { stroke: var(--loot-mark); stroke-width: 1.2; stroke-linecap: round; opacity: .8; }
+.star-ring { fill: none; stroke: var(--loot-mark); stroke-width: 1; }
+.you-dot { fill: var(--ink); }
+.dust { fill: var(--star-faint); opacity: var(--dust); }
+.twinkle { transform-box: fill-box; transform-origin: center; animation: twinkle 5.2s ease-in-out infinite; }
+@keyframes twinkle { 0%, 100% { transform: scale(1); opacity: 1; } 45% { transform: scale(.84); opacity: .74; } 60% { transform: scale(1.06); opacity: 1; } }
+
+/* ---------- Entry ---------- */
+.entry-head { padding: 8px 0 16px; display: grid; gap: 6px; }
+.entry-head h1 { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: var(--fs-title); font-weight: 450; line-height: 1.12; letter-spacing: -0.02em; }
+.entry-photo { border-radius: var(--r-photo); overflow: hidden; background: var(--raised); }
+.entry-photo img { width: 100%; height: auto; }
+.entry-thumbs { display: flex; gap: 8px; margin-top: 10px; }
+.entry-thumbs button { width: 56px; height: 56px; border-radius: 10px; overflow: hidden; padding: 0; position: relative; }
+.entry-thumbs button img { width: 100%; height: 100%; object-fit: cover; opacity: .72; transition: opacity .15s; }
+.entry-thumbs button[aria-current="true"] img { opacity: 1; }
+.entry-thumbs button[aria-current="true"]::after { content: ''; position: absolute; inset: 0; border: 2px solid var(--accent); border-radius: 10px; }
+.entry-thumbs button:hover img { opacity: 1; }
+.entry-thumbs .meta { align-self: center; margin-left: 4px; }
+.entry-text { display: grid; gap: 12px; font-size: var(--fs-text); line-height: 1.6; max-width: 62ch; margin-top: 24px; }
+.entry-text h2 { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: 20px; font-weight: 500; line-height: 1.25; margin-top: 8px; letter-spacing: -0.01em; }
+.entry-text h2:first-child { margin-top: 0; }
+.entry-extras { display: grid; gap: 14px; margin-top: 24px; justify-items: start; }
+.filed { margin-top: 24px; font-size: 14px; color: var(--ink2); max-width: 62ch; line-height: 1.5; }
+.filed a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+
+/* ---------- Era ---------- */
+.era-cover { margin: 0 calc(-1 * var(--gutter)); height: 220px; overflow: hidden; background: var(--raised); }
+.era-cover img { width: 100%; height: 100%; object-fit: cover; object-position: center 40%; }
+.era-intro { display: grid; gap: 10px; padding: 20px 0 8px; }
+.era-intro h1 { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: var(--fs-title); font-weight: 450; line-height: 1.1; letter-spacing: -0.02em; }
+.era-intro .lede { font-size: var(--fs-text); line-height: 1.55; max-width: 52ch; }
+.totals { display: grid; grid-template-columns: repeat(4, auto); justify-content: space-between; margin-top: 16px; background: var(--surface); border-radius: var(--r-card); padding: 14px 4px; }
+.totals div { padding: 0 12px; display: grid; gap: 2px; }
+.totals div + div { padding-left: 14px; }
+.totals div + div { border-left: 1px solid var(--line); }
+.totals b { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums lining-nums; line-height: 1.15; }
+.totals span { font-size: var(--fs-meta); color: var(--ink2); line-height: 1.25; white-space: nowrap; }
+.section-h { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.2; }
+.sky-panel { margin-top: 28px; }
+.sky-panel .meta { margin-top: 4px; max-width: 52ch; }
+.constellation { position: relative; margin-top: 12px; aspect-ratio: 4 / 3; background: var(--sky); border-radius: var(--r-card); overflow: hidden; }
+.constellation svg.lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.constellation svg.lines path { fill: none; stroke: var(--star-faint); stroke-width: 1; opacity: .55; vector-effect: non-scaling-stroke; }
+.c-dot { position: absolute; border-radius: 50%; background: var(--star-faint); transform: translate(-50%, -50%); }
+.c-star { position: absolute; width: 44px; height: 44px; transform: translate(-50%, -50%); display: grid; place-items: center; border-radius: 50%; }
+.c-star i { display: block; border-radius: 50%; background: var(--star); transition: transform .15s; }
+.c-star:hover i, .c-star:focus-visible i { transform: scale(1.35); }
+.c-star .c-label {
+  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 4px 10px; border-radius: 8px;
+  background: var(--surface); color: var(--ink); font-size: var(--fs-meta); font-weight: 600; box-shadow: var(--float); display: none; /* taste-skill-ignore: a tooltip floats */
+}
+.c-star:hover .c-label, .c-star:focus-visible .c-label { display: block; }
+.weeks { margin-top: 28px; }
+.week-rows { display: grid; margin-top: 8px; }
+.week-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; min-height: 60px; padding: 10px 4px; border-bottom: 1px solid var(--line); }
+.week-row:hover .wr-name { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.wr-name { font-weight: 600; font-size: var(--fs-body); }
+.wr-count { grid-row: 1 / span 2; grid-column: 2; color: var(--ink2); font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; }
+.week-row .thumbs { grid-column: 1 / -1; margin-top: 6px; }
+.week-row .thumbs img { width: 44px; height: 44px; border-radius: 6px; }
+.week-row.rest { border-bottom: 0; color: var(--ink2); }
+.inside { margin-top: 32px; }
+.inside-list { display: grid; gap: 10px; margin-top: 10px; }
+.sound-era { margin-top: 4px; }
+
+/* ---------- Loot Drop ---------- */
+.loot { display: grid; gap: 0; }
+.loot-sky { position: relative; margin: 0 calc(-1 * var(--gutter)); aspect-ratio: 5 / 4; background: var(--sky); overflow: hidden; }
+.loot-sky svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.loot-sky .lbl { position: absolute; font-size: var(--fs-meta); color: var(--ink2); line-height: 1.35; }
+.loot-sky .lbl b { color: var(--ink); font-weight: 600; display: block; }
+.loot-text { display: grid; gap: 14px; padding: 24px 0 0; }
+.loot-text h1 { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: 22px; font-weight: 500; line-height: 1.3; letter-spacing: -0.01em; max-width: 24ch; }
+.countdown { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-style: italic; font-weight: 400; font-size: var(--fs-count); line-height: 1.05; color: var(--loot); letter-spacing: -0.02em; }
+.loot-note { font-size: var(--fs-text); line-height: 1.55; max-width: 44ch; }
+.moon-line { display: flex; align-items: center; gap: 10px; }
+.loot-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: var(--r-pill); font-weight: 600; font-size: var(--fs-ui); }
+.btn.tonal { background: var(--raised); color: var(--ink); }
+.btn.tonal:hover { background: var(--line); }
+.btn.quiet { color: var(--ink2); text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; padding: 0 14px; }
+.btn.quiet:hover { color: var(--ink); }
+
+/* ---------- Write ---------- */
+.write-layer { position: fixed; inset: 0; z-index: 60; background: var(--page); overflow-y: auto; overflow-x: hidden; }
+.sheet { min-height: 100%; display: flex; flex-direction: column; }
+.sheet-bar {
+  position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px;
+  min-height: 60px; padding: 8px var(--gutter) 8px 4px; background: var(--page);
+}
+.sheet-title { display: grid; justify-items: center; text-align: center; line-height: 1.2; }
+.sheet-title h1 { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: 20px; font-weight: 500; letter-spacing: -0.01em; }
+.btn.primary { background: var(--accent); color: var(--on-accent); padding: 0 24px; }
+.btn.primary:active { transform: scale(.97); }
+.sheet-body { padding: 4px var(--gutter) 40px; display: grid; gap: 22px; }
+.sheet-col { display: grid; gap: 18px; align-content: start; }
+.pick-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.pick { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 13px 0 11px; background: var(--surface); border-radius: var(--r-pill); font-size: var(--fs-ui); font-weight: 500; }
+.pick .icon { color: var(--ink2); }
+.pick:hover { background: var(--raised); }
+.title-input {
+  width: 100%; border: 0; resize: none; field-sizing: content; line-height: 1.2; overflow: hidden; background: transparent; padding: 6px 0; font-family: var(--font-display); font-variation-settings: 'SOFT' 100;
+  font-size: 26px; font-weight: 450; letter-spacing: -0.015em; color: var(--ink); border-radius: 6px;
+}
+.title-input::placeholder { color: var(--ink2); }
+.tool-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.fmt { display: flex; gap: 2px; padding: 2px; background: var(--surface); border-radius: 14px; width: max-content; max-width: 100%; }
+.fmt button { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; font-size: 16px; color: var(--ink2); }
+.fmt button:hover { background: var(--raised); color: var(--ink); }
+.fmt .i { font-style: italic; font-family: var(--font-display); font-weight: 500; font-size: 18px; }
+.fmt .h { font-family: var(--font-display); font-weight: 600; font-size: 18px; }
+.editor { font-size: var(--fs-text); line-height: 1.6; display: grid; gap: 10px; padding: 4px 0; min-height: 200px; border-radius: 8px; }
+.editor h3 { font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: 20px; font-weight: 500; letter-spacing: -0.01em; margin-top: 6px; }
+.editor h3:first-child { margin-top: 0; }
+.editor:focus { outline: none; }
+.editor:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
+.blk h2 { font-size: var(--fs-ui); font-weight: 600; margin-bottom: 8px; }
+.stage { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.stage img, .stage .add { width: 88px; height: 88px; border-radius: 12px; object-fit: cover; flex: none; }
+.stage .add { display: grid; place-items: center; align-content: center; gap: 2px; border: 1.5px dashed var(--trail); color: var(--ink2); font-size: var(--fs-meta); font-weight: 600; }
+.stage .add:hover { color: var(--ink); border-color: var(--ink2); }
+.chip .x { width: 28px; height: 28px; margin-right: -8px; display: grid; place-items: center; border-radius: 50%; color: var(--ink2); }
+.chip .x:hover { background: var(--surface); color: var(--ink); }
+.chip.add-tag { background: transparent; border: 1.5px solid var(--line); min-height: 36px; color: var(--ink2); }
+.write-wave .wave { width: 170px; }
+.sealbox { background: var(--surface); border-radius: var(--r-card); padding: 16px; border: 0; margin: 0; display: grid; gap: 12px; }
+.sealbox legend { float: left; width: 100%; padding: 0; display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-variation-settings: 'SOFT' 100; font-size: 20px; font-weight: 500; }
+.sealbox legend svg { color: var(--loot-mark); }
+.sealbox p { clear: both; font-size: var(--fs-ui); color: var(--ink2); line-height: 1.45; }
+.quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.quick label { position: relative; display: grid; gap: 1px; align-content: center; min-height: 64px; padding: 8px 12px; border-radius: 14px; background: var(--raised); cursor: pointer; }
+.quick input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.quick b { font-size: 14px; font-weight: 600; line-height: 1.25; }
+.quick span { font-size: var(--fs-meta); color: var(--ink2); }
+.quick label:hover { background: var(--line); }
+.quick label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.quick label:has(input:checked) { outline: 2px solid var(--loot); outline-offset: -2px; }
+.under { display: none; }
+
+/* ---------- Phone and tablet widths ---------- */
+@media (min-width: 640px) {
+  .main { max-width: 652px; margin: 0 auto; }
+  .era-cover, .loot-sky { margin: 0; border-radius: var(--r-card); }
+}
+
+/* ---------- Laptops ---------- */
+@media (min-width: 1100px) {
+  :root { --gutter: 40px; }
+  .topbar, .tabbar { display: none; }
+  .shell { display: grid; grid-template-columns: var(--nav-w) minmax(0, 1fr); min-height: 100vh; }
+  .sidenav {
+    display: flex; flex-direction: column; gap: 22px; position: sticky; top: 0; height: 100vh; padding: 24px 16px 20px;
+    background: var(--surface);
+  }
+  .sidenav .wordmark { padding-left: 8px; }
+  .sidenav .write-btn { width: 100%; }
+  .sidenav .write-menu { left: 0; right: 0; top: 56px; }
+  .nav-list { display: grid; gap: 2px; }
+  .nav-list a { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 12px; font-weight: 500; color: var(--ink2); font-size: var(--fs-ui); }
+  .nav-list a:hover { background: var(--raised); color: var(--ink); }
+  .nav-list a[aria-current="page"] { background: var(--raised); color: var(--ink); font-weight: 600; }
+  .nav-foot { margin-top: auto; }
+  .main { max-width: none; margin: 0; padding: 32px var(--gutter) 96px; }
+
+  .feed-grid { display: grid; grid-template-columns: minmax(0, 620px) 300px; gap: 56px; justify-content: center; }
+  .rail { position: sticky; top: 32px; align-self: start; display: grid; gap: 28px; }
+  .feed-col .otd { display: none; }
+  .rail .otd-row { grid-template-columns: 1fr; gap: 10px; }
+  .rail .otd-item .yr { display: inline; }
+  .rail .otd-item { width: auto; align-items: flex-start; padding: 10px; }
+  .rail .otd-item img { width: 72px; height: 72px; }
+  .rail .otd-item b { font-size: var(--fs-ui); }
+  .rail .otd-item .preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; color: var(--ink2); line-height: 1.4; margin-top: 2px; }
+  .tonight { padding-top: 4px; }
+  .tonight .tn-title { font-size: 28px; }
+  .entry-head h1 { font-size: 32px; }
+
+  .back-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .entry-grid { display: grid; grid-template-columns: minmax(0, 1fr) 420px; grid-template-areas: 'media head' 'media words'; grid-template-rows: auto 1fr; column-gap: 48px; max-width: 1120px; margin: 0 auto; align-items: start; }
+  .entry-grid .entry-head { grid-area: head; }
+  .entry-grid .entry-words { grid-area: words; }
+  .entry-media { grid-area: media; position: sticky; top: 32px; }
+  .entry-head { padding-top: 0; }
+  .entry-text { margin-top: 18px; }
+
+  .era-wrap { max-width: 1120px; margin: 0 auto; }
+  .era-hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 40px; align-items: center; }
+  .era-cover { height: 340px; }
+  .era-intro { padding: 0; }
+  .era-intro h1 { font-size: 32px; }
+  .era-lower { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 48px; margin-top: 8px; }
+  .constellation { aspect-ratio: 16 / 5; }
+
+  .loot-wrap { max-width: 1120px; margin: 0 auto; min-height: calc(100vh - 200px); display: grid; align-content: center; }
+  .loot { grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: 56px; align-items: center; }
+  .loot-sky { width: 100%; }
+  .loot-text .countdown { font-size: 48px; }
+  .loot-text h1 { font-size: 24px; }
+  .loot-text { padding: 0; }
+
+  .under { display: block; }
+  .rail.under { display: grid; }
+  .back-row.under { display: flex; }
+  .write-layer { background: var(--scrim); display: grid; place-items: center; padding: 32px; }
+  .sheet { min-height: 0; width: min(1040px, 100%); max-height: calc(100vh - 64px); background: var(--page); border-radius: 22px; box-shadow: 0 2px 8px rgba(0, 0, 0, .08); overflow: hidden; } /* taste-skill-ignore: a dialog over the dimmed feed; the scrim does the lifting */
+  .sheet-bar { padding: 10px 16px 10px 8px; border-bottom: 1px solid var(--line); }
+  .sheet-body { grid-template-columns: minmax(0, 1fr) 380px; gap: 40px; padding: 20px 28px 28px; overflow-y: auto; }
+}
+@media (min-width: 1100px) and (max-width: 1279px) {
+  .feed-grid { grid-template-columns: minmax(0, 1fr) 260px; gap: 36px; }
+  .entry-grid { grid-template-columns: minmax(0, 1fr) 360px; gap: 36px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../../shared/content.js"></script>
+<script src="../../shared/helpers.js"></script>
+<script>
+(function () {
+  const { html, raw, icon } = M;
+  const D = M.data;
+  const app = document.getElementById('app');
+  const TALL = new Set(['diary-page.jpg', 'flat-white.jpg', 'mackenzie-falls.jpg']);
+  const plural = (n, one, many = one + 's') => `${n.toLocaleString('en-AU')} ${n === 1 ? one : many}`;
+  const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
+
+  // ---------- Drawn pieces ----------
+  // A four-point star, used for the wordmark, the Loot Drop and the seal section.
+  const STAR = 'M12 1.5c.55 5.5 5 9.95 10.5 10.5-5.5.55-9.95 5-10.5 10.5C11.45 16.5 7 12.05 1.5 12 7 11.45 11.45 7 12 1.5z';
+  const starIcon = (size = 16) => raw(`<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><path d="${STAR}" fill="currentColor"/></svg>`);
+  const closeIcon = raw('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>');
+
+  // The moon as seen from Melbourne: in the southern hemisphere a waning moon is lit on its right.
+  function moonSvg(day, size, label) {
+    const m = M.moon(day);
+    const r = 10, c = 12, k = m.illumination;
+    const litRight = !m.waxing;
+    const rx = (r * Math.abs(1 - 2 * k)).toFixed(2);
+    const so = litRight ? 1 : 0;
+    const si = k > 0.5 ? so : 1 - so;
+    const d = `M${c} ${c - r}A${r} ${r} 0 0 ${so} ${c} ${c + r}A${rx} ${r} 0 0 ${si} ${c} ${c - r}Z`;
+    return raw(`<svg class="moon" width="${size}" height="${size}" viewBox="0 0 24 24" ${label ? `role="img" aria-label="${M.esc(label)}"` : 'aria-hidden="true"'}><circle class="moon-dark" cx="12" cy="12" r="10"/><path class="moon-lit" d="${d}"/><circle class="moon-edge" cx="12" cy="12" r="10.8"/></svg>`);
+  }
+
+  // Faint background stars for a sky, the same on every load.
+  function dust(seed, n, w, h) {
+    const rnd = M.seeded(seed);
+    let s = '';
+    for (let i = 0; i < n; i++) s += `<circle class="dust" cx="${(rnd() * w).toFixed(1)}" cy="${(rnd() * h).toFixed(1)}" r="${(0.5 + rnd() * 1.1).toFixed(2)}"/>`;
+    return s;
+  }
+
+  // The travelling star: a star, a trail curving down to you, and the stretch already travelled lit.
+  function starTrail({ w, h, from, to, c1, c2, travelled, total, rays = 16, starSize = 18, dustN = 0, youR = 5, minLit = 0, rings = false }) {
+    const lit = Math.max(minLit, travelled);
+    // the trail leaves from the end of the star's lower ray, so the light front sits on the trail, not on the star
+    const lead = rays + (rings ? 4 : 2);
+    const path = `M${from[0]} ${from[1] + lead}C${c1[0]} ${c1[1]} ${c2[0]} ${c2[1]} ${to[0]} ${to[1]}`;
+    const s = starSize, x = from[0], y = from[1];
+    // where the light has got to: measured along the same curve, so it sits on the trail
+    const p0 = [from[0], from[1] + lead];
+    const bez = (t) => [0, 1].map((k) => (1 - t) ** 3 * p0[k] + 3 * (1 - t) ** 2 * t * c1[k] + 3 * (1 - t) * t ** 2 * c2[k] + t ** 3 * to[k]);
+    const pts = Array.from({ length: 201 }, (_, i) => bez(i / 200));
+    const lens = [0];
+    for (let i = 1; i < pts.length; i++) lens.push(lens[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    const want = lens[200] * Math.min(1, lit / total);
+    const [fx, fy] = pts[Math.max(0, lens.findIndex((l) => l >= want))];
+    const front = { x: fx, y: fy };
+    return raw(`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      ${dustN ? dust('starlight-sky', dustN, w, h) : ''}
+      <path class="trail-rest" d="${path}"/>
+      <path class="trail-lit" d="${path}" pathLength="${total}" stroke-dasharray="${lit} ${total}"/>
+      <circle class="light-halo" cx="${front.x.toFixed(1)}" cy="${front.y.toFixed(1)}" r="${(youR * 1.1).toFixed(1)}"/>
+      <circle class="light-front" cx="${front.x.toFixed(1)}" cy="${front.y.toFixed(1)}" r="${(youR * 0.55).toFixed(1)}"/>
+      <circle class="you-dot" cx="${to[0]}" cy="${to[1]}" r="${youR}"/>
+      ${rings ? `<circle class="star-ring" cx="${x}" cy="${y}" r="${s * 0.95}" opacity=".35"/><circle class="star-ring" cx="${x}" cy="${y}" r="${s * 1.6}" opacity=".16"/>` : ''}
+      <g class="twinkle">
+        <path class="star-ray" d="M${x} ${y - rays}V${y + rays}M${x - rays * 0.72} ${y}H${x + rays * 0.72}"/>
+        <path class="star-shape" transform="translate(${x - s / 2} ${y - s / 2}) scale(${s / 24})" d="${STAR}"/>
+      </g>
+    </svg>`);
+  }
+
+  // ---------- Small parts ----------
+  let wm = 0;
+  function writeMenu(cls) {
+    const id = `write-menu-${++wm}`;
+    return html`<div class="write ${cls}">
+      <button class="write-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="${id}">${icon('plus', { size: 20, stroke: 2.2 })}<span>Write</span></button>
+      <div class="write-menu" id="${id}" role="menu" hidden>
+        <a role="menuitem" href="#write">${icon('book', { size: 18 })}New entry</a>
+        <a role="menuitem" href="#write">${icon('image', { size: 18 })}Photo dump</a>
+        <a role="menuitem" href="#write">${icon('page', { size: 18 })}Diary page</a>
+      </div></div>`;
+  }
+
+  function voice(m, cls = '') {
+    const bars = M.waveform(m.id, 40);
+    return html`<div class="voice ${cls}">
+      <button class="play" type="button" aria-label="${'Play voice note, ' + M.duration(m.durationSeconds)}">${icon('play', { size: 18 })}</button>
+      <span class="wave" aria-hidden="true">${bars.map((b) => html`<i style="height:${Math.round(b * 100)}%"></i>`)}</span>
+      <span class="meta">${M.duration(m.durationSeconds)}</span></div>`;
+  }
+
+  const spotify = (s, action = 'Play') => html`<div class="sound">
+      <span class="spotify">${icon('spotify', { size: 22, label: 'Spotify' })}</span>
+      <span><b>${s.title}</b>, ${s.artist}</span>
+      <button class="text-btn" type="button">${action}</button></div>`;
+
+  function sidenav(current) {
+    const item = (href, ic, label, key) => html`<a href="${href}" ${current === key ? raw('aria-current="page"') : ''}>${icon(ic, { size: 18 })}${label}</a>`;
+    return html`<nav class="sidenav" aria-label="Main">
+      <a class="wordmark" href="#feed">${starIcon(16)}memoirist</a>
+      ${writeMenu('nav-write')}
+      <div class="nav-list">
+        ${item('#feed', 'home', 'Journal', 'feed')}
+        ${item('#era', 'layers', 'Eras', 'era')}
+        ${item('#feed', 'list', 'Timeline', 'timeline')}
+        ${item('#feed', 'page', 'Templates', 'templates')}
+        ${item('#feed', 'tag', 'Tags', 'tags')}
+      </div>
+      <div class="nav-list nav-foot">${item('#feed', 'trash', 'Recently deleted', 'deleted')}</div>
+    </nav>`;
+  }
+
+  const topbarHome = () => html`<header class="topbar">
+      <a class="wordmark" href="#feed">${starIcon(16)}memoirist</a>
+    </header>`;
+  function tabbar(current) {
+    const tab = (href, ic, label, key) => html`<a href="${href}" ${current === key ? raw('aria-current="page"') : ''}>${icon(ic, { size: 22 })}<span>${label}</span></a>`;
+    return html`<nav class="tabbar" aria-label="Main">
+      ${tab('#feed', 'home', 'Journal', 'feed')}${tab('#feed', 'list', 'Timeline', 'timeline')}
+      ${writeMenu('tab-write')}
+      ${tab('#era', 'layers', 'Eras', 'era')}${tab('#feed', 'user', 'You', 'you')}
+    </nav>`;
+  }
+  const topbarBack = (href, label, extra = '') => html`<header class="topbar">
+      <a class="back" href="${href}">${icon('arrowLeft', { size: 20 })}${label}</a>${extra}
+    </header>`;
+
+  function shell(screen, top, body, { fab = true } = {}) {
+    return html`${top}<div class="shell">${sidenav(screen)}<main class="main" id="main">${body}</main></div>${fab ? tabbar(screen) : ''}`;
+  }
+
+  // ---------- Feed ----------
+  function tonight(tag = 'h1') {
+    const t = M.today();
+    const hour = Number(M.instant(D.now, { hour: 'numeric', hourCycle: 'h23' }));
+    const part = hour < 5 ? 'night' : hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : hour < 19 ? 'evening' : hour < 21 ? 'dusk' : 'night';
+    const phrase = part === 'dusk' ? 'at dusk' : part;
+    const m = M.moon(t);
+    return html`<div class="tonight">${moonSvg(t, 40, m.name + ' moon')}
+      <div>${raw(`<${tag} class="tn-title">`)}${M.date(t, 'weekday')} ${phrase}${raw(`</${tag}>`)}<p class="meta">${m.name} moon, ${Math.round(m.illumination * 100)}% lit</p></div></div>`;
+  }
+
+  function onThisDay(k) {
+    return html`<section class="otd" aria-labelledby="otd-h${k}"><h2 id="otd-h${k}">On this day</h2>
+      <div class="otd-row">${D.onThisDay.map((e) => html`<a class="otd-item" href="#entry">
+        <img src="${M.src(M.images(e)[0])}" alt="${M.images(e)[0].alt}" width="52" height="52">
+        <span><b>${M.displayTitle(e)}</b><span class="meta">${M.yearsAgo(e.entryDate)}<span class="yr">, ${M.date(e.entryDate, 'year')}</span></span>
+        <span class="preview under">${M.previewLine(e)}</span></span></a>`)}</div></section>`;
+  }
+
+  function eraBar(era) {
+    const img = M.cover(era);
+    return html`<a class="era-bar" href="#era">
+      ${img ? html`<img src="${img}" alt="" width="52" height="52">` : html`<span class="era-sky" aria-hidden="true">${raw('<svg viewBox="0 0 52 52"><path d="M14 31L22 18L33 34L40 22"/><circle cx="14" cy="31" r="2.2"/><circle cx="22" cy="18" r="2.8"/><circle cx="33" cy="34" r="2.4"/><circle cx="40" cy="22" r="1.8"/></svg>')}</span>`}
+      <span class="era-bar-text"><span class="era-bar-name">${era.title}</span><span class="meta">${M.range(era.startDate, era.endDate)}</span></span>
+      ${icon('chevronRight', { size: 20 })}</a>`;
+  }
+
+  function weekHead(w) {
+    const s = M.weekStats(w);
+    const facts = [s.photoCount && plural(s.photoCount, 'photo'), s.voiceNoteCount && plural(s.voiceNoteCount, 'voice note')].filter(Boolean);
+    return html`<details class="week"><summary>
+      <span class="week-name">${M.weekLabel(w)}</span><span class="week-count">${plural(s.entryCount, 'entry', 'entries')}</span>${icon('chevronRight', { size: 18 })}</summary>
+      <div class="week-body">
+        <p class="meta">${M.range(w.startDate, w.endDate)}. ${facts.join(' and ')}.</p>
+        <div class="chips">${s.tags.map((t) => html`<span class="chip">${t.name} <span class="meta">${t.count}</span></span>`)}</div>
+        <div class="thumbs">${s.thumbs.slice(0, 8).map((m) => html`<img src="${M.src(m)}" alt="${m.alt}" width="56" height="56">`)}</div>
+      </div></details>`;
+  }
+
+  function media(imgs) {
+    if (imgs.length === 1) {
+      const m = imgs[0];
+      return html`<a class="photo ${TALL.has(m.file) ? 'tall' : 'wide'}" href="#entry"><img src="${M.src(m)}" alt="${m.alt}"></a>`;
+    }
+    const shown = imgs.slice(0, 4);
+    return html`<a class="mosaic n${shown.length}" href="#entry" style="grid-template-rows:repeat(${Math.max(1, shown.length - 1)},1fr)">${shown.map((m) => html`<img src="${M.src(m)}" alt="${m.alt}">`)}</a>`;
+  }
+
+  function dayLabel(d) {
+    return d === M.today() ? 'Today' : M.date(d, 'dayLong');
+  }
+
+  function entryCard(e, showDay) {
+    const imgs = M.images(e), vns = M.voiceNotes(e);
+    const title = e.title || (!e.contentJson ? M.displayTitle(e) : null);
+    const hasHeadings = (e.contentJson?.content || []).some((n) => n.type === 'heading');
+    const text = e.contentJson ? (hasHeadings ? html`<p>${M.previewLine(e)}</p>` : M.caption(e.contentJson, { headingTag: 'h4' })) : '';
+    return html`<article class="card" data-entry="${e.id}">
+      ${showDay ? html`<p class="card-day">${dayLabel(e.entryDate)}</p>` : ''}
+      ${title ? html`<h3 class="card-title"><a href="#entry">${title}</a></h3>` : ''}
+      ${imgs.length ? media(imgs) : ''}
+      ${text ? html`<div class="card-text">${text}</div>` : ''}
+      ${vns.length || e.soundtrack ? html`<div class="card-foot">${vns.map((m) => voice(m))}${e.soundtrack ? spotify(e.soundtrack) : ''}</div>` : ''}
+      ${e.tags.length ? html`<p class="tagline">${icon('tag', { size: 16 })}${e.tags.map((t) => t.name).join(', ')}</p>` : ''}
+    </article>`;
+  }
+
+  function sealedCard(e) {
+    const v = M.sealedView(e);
+    const days = daysBetween(v.memoryDate, v.unlockDay);
+    const travelled = daysBetween(v.memoryDate, M.today());
+    return html`<a class="sealed" href="#loot" data-sealed aria-label="${'Loot Drop. ' + v.opens + ', ' + v.countdown}">
+      <span class="sealed-sky">${starTrail({ w: 100, h: 100, from: [74, 22], to: [20, 80], c1: [70, 52], c2: [48, 70], travelled, total: days, rays: 11, starSize: 15, dustN: 9, youR: 3.5 })}</span>
+      <span class="sealed-facts">
+        <span class="card-day">${M.date(v.memoryDate, 'dayLong')}</span>
+        <span class="sealed-opens">Opens ${M.date(v.unlockDay, 'weekdayShort')} ${M.date(v.unlockDay, 'medium')}</span>
+        <span class="sealed-count">${v.countdown}</span>
+      </span></a>`;
+  }
+
+  function feedColumn() {
+    return html`${M.feedGroups().map((g) => html`<section class="group" aria-label="${g.era.title}">
+      ${eraBar(g.era)}
+      ${g.weeks.map((w) => html`${weekHead(w)}<div class="cards">${w.entries.map((e, i) => {
+        if (M.isSealed(e)) return sealedCard(e);
+        const prev = w.entries[i - 1];
+        return entryCard(e, !prev || prev.entryDate !== e.entryDate);
+      })}</div>`)}
+    </section>`)}`;
+  }
+
+  function feedBody(under = false) {
+    return html`<div class="feed-grid">
+      <div class="feed-col">${tonight(under ? 'p' : 'h1')}${onThisDay('1')}${feedColumn()}</div>
+      <aside class="rail under" aria-label="On this day">${onThisDay('2')}</aside>
+    </div>`;
+  }
+
+  // ---------- Entry ----------
+  function entryBody() {
+    const e = M.featured.entry();
+    const w = M.weekOf(e.id);
+    const imgs = M.images(e), vns = M.voiceNotes(e);
+    const tpl = M.template(e.templateId);
+    const eraLinks = w.eras.map((x) => html`<a href="#era">${x.title}</a>`);
+    return html`<div class="back-row under"><a class="back" href="#feed">${icon('arrowLeft', { size: 20 })}${M.weekLabel(w)}</a><button class="text-btn" type="button">Edit</button></div>
+    <article class="entry-grid" data-entry="${e.id}">
+      <header class="entry-head"><p class="meta">${M.date(e.entryDate, 'long')}</p><h1>${e.title}</h1></header>
+      <div class="entry-media">
+        <figure class="entry-photo"><img id="main-photo" src="${M.src(imgs[0])}" alt="${imgs[0].alt}" width="1920" height="1281"></figure>
+        <div class="entry-thumbs" role="group" aria-label="Photos">${imgs.map((m, i) => html`<button type="button" data-i="${i}" aria-current="${i === 0 ? 'true' : 'false'}" aria-label="${'Show photo ' + (i + 1) + ' of ' + imgs.length}"><img src="${M.src(m)}" alt=""></button>`)}<span class="meta" id="photo-count">1 of ${imgs.length}</span></div>
+      </div>
+      <div class="entry-words">
+        <div class="entry-text">${M.caption(e.contentJson, { headingTag: 'h2' })}</div>
+        <div class="entry-extras">${vns.map((m) => voice(m))}${spotify(e.soundtrack)}
+          <div class="chips">${e.tags.map((t) => html`<a class="chip" href="#feed">${t.name}</a>`)}</div></div>
+        <p class="filed">In ${eraLinks.length === 2 ? html`${eraLinks[0]} and ${eraLinks[1]}` : eraLinks}. Written from the ${tpl.name} template.</p>
+      </div>
+    </article>`;
+  }
+
+  // ---------- Era ----------
+  // Each week of the Era is a star, sized by its entries. The newest weeks (the ones the page lists) are the
+  // bright, tappable stars, joined into the Era's figure; Japan's three weeks make a small figure of their own.
+  const FIGURE = [[47, 74], [56, 63], [65, 71], [71, 52], [64, 38], [77, 26], [89, 37]]; // oldest to newest listed week
+  const JAPAN = [[16, 34], [24, 24], [29, 38]];
+  function constellation(page) {
+    const series = M.eraSeries(page.era.id);
+    const listed = series.filter((s) => s.listed);
+    const rows = [...page.rows].reverse(); // oldest first, to match FIGURE
+    const japan = series.filter((s) => s.title === 'Japan, finally');
+    const others = series.filter((s) => !s.listed && s.title !== 'Japan, finally');
+    const rnd = M.seeded('brunswick-sky');
+    const taken = [...FIGURE, ...JAPAN];
+    const placed = others.map((s) => {
+      let p;
+      for (let tries = 0; tries < 60; tries++) {
+        p = [4 + rnd() * 92, 6 + rnd() * 88];
+        if (taken.every((q) => Math.hypot((p[0] - q[0]) * 1.4, p[1] - q[1]) > 7)) break;
+      }
+      taken.push(p);
+      return { ...s, p };
+    });
+    const size = (n, big) => (big ? 7 + n * 1.3 : 2 + n * 0.55).toFixed(1);
+    const line = (pts) => 'M' + pts.map((p) => p.join(' ')).join('L');
+    return html`<div class="constellation">
+      <svg class="lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${line(FIGURE)}"/><path d="${line(JAPAN)}"/></svg>
+      ${placed.map((s) => html`<span class="c-dot" style="left:${s.p[0].toFixed(1)}%;top:${s.p[1].toFixed(1)}%;width:${size(s.entryCount)}px;height:${size(s.entryCount)}px" aria-hidden="true"></span>`)}
+      ${japan.map((s, i) => html`<span class="c-dot" style="left:${JAPAN[i][0]}%;top:${JAPAN[i][1]}%;width:${size(s.entryCount)}px;height:${size(s.entryCount)}px" aria-hidden="true"></span>`)}
+      ${listed.map((s, i) => {
+        const r = rows[i];
+        const label = `${r.title}, ${plural(r.entryCount, 'entry', 'entries')}`;
+        return html`<a class="c-star" href="#feed" style="left:${FIGURE[i][0]}%;top:${FIGURE[i][1]}%" aria-label="${'Open week: ' + label}"><i style="width:${size(s.entryCount, true)}px;height:${size(s.entryCount, true)}px"></i><span class="c-label" aria-hidden="true">${r.title}</span></a>`;
+      })}
+    </div>`;
+  }
+
+  function eraBody() {
+    const page = M.eraPage(D.featured.eraId);
+    const e = page.era;
+    const t = page.totals;
+    const shownWeeks = page.rows.length;
+    return html`<div class="back-row under"><a class="back" href="#feed">${icon('arrowLeft', { size: 20 })}Eras</a><button class="text-btn" type="button">Edit</button></div>
+    <div class="era-wrap">
+      <div class="era-hero">
+        <figure class="era-cover"><img src="${M.cover(e)}" alt="A row of Victorian terrace houses with iron lace verandas"></figure>
+        <div class="era-intro">
+          <h1>${e.title}</h1>
+          <p class="meta">${M.range(e.startDate, e.endDate)} · ${page.span}</p>
+          <p class="lede">${e.description}</p>
+          <div class="sound-era">${spotify(e.soundtrack)}</div>
+          <div class="totals">
+            <div><b>${t.weekCount.toLocaleString('en-AU')}</b><span>weeks</span></div>
+            <div><b>${t.entryCount.toLocaleString('en-AU')}</b><span>entries</span></div>
+            <div><b>${t.photoCount.toLocaleString('en-AU')}</b><span>photos</span></div>
+            <div><b>${t.voiceNoteCount.toLocaleString('en-AU')}</b><span>voice notes</span></div>
+          </div>
+        </div>
+      </div>
+      <section class="sky-panel" aria-labelledby="sky-h">
+        <h2 class="section-h" id="sky-h">Its weeks as stars</h2>
+        <p class="meta">Each star is a week, sized by its entries. Tap a bright star to open its week.</p>
+        ${constellation(page)}
+      </section>
+      <div class="era-lower">
+        <section class="weeks" aria-labelledby="weeks-h">
+          <h2 class="section-h" id="weeks-h">Weeks</h2>
+          <div class="week-rows">
+            ${page.rows.map((r) => {
+              const titleIsRange = r.title === M.range(r.startDate, r.endDate);
+              return html`<a class="week-row" href="#feed">
+                <span class="wr-name">${r.title}</span>
+                <span class="wr-count">${plural(r.entryCount, 'entry', 'entries')}</span>
+                ${titleIsRange ? '' : html`<span class="meta">${M.range(r.startDate, r.endDate)}</span>`}
+                ${r.thumbs.length ? html`<span class="thumbs">${r.thumbs.slice(0, 6).map((m) => html`<img src="${M.src(m)}" alt="">`)}</span>` : ''}
+              </a>`;
+            })}
+            <div class="week-row rest"><span>${page.notListedWeeks} earlier weeks</span><span class="wr-count">${plural(D.eraPages[e.id].notListed.entryCount, 'entry', 'entries')}</span></div>
+          </div>
+        </section>
+        <section class="inside" aria-labelledby="inside-h">
+          <h2 class="section-h" id="inside-h">Eras inside this one</h2>
+          <div class="inside-list">${page.chaptersInside.map((c) => eraBar(c))}</div>
+        </section>
+      </div>
+    </div>`;
+  }
+
+  // ---------- Loot Drop ----------
+  function lootBody() {
+    const e = M.featured.lootDrop();
+    const v = M.sealedView(e);
+    const w = M.weekOf(e.id);
+    const total = daysBetween(v.memoryDate, v.unlockDay);
+    const travelled = daysBetween(v.memoryDate, M.today());
+    const morning = M.moon(v.unlockDay);
+    return html`<div class="back-row under"><a class="back" href="#feed">${icon('arrowLeft', { size: 20 })}${M.weekLabel(w)}</a></div>
+    <div class="loot-wrap"><div class="loot">
+      <div class="loot-sky" role="img" aria-label="${`A star whose light set out on ${M.date(v.memoryDate, 'long')} and is still travelling towards you.`}">
+        ${starTrail({ w: 400, h: 320, from: [296, 76], to: [72, 270], c1: [290, 190], c2: [190, 250], travelled, total, rays: 40, starSize: 38, dustN: 46, youR: 6, rings: true })}
+        <span class="lbl" style="right:calc(26% + 13%);top:calc(23.75% - 19px);text-align:right"><b>Written</b>${M.date(v.memoryDate, 'medium')}</span>
+        <span class="lbl" style="left:18%;top:calc(84.4% + 12px);transform:translateX(-50%)"><b>You</b></span>
+      </div>
+      <div class="loot-text">
+        <p class="countdown">${v.countdown}</p>
+        <h1>${v.opens}</h1>
+        <p class="loot-note">Its light is still on its way to you. Nobody can open or change this Loot Drop before then, you included.</p>
+        <p class="moon-line meta">${moonSvg(v.unlockDay, 22)}A ${morning.name.toLowerCase()} moon that morning</p>
+        <div class="loot-actions">
+          <button class="btn tonal" type="button">${icon('clock', { size: 18 })}Extend the seal</button>
+          <button class="btn quiet" type="button">Delete</button>
+        </div>
+      </div>
+    </div></div>`;
+  }
+
+  // ---------- Write ----------
+  function writeLayer() {
+    const d = M.draft();
+    const e = d.entry;
+    const imgs = M.images(e), vns = M.voiceNotes(e);
+    const tpl = M.template(e.templateId);
+    const suggestions = M.sealSuggestions();
+    return html`<div class="write-layer" role="dialog" aria-modal="true" aria-labelledby="write-h">
+      <form class="sheet" onsubmit="return false">
+        <div class="sheet-bar">
+          <a class="text-btn" href="#feed">Cancel</a>
+          <div class="sheet-title"><h1 id="write-h">New entry</h1><p class="meta" aria-live="polite">Draft saved ${M.time(d.savedAt)}</p></div>
+          <button class="btn primary" type="submit">Save</button>
+        </div>
+        <div class="sheet-body">
+          <div class="sheet-col">
+            <div class="pick-row">
+              <button class="pick" type="button" aria-label="${'Memory date: today, ' + M.date(e.entryDate, 'day') + '. Change'}">${icon('calendar', { size: 18 })}Today, ${M.date(e.entryDate, 'day')}</button>
+              <button class="pick" type="button" aria-label="${'Template: ' + tpl.name + '. Change'}">${icon('layers', { size: 18 })}From ${tpl.name}</button>
+            </div>
+            <textarea class="title-input" rows="1" placeholder="Title (optional)" aria-label="Title, optional">${e.title}</textarea>
+            <div class="tool-row"><div class="fmt" role="toolbar" aria-label="Formatting">
+              <button type="button" aria-label="Bold">B</button>
+              <button type="button" class="i" aria-label="Italic">I</button>
+              <button type="button" class="h" aria-label="Heading">H</button>
+              <button type="button" aria-label="Bulleted list">${icon('list', { size: 20 })}</button>
+            </div></div>
+            <div class="editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Entry text">${M.caption(e.contentJson, { headingTag: 'h3' })}</div>
+          </div>
+          <div class="sheet-col">
+            <section class="blk" aria-labelledby="ph-h"><h2 id="ph-h">Photos</h2>
+              <div class="stage">${imgs.map((m) => html`<img src="${M.src(m)}" alt="${m.alt}">`)}<button class="add" type="button">${icon('plus', { size: 22 })}Add</button></div></section>
+            <section class="blk write-wave" aria-labelledby="vn-h"><h2 id="vn-h">Voice note</h2>${vns.map((m) => voice(m))}</section>
+            <section class="blk" aria-labelledby="tg-h"><h2 id="tg-h">Tags</h2>
+              <div class="chips">${e.tags.map((t) => html`<span class="chip">${t.name}<button class="x" type="button" aria-label="${'Remove tag ' + t.name}">${closeIcon}</button></span>`)}<button class="chip add-tag" type="button">${icon('plus', { size: 16 })}Add tag</button></div></section>
+            <section class="blk" aria-labelledby="st-h"><h2 id="st-h">Soundtrack</h2>${spotify(e.soundtrack, 'Change')}</section>
+            <fieldset class="sealbox">
+              <legend>${starIcon(18)}Seal as Loot Drop</legend>
+              <p>Nobody, including you, can open it until the day you pick.</p>
+              <div class="quick">${suggestions.map((s) => html`<label><input type="radio" name="seal" value="${s.key}"><b>${s.label}</b><span>${M.date(s.day, 'medium')}</span></label>`)}</div>
+            </fieldset>
+          </div>
+        </div>
+      </form></div>`;
+  }
+
+  // ---------- Render ----------
+  function render(screen) {
+    let out;
+    if (screen === 'entry') out = shell('feed', topbarBack('#feed', M.weekLabel(M.weekOf(D.featured.entryId)), html`<button class="text-btn" type="button">Edit</button>`), entryBody());
+    else if (screen === 'era') out = shell('era', topbarBack('#feed', 'Eras', html`<button class="text-btn" type="button">Edit</button>`), eraBody());
+    else if (screen === 'loot') out = shell('feed', topbarBack('#feed', M.weekLabel(M.weekOf(D.featured.lootDropId))), lootBody());
+    else if (screen === 'write') out = html`<div class="under" aria-hidden="true" inert>${shell('feed', topbarHome(), feedBody(true), { fab: false })}</div>${writeLayer()}`;
+    else out = shell('feed', topbarHome(), feedBody());
+    app.innerHTML = String(out);
+
+    // The entry's thumbnails switch the main photo, which keeps its own shape.
+    const main = document.getElementById('main-photo');
+    if (main) {
+      const imgs = M.images(M.featured.entry());
+      document.querySelectorAll('.entry-thumbs button').forEach((b) => b.addEventListener('click', () => {
+        const i = Number(b.dataset.i);
+        main.src = M.src(imgs[i]); main.alt = imgs[i].alt;
+        document.querySelectorAll('.entry-thumbs button').forEach((x) => x.setAttribute('aria-current', String(x === b)));
+        document.getElementById('photo-count').textContent = `${i + 1} of ${imgs.length}`;
+      }));
+    }
+  }
+  M.mountApp(render);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keepsake</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Keepsake: neutral greys, one accent, big day numbers, photo-first. A Loot Drop is a metal time capsule. */
+:root {
+  --page: #F2F2EF; --surface: #FFFFFF; --raised: #E7E7E2; --ink: #151515; --ink-2: #57574F;
+  --accent: #C21F2B; --on-accent: #FFFFFF;
+  --era: #151515; --era-ink: #F2F2EF; --era-ink-2: #B9B9B2;
+  --metal: #C3C6C8; --metal-hi: #E4E6E7; --metal-lo: #A3A7AA; --metal-cap: #8D9295; --metal-ridge: #6F7477; --metal-edge: #2B2C2D;
+  --band: #C21F2B; --band-ink: #FFFFFF; --ground-shadow: rgba(21, 21, 21, .16);
+  --scrim: rgba(21, 21, 21, .55); --float-shadow: 0 12px 32px rgba(0, 0, 0, .18);
+  --spotify: #000000;
+  --font: "Archivo", system-ui, sans-serif;
+  --r-photo: 4px; --r-card: 8px;
+  --gutter: 16px;
+  color-scheme: light;
+}
+[data-theme="a"][data-mode="light"] { /* Ink and red, light: the starting values */ }
+[data-theme="a"][data-mode="dark"] {
+  --page: #1E1E1D; --surface: #282827; --raised: #323230; --ink: #EDEDE8; --ink-2: #ABABA3;
+  --accent: #F2737A; --on-accent: #1E1E1D;
+  --era: #343432; --era-ink: #EDEDE8; --era-ink-2: #B9B9B2;
+  --metal: #7E8286; --metal-hi: #A2A6A9; --metal-lo: #62666A; --metal-cap: #4C5053; --metal-ridge: #3A3D40; --metal-edge: #121212;
+  --band: #F2737A; --band-ink: #1E1E1D; --ground-shadow: rgba(0, 0, 0, .38);
+  --scrim: rgba(10, 10, 10, .62); --float-shadow: 0 14px 36px rgba(0, 0, 0, .45);
+  --spotify: #1DB954; color-scheme: dark;
+}
+[data-theme="b"][data-mode="light"] {
+  --page: #F3F5F1; --surface: #FFFFFF; --raised: #E6EAE4; --ink: #1A1F1C; --ink-2: #53605A;
+  --accent: #2E5A44; --on-accent: #FFFFFF;
+  --era: #1A1F1C; --era-ink: #F3F5F1; --era-ink-2: #B3BDB7;
+  --band: #2E5A44; --band-ink: #FFFFFF; --metal-edge: #232926;
+}
+[data-theme="b"][data-mode="dark"] {
+  --page: #18201C; --surface: #212B26; --raised: #2B3630; --ink: #E3EAE5; --ink-2: #A3B0A8;
+  --accent: #93C6A9; --on-accent: #101614;
+  --era: #2D3832; --era-ink: #E3EAE5; --era-ink-2: #B3BDB7;
+  --metal: #7C8482; --metal-hi: #98A09E; --metal-lo: #636A68; --metal-cap: #4A514F; --metal-ridge: #383E3C; --metal-edge: #0E1311;
+  --band: #93C6A9; --band-ink: #101614; --ground-shadow: rgba(0, 0, 0, .38);
+  --scrim: rgba(8, 12, 10, .62); --float-shadow: 0 14px 36px rgba(0, 0, 0, .45);
+  --spotify: #1DB954; color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--page); color: var(--ink); font-family: var(--font);
+  font-size: 16px; line-height: 1.5; font-feature-settings: "tnum" 0;
+  -webkit-font-smoothing: antialiased;
+}
+img { display: block; max-width: 100%; }
+a { color: inherit; }
+button { font: inherit; color: inherit; }
+h1, h2, h3, p, ul { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.sr { font-size: 20px; position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.num { font-variant-numeric: tabular-nums; }
+.icon { flex: none; }
+
+/* ---------- Shell ---------- */
+.shell { min-height: 100vh; }
+.topbar {
+  position: sticky; top: 0; z-index: 20; height: 52px; display: flex; align-items: center; gap: 8px;
+  padding: 0 var(--gutter); background: var(--page);
+}
+.wordmark { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 20px; letter-spacing: -0.03em; text-decoration: none; }
+.wordmark i { width: 10px; height: 18px; border-radius: 3px; background: var(--accent); display: inline-block; }
+.back { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding-right: 8px; text-decoration: none; font-weight: 600; font-size: 16px; margin-left: -6px; }
+.topbar h1 { font-size: 18px; font-weight: 700; }
+.topbar .end { margin-left: auto; }
+.quiet { display: inline-flex; align-items: center; justify-content: center; background: none; border: 0; padding: 0 4px; min-height: 44px; min-width: 44px; font-size: 16px; font-weight: 500; color: var(--ink-2); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.quiet:hover { color: var(--ink); }
+
+.bottombar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; align-items: center; gap: 2px;
+  padding: 6px 12px calc(8px + env(safe-area-inset-bottom)); background: var(--surface);
+}
+.tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px; text-decoration: none; font-size: 12px; font-weight: 500; color: var(--ink-2); border-radius: 8px; }
+.tab[aria-current="page"] { color: var(--ink); font-weight: 700; }
+.bottombar .write { flex: none; margin-left: 6px; }
+
+/* Write: one button, a plus and a word, never a pencil */
+.write { position: relative; }
+.write-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px 0 16px;
+  border: 0; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 16px; cursor: pointer;
+  transition: transform .12s ease, filter .12s ease;
+}
+.write-btn:hover { filter: brightness(1.06); }
+.write-btn:active { transform: scale(.97); }
+.write-menu {
+  position: absolute; right: 0; bottom: calc(100% + 10px); min-width: 216px; padding: 6px; border-radius: 12px;
+  background: var(--surface); box-shadow: var(--float-shadow); z-index: 40;
+}
+.write-menu button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0 12px; border: 0; background: none; border-radius: 8px; font-size: 16px; font-weight: 500; text-align: left; cursor: pointer; }
+.write-menu button:hover { background: var(--raised); }
+.write-menu .icon { color: var(--ink-2); }
+
+.sidenav { display: none; }
+main { padding: 0 var(--gutter) calc(96px + env(safe-area-inset-bottom)); }
+
+/* ---------- Day numbers: the signature ---------- */
+.daynum { display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px; }
+.daynum .n { font-size: 56px; line-height: .86; font-weight: 800; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
+.daynum .wd { font-size: 16px; font-weight: 600; color: var(--ink-2); }
+.daynum .wd b { display: block; color: var(--ink); font-weight: 600; }
+
+/* ---------- Feed ---------- */
+.otd { padding: 4px 0 14px; }
+.otd h2, .rail h2 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.otd-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.otd-item { display: flex; align-items: center; gap: 10px; min-width: 0; text-decoration: none; min-height: 48px; }
+.otd-item img { width: 48px; height: 48px; flex: none; object-fit: cover; border-radius: var(--r-photo); }
+.otd-item > span { min-width: 0; }
+.otd-item span span { display: block; font-size: 12px; color: var(--ink-2); line-height: 1.3; }
+.otd-item b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; font-weight: 600; line-height: 1.25; }
+
+.erabar {
+  position: sticky; top: 52px; z-index: 10; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 12px 8px 8px;
+  background: var(--era); color: var(--era-ink); border-radius: var(--r-card); text-decoration: none;
+}
+.erabar img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
+.erabar b { display: block; font-size: 16px; font-weight: 700; line-height: 1.25; color: var(--era-ink); }
+.erabar .d { display: block; font-size: 13px; color: var(--era-ink-2); line-height: 1.3; }
+.erabar .icon { margin-left: auto; color: var(--era-ink-2); }
+.group + .group { margin-top: 40px; }
+
+.week { margin-top: 16px; }
+.wl { margin: 0; }
+.wl button { display: block; width: 100%; padding: 6px 0; border: 0; background: none; text-align: left; cursor: pointer; }
+.wl-top { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.wl-title { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+.wl-range { font-size: 14px; font-weight: 500; color: var(--ink-2); display: none; }
+.wl-count { margin-left: auto; font-size: 14px; font-weight: 500; color: var(--ink-2); }
+.wl-top .icon { color: var(--ink-2); transition: transform .2s ease; }
+.wl button[aria-expanded="true"] .wl-top .icon { transform: rotate(90deg); }
+.wl-thumbs { display: flex; gap: 4px; margin-top: 6px; }
+.tile { width: 56px; height: 56px; flex: none; border-radius: var(--r-photo); overflow: hidden; background: var(--raised); }
+.tile img { width: 100%; height: 100%; object-fit: cover; }
+.tile.text { display: flex; align-items: flex-end; padding: 4px 5px; font-size: 11px; letter-spacing: -0.01em; font-weight: 700; line-height: 1.15; color: var(--ink); }
+.wsum { margin: 4px 0 6px; padding: 12px 14px; background: var(--surface); border-radius: var(--r-card); font-size: 15px; }
+.wsum span { color: var(--ink-2); }
+
+.days { margin-top: 18px; display: grid; gap: 36px; }
+.day-cards { display: grid; gap: 28px; min-width: 0; }
+.card h3 { font-size: 20px; line-height: 1.25; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 10px; }
+.card h3 a { text-decoration: none; }
+.card h3 a:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.photos { position: relative; }
+.photos .track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: var(--r-photo); }
+.photos .track::-webkit-scrollbar { display: none; }
+.photos .track img { flex: none; width: 100%; scroll-snap-align: start; object-fit: cover; background: var(--raised); }
+.photos .count { position: absolute; top: 10px; right: 10px; padding: 2px 8px; border-radius: 999px; background: rgba(15, 15, 15, .62); color: #FFFFFF; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.card .text { margin-top: 10px; font-size: 16px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-width: 62ch; }
+.card.words { background: var(--surface); border-radius: var(--r-card); padding: 18px 18px 16px; }
+.card.words .body p + p { margin-top: 10px; }
+.card.words .body { max-width: 62ch; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border-radius: 999px; background: var(--raised); font-size: 14px; font-weight: 500; }
+.voice { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px 0 4px; border-radius: 999px; background: var(--raised); }
+.voice .play { width: 36px; height: 36px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--ink); color: var(--page); cursor: pointer; }
+.wave { display: flex; align-items: center; gap: 2px; height: 22px; }
+.wave i { width: 2px; border-radius: 1px; background: var(--ink-2); display: block; }
+.voice .dur { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sound { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; }
+.sound .icon { color: var(--spotify); }
+.sound b { font-weight: 600; }
+.sound .ar { color: var(--ink-2); }
+
+/* The sealed card: a fixed size; memory date, opening date and countdown only */
+.sealed {
+  display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 14px; height: 124px; padding: 0 18px 0 10px;
+  background: var(--surface); border-radius: var(--r-card); overflow: hidden; text-decoration: none;
+}
+.sealed svg { width: 80px; height: auto; justify-self: center; }
+.sealed .cd { display: block; font-size: 23px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.sealed .op { display: block; font-size: 15px; font-weight: 600; margin-top: 6px; }
+.sealed .wr { display: block; font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+
+.rail { display: none; }
+
+/* ---------- Entry ---------- */
+.entry { padding-top: 8px; }
+.entry .text-col { padding-top: 26px; }
+.topbar.desk { display: none; }
+.entry .daynum { margin-bottom: 12px; }
+.entry h1 { font-size: 28px; line-height: 1.15; font-weight: 800; letter-spacing: -0.025em; margin-bottom: 16px; max-width: 18ch; }
+.viewer { margin: 0 calc(-1 * var(--gutter)); }
+.viewer .main img { width: 100%; height: auto; background: var(--raised); }
+.thumbs { display: flex; gap: 6px; padding: 8px var(--gutter) 0; }
+.thumbs button { width: 56px; height: 56px; padding: 0; border: 0; border-radius: var(--r-photo); overflow: hidden; cursor: pointer; background: var(--raised); opacity: .72; transition: opacity .15s ease; }
+.thumbs button[aria-pressed="true"] { opacity: 1; outline: 2px solid var(--ink); outline-offset: 2px; }
+.thumbs button:focus-visible { outline-color: var(--accent); }
+.thumbs img { width: 100%; height: 100%; object-fit: cover; }
+.prose { font-size: 17px; line-height: 1.6; max-width: 62ch; }
+.prose h3 { font-size: 15px; font-weight: 700; margin: 22px 0 4px; color: var(--ink); }
+.prose h3:first-child { margin-top: 0; }
+.prose p + p { margin-top: 12px; }
+.prose ul { padding-left: 1.2em; margin: 8px 0; }
+.entry .prose { margin-top: 22px; }
+.entry .attach { display: grid; gap: 10px; margin-top: 22px; justify-items: start; }
+.entry .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.entry .inera { margin-top: 18px; font-size: 14px; color: var(--ink-2); }
+.entry .inera a { color: var(--ink); font-weight: 600; text-decoration: none; }
+
+/* ---------- Era ---------- */
+.era-cover { margin: 0 calc(-1 * var(--gutter)); }
+.era-cover img { width: 100%; height: auto; }
+.era-head { padding-top: 18px; }
+.era-head h1 { font-size: 32px; line-height: 1.1; font-weight: 800; letter-spacing: -0.03em; }
+.era-dates { margin-top: 8px; font-size: 15px; color: var(--ink-2); }
+.era-dates b { color: var(--ink); font-weight: 600; }
+.era-desc { margin-top: 12px; font-size: 17px; line-height: 1.5; max-width: 46ch; }
+.era-head .sound { margin-top: 8px; }
+.totals { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; margin-top: 18px; border-radius: var(--r-card); overflow: hidden; }
+.totals div { background: var(--surface); padding: 12px 14px; }
+.totals b { display: block; font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.totals span { font-size: 14px; color: var(--ink-2); }
+.era-body h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.015em; margin: 36px 0 12px; }
+.weeks { display: grid; gap: 4px; list-style: none; padding: 0; border-radius: var(--r-card); overflow: hidden; }
+.weeks li { background: var(--surface); }
+.weeks a { display: block; padding: 14px; text-decoration: none; }
+.weeks a:hover { background: var(--raised); }
+.wrow { display: flex; align-items: baseline; gap: 12px; }
+.wrow b { font-size: 16px; font-weight: 700; }
+.wrow .r { font-size: 14px; color: var(--ink-2); }
+.wrow .c { margin-left: auto; font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Phones: the week's name on its own line, then its dates and counts, so nothing squeezes into narrow columns */
+@media (max-width: 639px) {
+  .wrow { flex-wrap: wrap; column-gap: 8px; row-gap: 2px; }
+  .wrow b { flex: 1 1 100%; }
+  .wrow .r { white-space: nowrap; }
+  .wrow .c { margin-left: 0; }
+  .wrow .r + .c::before { content: "·" / ""; margin-right: 8px; }
+}
+.wthumbs { display: flex; gap: 4px; margin-top: 10px; }
+.wthumbs .tile { width: 44px; height: 44px; }
+.wthumbs .more { display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.weeks .rest { padding: 14px; font-size: 15px; color: var(--ink-2); }
+.weeks .rest b { color: var(--ink); font-weight: 600; }
+.inside { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.inside a { text-decoration: none; display: block; }
+.inside .pic { aspect-ratio: 4 / 3; border-radius: var(--r-photo); overflow: hidden; background: var(--raised); }
+.inside .pic img { width: 100%; height: 100%; object-fit: cover; }
+.inside .pic.word { display: flex; align-items: flex-end; padding: 6px 12px; font-size: 64px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.inside b { display: block; margin-top: 8px; font-size: 16px; font-weight: 700; line-height: 1.25; }
+.inside span { display: block; font-size: 14px; color: var(--ink-2); }
+
+/* ---------- Loot Drop ---------- */
+.loot { padding-top: 8px; }
+.stage { position: relative; display: grid; place-items: center; padding: 40px 6px 34px; background: var(--raised); border-radius: var(--r-card); overflow: hidden; }
+/* An upright canister on a flat base, with a screw lid and a carry handle: a time capsule, never a pill (senior review). */
+.capsule { position: relative; width: min(66%, 230px); aspect-ratio: 300 / 330; animation: settle .9s cubic-bezier(.2, .8, .25, 1) both; }
+.capsule svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.capsule .label {
+  position: absolute; left: 13.3%; width: 73.4%; top: 40%; height: 33.4%; display: flex; flex-direction: column; justify-content: center; align-items: center;
+  text-align: center; color: var(--band-ink); line-height: 1.15;
+}
+.capsule .label span { font-size: 12px; font-weight: 600; }
+.capsule .label b { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; margin: 2px 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
+@keyframes settle { /* set down on the table: a short drop, a small rock, still */
+  0% { transform: translateY(-28px) rotate(-3deg); }
+  60% { transform: translateY(0) rotate(1.5deg); }
+  80% { transform: translateY(0) rotate(-.6deg); }
+  100% { transform: translateY(0) rotate(0); }
+}
+.loot-text { padding-top: 24px; }
+.countdown { font-size: 56px; line-height: .95; font-weight: 800; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
+.loot-text .why { margin-top: 14px; font-size: 17px; line-height: 1.5; max-width: 34ch; }
+.loot-text .written { margin-top: 10px; font-size: 15px; color: var(--ink-2); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 24px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 22px; border: 0; border-radius: 999px; font-weight: 700; font-size: 16px; cursor: pointer; text-decoration: none; transition: transform .12s ease, filter .12s ease; }
+.btn:active { transform: scale(.97); }
+.btn.ink { background: var(--ink); color: var(--page); }
+.btn.ink:hover { filter: brightness(1.2); }
+.btn.primary { background: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { filter: brightness(1.06); }
+
+/* ---------- Write ---------- */
+.behind { display: none; }
+.sheet { position: fixed; inset: 0; z-index: 50; background: var(--page); overflow-y: auto; display: flex; flex-direction: column; }
+.sheet-head { position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: 6px 12px; background: var(--page); }
+.sheet-head .t { text-align: center; line-height: 1.2; }
+.sheet-head h1 { font-size: 18px; font-weight: 700; }
+.sheet-head .saved { display: block; font-size: 13px; color: var(--ink-2); }
+.sheet-head .btn { min-height: 44px; padding: 0 20px; }
+.sheet-body { padding: 4px var(--gutter) 40px; display: grid; gap: 22px; align-content: start; }
+.mdate { display: flex; align-items: center; gap: 12px; }
+.mdate .daynum { margin: 0; }
+.mdate .quiet { margin-left: auto; }
+.sheet-body .col { display: grid; gap: 22px; align-content: start; min-width: 0; }
+.x .icon { transform: rotate(45deg); }
+.title-in { display: block; width: 100%; border: 0; background: none; padding: 4px 0; resize: none; field-sizing: content; overflow: hidden; font: inherit; font-size: 26px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.2; color: var(--ink); border-radius: 4px; }
+.title-in::placeholder { color: var(--ink-2); }
+.editor { background: var(--surface); border-radius: var(--r-card); overflow: hidden; }
+.fmt { display: flex; gap: 2px; padding: 4px; background: var(--raised); }
+.fmt button { min-width: 44px; height: 40px; border: 0; border-radius: 6px; background: none; font-size: 16px; cursor: pointer; display: grid; place-items: center; color: var(--ink); }
+.fmt button:hover { background: var(--surface); }
+.fmt button[aria-pressed="true"] { background: var(--surface); }
+.fmt .b { font-weight: 800; } .fmt .i { font-style: italic; font-family: Georgia, serif; } .fmt .h { font-weight: 800; letter-spacing: -0.02em; }
+.editor .prose { padding: 14px 16px 18px; min-height: 180px; outline: none; font-size: 17px; }
+.editor .prose:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 0 0 var(--r-card) var(--r-card); }
+.field h2 { font-size: 15px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.strip { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.strip .ph { position: relative; width: 84px; height: 84px; flex: none; border-radius: var(--r-photo); overflow: hidden; }
+.strip .ph img { width: 100%; height: 100%; object-fit: cover; }
+.strip .ph button { position: absolute; top: 2px; right: 2px; width: 44px; height: 44px; border: 0; background: none; display: grid; place-items: start end; padding: 4px; cursor: pointer; }
+.strip .ph button span { width: 24px; height: 24px; border-radius: 50%; background: rgba(15, 15, 15, .66); color: #FFFFFF; display: grid; place-items: center; }
+.add { width: 84px; height: 84px; flex: none; border: 2px dashed var(--ink-2); border-radius: var(--r-photo); background: none; display: grid; place-content: center; justify-items: center; gap: 2px; font-size: 13px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tagchip { display: inline-flex; align-items: center; gap: 2px; min-height: 36px; padding: 0 0 0 14px; border-radius: 999px; background: var(--raised); font-size: 15px; font-weight: 500; }
+.tagchip button { width: 36px; height: 36px; border: 0; background: none; border-radius: 50%; display: grid; place-items: center; cursor: pointer; color: var(--ink-2); }
+.addchip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 2px dashed var(--ink-2); border-radius: 999px; background: none; font-size: 15px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.setting { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 4px 6px 14px; background: var(--surface); border-radius: var(--r-card); }
+.setting .k { font-size: 14px; color: var(--ink-2); width: 78px; flex: none; }
+.setting .v { flex: 1; font-size: 16px; font-weight: 600; min-width: 0; }
+.setting .quiet { margin-left: auto; }
+.setting .sound { min-height: 0; }
+.seal { background: var(--surface); border-radius: var(--r-card); padding: 14px 14px 16px; }
+.seal h2 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.seal h2 svg { width: 30px; height: auto; }
+.seal p { margin-top: 6px; font-size: 15px; color: var(--ink-2); }
+.quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
+.quick button { min-height: 60px; padding: 8px 10px; border: 2px solid var(--raised); border-radius: var(--r-card); background: none; text-align: left; cursor: pointer; line-height: 1.25; }
+.quick button:hover { border-color: var(--ink-2); }
+.quick button[aria-checked="true"] { border-color: var(--accent); }
+.quick b { display: block; font-size: 15px; font-weight: 700; }
+.quick span { display: block; font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+.seal .pick { margin-top: 6px; }
+
+/* ---------- Tablet: a phone column, capped ---------- */
+@media (min-width: 640px) {
+  :root { --gutter: 24px; }
+  main { max-width: 680px; margin: 0 auto; }
+  .topbar { max-width: 680px; margin: 0 auto; }
+}
+
+/* ---------- Laptop ---------- */
+@media (min-width: 1100px) {
+  :root { --gutter: 40px; }
+  .topbar.phone, .bottombar { display: none; }
+  .shell { display: grid; grid-template-columns: 232px 1fr; }
+  .sidenav {
+    display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; padding: 22px 16px 20px; background: var(--page);
+  }
+  .sidenav .wordmark { padding: 0 8px; margin-bottom: 22px; }
+  .sidenav .write { margin-bottom: 18px; }
+  .sidenav .write-btn { width: 100%; }
+  .sidenav .write-menu { top: calc(100% + 8px); bottom: auto; left: 0; right: auto; }
+  .nav-link { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 10px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: 500; color: var(--ink-2); }
+  .nav-link:hover { background: var(--raised); color: var(--ink); }
+  .nav-link[aria-current="page"] { color: var(--ink); font-weight: 700; background: var(--surface); }
+  .sidenav .foot { margin-top: auto; }
+  main { max-width: none; margin: 0; padding: 0 var(--gutter) 80px; }
+
+  .feedwrap { display: grid; grid-template-columns: minmax(0, 648px) 300px; gap: 56px; justify-content: center; }
+  .feedcol { padding-top: 22px; }
+  .otd.phone { display: none; }
+  .erabar { top: 0; }
+  .wl-range { display: inline; }
+  .wl-count { display: none; }
+  .wl-thumbs { display: none; }
+  .wl-top .icon { margin-left: auto; }
+  .day { display: grid; grid-template-columns: 88px minmax(0, 1fr); }
+  .day > .daynum { flex-direction: column; align-items: flex-start; gap: 6px; position: sticky; top: 72px; align-self: start; }
+  .daynum .n { font-size: 64px; }
+  .days { gap: 48px; }
+  .rail { display: grid; gap: 34px; align-content: start; position: sticky; top: 0; padding-top: 22px; }
+  .rail .otd-row { grid-template-columns: 1fr; }
+  .rail .otd-item img { width: 64px; height: 64px; }
+  .rail .otd-item b { max-width: 210px; white-space: normal; }
+  .rail .list { display: grid; gap: 12px; }
+  .rail h2.facts { font-size: 18px; font-weight: 800; letter-spacing: -0.015em; line-height: 1.25; margin-bottom: 4px; }
+  .rail .tagline { font-size: 14px; color: var(--ink-2); margin-bottom: 12px; }
+  .rail .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .rail .grid3 .tile { width: auto; height: auto; aspect-ratio: 1; font-size: 14px; padding: 8px; }
+
+  .topbar.desk { display: flex; position: static; max-width: 1180px; margin: 0; padding: 0; height: 64px; }
+  .inside .pic { aspect-ratio: 16 / 9; }
+  .entry { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 48px; padding-top: 0; max-width: 1180px; }
+  .viewer { margin: 0; }
+  .viewer .main img { max-height: calc(100vh - 170px); width: auto; max-width: 100%; border-radius: var(--r-photo); }
+  .thumbs { padding: 10px 0 0; }
+  .thumbs button { width: 64px; height: 64px; }
+  .entry .text-col { padding-top: 2px; }
+  .entry h1 { font-size: 32px; }
+  .entry .daynum .n { font-size: 64px; }
+
+  .era-top { display: grid; grid-template-columns: minmax(0, 600px) minmax(0, 1fr); gap: 48px; align-items: start; max-width: 1180px; }
+  .era-cover { margin: 0; }
+  .era-cover img { border-radius: var(--r-photo); }
+  .era-head { padding-top: 0; }
+  .era-head h1 { font-size: 32px; }
+  .totals { grid-template-columns: repeat(4, 1fr); }
+  .era-body { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 48px; max-width: 1180px; }
+  .inside { grid-template-columns: 1fr; }
+
+  .topbar.phone.keep { display: flex; position: static; height: 64px; max-width: none; margin: 0; }
+  .loot { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 56px; align-items: center; max-width: 1180px; padding-top: 8px; }
+  .stage { min-height: min(520px, calc(100vh - 64px - 80px)); padding: 64px 40px 56px; align-content: center; }
+  .capsule { width: min(100%, 320px); }
+  .capsule .label span { font-size: 15px; }
+  .capsule .label b { font-size: 28px; }
+  .loot-text { padding-top: 0; }
+  .countdown { font-size: 72px; }
+
+  .behind { display: block; }
+  .scrim { position: fixed; inset: 0; z-index: 45; background: var(--scrim); }
+  .sheet { inset: 32px auto 32px 50%; transform: translateX(-50%); width: min(1040px, calc(100vw - 64px)); border-radius: 14px; }
+  .sheet-head { padding: 10px 16px; }
+  .sheet-body { grid-template-columns: minmax(0, 1fr) 384px; column-gap: 36px; padding: 6px 28px 32px; }
+  .sheet-body .col { display: grid; gap: 22px; align-content: start; min-width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../../shared/content.js"></script>
+<script src="../../shared/helpers.js"></script>
+<script>
+(function () {
+  const { html, raw, icon } = M;
+  const D = M.data;
+  // Natural shapes of the shared photos (width / height), so feed crops stay gentle and entry photos uncropped.
+  const RATIO = {
+    'boroka-lookout.jpg': 1280 / 720, 'campfire.jpg': 1280 / 853, 'diary-page.jpg': 1260 / 1680, 'empty-bedroom.jpg': 1280 / 960,
+    'fitzroy-terrace.jpg': 1800 / 1200, 'flat-white.jpg': 1280 / 1707, 'grampians-sandstone.jpg': 1280 / 720,
+    'halls-gap-kangaroo.jpg': 1280 / 853, 'halls-gap-ranges.jpg': 1280 / 853, 'lecture-theatre.jpg': 1280 / 964,
+    'mackenzie-falls.jpg': 1280 / 1920, 'pinnacle-lookout.jpg': 1280 / 853, 'pinnacle-sunrise.jpg': 1920 / 1281,
+    'princes-park.jpg': 1280 / 853, 'sydney-road-tram.jpg': 1280 / 853,
+  };
+  const ratio = (m) => RATIO[m.file] || 1.5;
+  const pl = (n, one, many = one + 's') => `${n.toLocaleString('en-AU')} ${n === 1 ? one : many}`;
+  const dayN = (d) => String(Number(d.slice(8)));
+  const list = (words) => (words.length < 2 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`);
+
+  // ---------- The time capsule (drawn, flat metal in three tones) ----------
+  // An upright canister standing on a flat base: a knurled screw lid with a carry handle, two rims and the label band
+  // round its middle. Upright, flat-bottomed and handled so it reads as a container, never as a pill (senior review).
+  function capsule({ mini = false } = {}) {
+    const edge = mini ? 9 : 5;
+    const knurl = Array.from({ length: 15 }, (_, i) => `<rect x="${38 + i * 15.5}" y="56" width="6" height="26" fill="var(--metal-ridge)"/>`).join('');
+    const rivets = [56, 244].map((x) => `<circle cx="${x}" cy="114" r="5" fill="var(--metal-ridge)"/><circle cx="${x}" cy="270" r="5" fill="var(--metal-ridge)"/>`).join('');
+    return raw(`<svg viewBox="0 0 300 330" aria-hidden="true" focusable="false">
+      ${mini ? '' : '<ellipse cx="150" cy="318" rx="132" ry="10" fill="var(--ground-shadow)"/>'}
+      <path d="M118 52 V30 a14 14 0 0 1 14 -14 h36 a14 14 0 0 1 14 14 V52" fill="none" stroke="var(--metal-edge)" stroke-width="${mini ? 14 : 10}" stroke-linecap="round"/>
+      <rect x="40" y="88" width="220" height="208" fill="var(--metal)"/>
+      <rect x="66" y="88" width="30" height="208" fill="var(--metal-hi)"/>
+      <rect x="216" y="88" width="44" height="208" fill="var(--metal-lo)"/>
+      <rect x="40" y="132" width="220" height="110" fill="var(--band)"/>
+      ${mini ? '' : rivets}
+      <rect x="28" y="48" width="244" height="40" rx="10" fill="var(--metal-cap)"/>
+      ${mini ? '' : knurl}
+      <rect x="32" y="284" width="236" height="28" rx="8" fill="var(--metal-cap)"/>
+      <path d="M40 88 V296 M260 88 V296 M40 132 H260 M40 242 H260" stroke="var(--metal-edge)" stroke-width="${edge}"/>
+      <rect x="28" y="48" width="244" height="40" rx="10" fill="none" stroke="var(--metal-edge)" stroke-width="${edge}"/>
+      <rect x="32" y="284" width="236" height="28" rx="8" fill="none" stroke="var(--metal-edge)" stroke-width="${edge}"/>
+    </svg>`);
+  }
+
+  // ---------- Shared pieces ----------
+  const writeBtn = (where) => html`<div class="write">
+    <button class="write-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="write-${where}">${icon('plus', { size: 20, stroke: 2.4 })}<span>Write</span></button>
+    <div class="write-menu" id="write-${where}" role="menu" hidden>
+      <button type="button" role="menuitem" data-go="write">${icon('plus', { size: 20 })}New entry</button>
+      <button type="button" role="menuitem" data-go="write">${icon('image', { size: 20 })}Photo dump</button>
+      <button type="button" role="menuitem" data-go="write">${icon('page', { size: 20 })}Diary page</button>
+    </div></div>`;
+
+  const NAV = [['feed', 'Journal', 'home'], ['timeline', 'Timeline', 'list'], ['eras', 'Eras', 'layers']];
+  const current = (s) => (s === 'era' ? 'eras' : s === 'feed' ? 'feed' : 'feed');
+  const sidenav = (s) => html`<nav class="sidenav" aria-label="Main">
+    <a class="wordmark" href="#feed"><i aria-hidden="true"></i>memoirist</a>
+    ${writeBtn('side')}
+    ${NAV.map(([id, label, ic]) => html`<a class="nav-link" href="${id === 'eras' ? '#era' : '#feed'}" ${current(s) === id ? raw('aria-current="page"') : ''}>${icon(ic)}${label}</a>`)}
+    <a class="nav-link" href="#feed">${icon('page')}Templates</a>
+    <div class="foot"><a class="nav-link" href="#feed">${icon('trash')}Recently deleted</a></div>
+  </nav>`;
+  const bottombar = (s) => html`<nav class="bottombar" aria-label="Main">
+    ${NAV.map(([id, label, ic]) => html`<a class="tab" href="${id === 'eras' ? '#era' : '#feed'}" ${current(s) === id ? raw('aria-current="page"') : ''}>${icon(ic, { size: 22 })}${label}</a>`)}
+    ${writeBtn('bar')}
+  </nav>`;
+
+  const daynum = (d, { long = false } = {}) => html`<div class="daynum"><span class="n">${dayN(d)}</span>
+    <span class="wd">${long ? html`<b>${M.date(d, 'weekday')}</b>${M.date(d, 'monthYear')}` : M.date(d, 'weekdayShort')}</span></div>`;
+
+  const voice = (v) => html`<div class="voice"><button class="play" type="button" aria-label="${`Play voice note, ${M.duration(v.durationSeconds)}`}">${icon('play', { size: 16 })}</button>
+    <span class="wave" aria-hidden="true">${raw(M.waveform(v.id, 36).map((h) => `<i style="height:${Math.round(h * 100)}%"></i>`).join(''))}</span>
+    <span class="dur">${M.duration(v.durationSeconds)}</span></div>`;
+
+  const sound = (t) => html`<div class="sound">${icon('spotify', { size: 22, label: 'Spotify' })}<span><b>${t.title}</b><span class="ar">, ${t.artist}</span></span></div>`;
+
+  const tile = (e) => {
+    const img = M.images(e)[0];
+    return img ? html`<span class="tile"><img src="${M.src(img)}" alt=""></span>` : html`<span class="tile text">${M.displayTitle(e).replace(/-/g, '‑')}</span>`;
+  };
+
+  // ---------- Feed ----------
+  function otd(cls) {
+    return html`<section class="otd ${cls}" aria-labelledby="otd-${cls}"><h2 id="otd-${cls}">On this day</h2>
+      <div class="otd-row list">${D.onThisDay.map((e) => html`<a class="otd-item" href="#feed">
+        <img src="${M.src(M.images(e)[0])}" alt="${M.images(e)[0].alt}">
+        <span><span>${M.yearsAgo(e.entryDate)}</span><b>${M.displayTitle(e)}</b></span></a>`)}</div></section>`;
+  }
+
+  function sealedCard(e) {
+    const v = M.sealedView(e);
+    return html`<a class="sealed" href="#loot" data-sealed aria-label="${`Loot Drop. ${v.opens}, ${v.countdown}. Written ${M.date(v.memoryDate, 'medium')}`}">
+      ${capsule({ mini: true })}
+      <span><span class="cd">${v.countdown}</span><span class="op">Opens ${M.date(v.unlockDay, 'day')} ${M.date(v.unlockDay, 'year')}</span><span class="wr">Written ${M.date(v.memoryDate, 'medium')}</span></span></a>`;
+  }
+
+  function card(e, first) {
+    if (M.isSealed(e)) return sealedCard(e);
+    const imgs = M.images(e);
+    const voices = M.voiceNotes(e);
+    const title = e.title || (!e.contentJson ? M.displayTitle(e) : null);
+    const r = Math.max(imgs.length ? ratio(imgs[0]) : 1.5, 0.8);
+    const link = (t) => html`<a href="${e.id === D.featured.entryId ? '#entry' : '#feed'}">${t}</a>`;
+    if (!imgs.length && !voices.length) {
+      return html`<article class="card words" data-entry="${e.id}">${title ? html`<h3>${link(title)}</h3>` : ''}
+        <div class="body prose">${M.caption(e.contentJson)}</div>
+        ${e.tags.length ? html`<div class="meta">${e.tags.map((t) => html`<span class="chip">${t.name}</span>`)}</div>` : ''}</article>`;
+    }
+    const line = e.contentJson ? M.previewLine(e) : null;
+    return html`<article class="card" data-entry="${e.id}">
+      ${title ? html`<h3>${link(title)}</h3>` : ''}
+      ${imgs.length ? html`<div class="photos">
+        <div class="track" style="${`aspect-ratio:${r.toFixed(3)}`}" ${imgs.length > 1 ? raw('tabindex="0" aria-label="Photos, swipe for more"') : ''}>${imgs.map((m) => html`<img src="${M.src(m)}" alt="${m.alt}">`)}</div>
+        ${imgs.length > 1 ? html`<span class="count" aria-hidden="true">1/${imgs.length}</span>` : ''}</div>` : ''}
+      ${line ? html`<p class="text">${line}</p>` : ''}
+      ${(e.tags.length || voices.length || e.soundtrack) ? html`<div class="meta">${voices.map(voice)}${e.soundtrack ? sound(e.soundtrack) : ''}${e.tags.map((t) => html`<span class="chip">${t.name}</span>`)}</div>` : ''}
+    </article>`;
+  }
+
+  function weekBlock(w) {
+    const s = M.weekStats(w);
+    const open = w.entries.filter((e) => !M.isSealed(e));
+    const days = [];
+    for (const e of w.entries) {
+      const last = days[days.length - 1];
+      if (last && last.date === e.entryDate) last.entries.push(e); else days.push({ date: e.entryDate, entries: [e] });
+    }
+    const sumId = `sum-${w.id}`;
+    const facts = [s.photoCount && pl(s.photoCount, 'photo'), s.voiceNoteCount && pl(s.voiceNoteCount, 'voice note')].filter(Boolean);
+    return html`<section class="week" aria-labelledby="h-${w.id}">
+      <h2 class="wl" id="h-${w.id}"><button type="button" aria-expanded="false" aria-controls="${sumId}">
+        <span class="wl-top"><span class="wl-title">${M.weekLabel(w)}</span><span class="wl-range">${M.range(w.startDate, w.endDate)}</span>
+          <span class="wl-count">${pl(s.entryCount, 'entry', 'entries')}</span>${icon('chevronRight', { size: 18 })}</span>
+        <span class="wl-thumbs" aria-hidden="true">${open.map(tile)}</span>
+      </button></h2>
+      <div class="wsum" id="${sumId}" hidden>${list(facts)}. <span>${s.tags.map((t) => t.name).join(', ')}</span></div>
+      <div class="days">${days.map((d) => html`<div class="day">${daynum(d.date)}<div class="day-cards">${d.entries.map((e) => card(e))}</div></div>`)}</div>
+    </section>`;
+  }
+
+  function eraBar(era) {
+    return html`<a class="erabar" href="${era.id === D.featured.eraId ? '#era' : '#feed'}">
+      ${era.cover ? html`<img src="${M.cover(era)}" alt="">` : ''}
+      <span><b>${era.title}</b><span class="d">${M.range(era.startDate, era.endDate)}</span></span>${icon('chevronRight', { size: 20 })}</a>`;
+  }
+
+  function rail() {
+    const w = D.weeks[0];
+    const s = M.weekStats(w);
+    const open = w.entries.filter((e) => !M.isSealed(e));
+    const facts = [pl(s.entryCount, 'entry', 'entries'), s.photoCount && pl(s.photoCount, 'photo'), s.voiceNoteCount && pl(s.voiceNoteCount, 'voice note')].filter(Boolean);
+    return html`<aside class="rail" aria-label="On this day and this week">
+      ${otd('desk')}
+      <section aria-label="Week summary"><h2 class="facts">${list(facts)}</h2>
+        <p class="tagline">So far this week, tagged ${list(s.tags.map((t) => t.name))}</p>
+        <div class="grid3">${open.map(tile)}</div></section>
+    </aside>`;
+  }
+
+  function feedView() {
+    return html`<div class="feedwrap"><div class="feedcol">
+      ${otd('phone')}
+      ${M.feedGroups().map((g) => html`<div class="group">${eraBar(g.era)}${g.weeks.map(weekBlock)}</div>`)}
+    </div>${rail()}</div>`;
+  }
+
+  // ---------- Entry ----------
+  function entryView() {
+    const e = M.featured.entry();
+    const imgs = M.images(e);
+    const w = M.weekOf(e.id);
+    const first = imgs[0];
+    return html`<article class="entry" data-screen-entry>
+      <div class="viewer">
+        <div class="main"><img id="main-photo" src="${M.src(first)}" alt="${first.alt}" width="1920" height="${Math.round(1920 / ratio(first))}"></div>
+        <div class="thumbs" role="group" aria-label="${`Photos, ${imgs.length}`}">${imgs.map((m, i) => html`<button type="button" aria-pressed="${i === 0}" aria-label="${`Photo ${i + 1} of ${imgs.length}: ${m.alt}`}" data-src="${M.src(m)}" data-alt="${m.alt}" data-ratio="${ratio(m)}"><img src="${M.src(m)}" alt=""></button>`)}</div>
+      </div>
+      <div class="text-col">
+        ${daynum(e.entryDate, { long: true })}
+        <h1>${e.title}</h1>
+        <div class="prose">${M.caption(e.contentJson)}</div>
+        <div class="attach">${M.voiceNotes(e).map(voice)}${e.soundtrack ? sound(e.soundtrack) : ''}</div>
+        <div class="tags">${e.tags.map((t) => html`<span class="chip">${t.name}</span>`)}</div>
+        <p class="inera">In ${w.eras.map((x, i) => html`${i ? ' and ' : ''}<a href="${x.id === D.featured.eraId ? '#era' : '#feed'}">${x.title}</a>`)}</p>
+      </div>
+    </article>`;
+  }
+
+  // ---------- Era ----------
+  function eraView() {
+    const p = M.eraPage(D.featured.eraId);
+    const e = p.era;
+    const t = p.totals;
+    return html`<div class="era-top">
+        <div class="era-cover"><img src="${M.cover(e)}" alt="A row of Victorian terrace houses with iron lace verandas in Fitzroy" width="1800" height="1200"></div>
+        <header class="era-head">
+          <h1>${e.title}</h1>
+          <p class="era-dates"><b>${M.range(e.startDate, e.endDate)}</b>, ${p.span} so far</p>
+          <p class="era-desc">${e.description}</p>
+          ${e.soundtrack ? sound(e.soundtrack) : ''}
+          <div class="totals">
+            <div><b>${t.weekCount.toLocaleString('en-AU')}</b><span>weeks</span></div>
+            <div><b>${t.entryCount.toLocaleString('en-AU')}</b><span>entries</span></div>
+            <div><b>${t.photoCount.toLocaleString('en-AU')}</b><span>photos</span></div>
+            <div><b>${t.voiceNoteCount.toLocaleString('en-AU')}</b><span>voice notes</span></div>
+          </div>
+        </header>
+      </div>
+      <div class="era-body">
+        <section aria-labelledby="h-weeks"><h2 id="h-weeks">Weeks</h2>
+          <ul class="weeks">${p.rows.map((r) => {
+            const named = r.title !== M.range(r.startDate, r.endDate);
+            const counts = [pl(r.entryCount, 'entry', 'entries'), r.photoCount && pl(r.photoCount, 'photo')].filter(Boolean).join(', ');
+            const shown = r.thumbs.slice(0, 6);
+            return html`<li><a href="#feed"><span class="wrow"><b>${r.title}</b>${named ? html`<span class="r">${M.range(r.startDate, r.endDate)}</span>` : ''}<span class="c">${counts}</span></span>
+              ${shown.length ? html`<span class="wthumbs" aria-hidden="true">${shown.map((m, i) => (i === 5 && r.thumbs.length > 6 ? html`<span class="tile more">+${r.thumbs.length - 5}</span>` : html`<span class="tile"><img src="${M.src(m)}" alt=""></span>`))}</span>` : ''}</a></li>`;
+          })}
+            <li class="rest"><b>${pl(p.notListedWeeks, 'earlier week')}</b></li>
+          </ul></section>
+        <section aria-labelledby="h-inside"><h2 id="h-inside">Eras inside this one</h2>
+          <div class="inside">${p.chaptersInside.map((c) => html`<a href="#feed">
+            ${c.cover ? html`<span class="pic"><img src="${M.cover(c)}" alt=""></span>` : html`<span class="pic word" aria-hidden="true">${[...c.title][0]}</span>`}
+            <b>${c.title}</b><span>${M.range(c.startDate, c.endDate)}</span></a>`)}</div></section>
+      </div>`;
+  }
+
+  // ---------- Loot Drop ----------
+  function lootView() {
+    const v = M.sealedView(M.featured.lootDrop());
+    return html`<div class="loot">
+      <div class="stage">
+        <div class="capsule">${capsule()}
+          <div class="label"><span>Opens ${M.date(v.unlockDay, 'weekday')}</span><b>${M.date(v.unlockDay, 'medium')}</b><span>at ${M.time(v.unlockAt)}</span></div>
+        </div>
+      </div>
+      <div class="loot-text">
+        <p class="countdown">${v.countdown}</p>
+        <p class="why">Nobody can open it or change it before then, you included.</p>
+        <p class="written">Written ${M.date(v.memoryDate, 'long')}</p>
+        <div class="actions"><button class="btn ink" type="button">${icon('clock', { size: 20 })}Extend the seal</button><button class="quiet" type="button">Delete</button></div>
+      </div>
+    </div>`;
+  }
+
+  // ---------- Write ----------
+  function writeView() {
+    const { entry: d, savedAt } = M.draft();
+    const tpl = M.template(d.templateId);
+    const imgs = M.images(d);
+    const v = M.voiceNotes(d)[0];
+    const quick = M.sealSuggestions();
+    const editor = html`
+      <div class="mdate">${daynum(d.entryDate, { long: true })}<button class="quiet" type="button">Change date</button></div>
+      <label class="sr" for="title-in">Title (optional)</label>
+      <textarea class="title-in" id="title-in" rows="1" placeholder="Title (optional)">${d.title}</textarea>
+      <div class="editor">
+        <div class="fmt" role="toolbar" aria-label="Formatting">
+          <button type="button" class="b" aria-label="Bold" aria-pressed="false">B</button>
+          <button type="button" class="i" aria-label="Italic" aria-pressed="false">I</button>
+          <button type="button" class="h" aria-label="Heading" aria-pressed="false">H</button>
+          <button type="button" aria-label="Bullet list" aria-pressed="false">${icon('list', { size: 20 })}</button>
+        </div>
+        <div class="prose" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Entry text">${M.caption(d.contentJson)}</div>
+      </div>
+      <section class="field" aria-labelledby="h-ph"><h2 id="h-ph">Photos</h2>
+        <div class="strip">${imgs.map((m) => html`<span class="ph"><img src="${M.src(m)}" alt="${m.alt}"><button class="x" type="button" aria-label="${`Remove photo: ${m.alt}`}"><span>${icon('plus', { size: 14, stroke: 2.4 })}</span></button></span>`)}
+          <button class="add" type="button">${icon('plus', { size: 22 })}Add</button></div></section>
+      <section class="field" aria-labelledby="h-vn"><h2 id="h-vn">Voice note</h2>
+        <div class="row">${voice(v)}<button class="quiet" type="button" aria-label="Remove voice note">Remove</button></div></section>`;
+    const side = html`
+      <section class="field" aria-labelledby="h-tags"><h2 id="h-tags">Tags</h2>
+        <div class="row">${d.tags.map((t) => html`<span class="tagchip">${t.name}<button class="x" type="button" aria-label="${`Remove tag ${t.name}`}">${icon('plus', { size: 16, stroke: 2 })}</button></span>`)}
+          <button class="addchip" type="button">${icon('plus', { size: 18 })}Add tag</button></div></section>
+      <div class="setting"><span class="k">Template</span><span class="v">${tpl.name}</span><button class="quiet" type="button">Change</button></div>
+      <div class="setting"><span class="k">Soundtrack</span><span class="v">${sound(d.soundtrack)}</span><button class="quiet" type="button">Change</button></div>
+      <section class="seal" aria-labelledby="h-seal"><h2 id="h-seal">${capsule({ mini: true })}Seal as Loot Drop</h2>
+        <p>Nobody, including you, can open it until the day you choose.</p>
+        <div class="quick" role="radiogroup" aria-labelledby="h-seal">${quick.map((q) => html`<button type="button" role="radio" aria-checked="false"><b>${q.label}</b><span>${M.date(q.day, 'medium')}</span></button>`)}</div>
+        <button class="quiet pick" type="button">Pick a date</button></section>`;
+    return html`<section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+        <header class="sheet-head"><a class="quiet" href="#feed">Cancel</a>
+          <div class="t"><h1 id="sheet-title">New entry</h1><span class="saved">Draft saved ${M.time(savedAt)}</span></div>
+          <button class="btn primary" type="button">Save</button></header>
+        <div class="sheet-body"><div class="col">${editor}</div><div class="col">${side}</div></div>
+      </section>
+      <div class="scrim" aria-hidden="true"></div>
+      <div class="behind" inert aria-hidden="true">${shell('feed', feedView())}</div>`;
+  }
+
+  // ---------- Shell per screen ----------
+  function topbar(s) {
+    if (s === 'feed') return html`<header class="topbar phone"><a class="wordmark" href="#feed"><i aria-hidden="true"></i>memoirist</a></header>`;
+    if (s === 'era') return html`<header class="topbar phone"><a class="back" href="#feed">${icon('chevronLeft', { size: 24 })}Eras</a></header>`;
+    if (s === 'entry') return html`<header class="topbar phone"><a class="back" href="#feed">${icon('chevronLeft', { size: 24 })}Grampians Trip Week</a><button class="quiet end" type="button">Edit</button></header>`;
+    return html`<header class="topbar phone keep"><a class="back" href="#feed" aria-label="Back to Grampians Trip Week">${icon('chevronLeft', { size: 24 })}</a><h1>Loot Drop</h1></header>`;
+  }
+  function desktopBar(s) {
+    if (s === 'entry') return html`<header class="topbar desk"><a class="back" href="#feed">${icon('chevronLeft', { size: 22 })}Grampians Trip Week</a><button class="quiet end" type="button">Edit</button></header>`;
+    if (s === 'era') return html`<header class="topbar desk"><a class="back" href="#feed">${icon('chevronLeft', { size: 22 })}Eras</a></header>`;
+    return '';
+  }
+  function shell(s, body) {
+    return html`<div class="shell">${sidenav(s)}<div class="content">${topbar(s)}<main id="main">
+      ${s === 'feed' ? html`<h1 class="sr">Journal</h1>` : ''}${desktopBar(s)}${body}</main></div>${bottombar(s)}</div>`;
+  }
+
+  const VIEWS = { feed: feedView, entry: entryView, era: eraView, loot: lootView };
+  function render(screen) {
+    const app = document.getElementById('app');
+    app.innerHTML = String(screen === 'write' ? writeView() : shell(screen, VIEWS[screen]()));
+    document.title = { feed: 'Keepsake', entry: 'Sunrise at the Pinnacle', era: 'The Brunswick Years', loot: 'Loot Drop', write: 'New entry' }[screen];
+  }
+
+  // Interactions: week summaries (D-25), the entry's photo picker, the feed carousel counter, write menu items.
+  document.addEventListener('click', (ev) => {
+    const wl = ev.target.closest('.wl button');
+    if (wl) {
+      const open = wl.getAttribute('aria-expanded') !== 'true';
+      wl.setAttribute('aria-expanded', String(open));
+      document.getElementById(wl.getAttribute('aria-controls')).hidden = !open;
+    }
+    const th = ev.target.closest('.thumbs button');
+    if (th) {
+      const img = document.getElementById('main-photo');
+      img.src = th.dataset.src; img.alt = th.dataset.alt;
+      img.height = Math.round(1920 / Number(th.dataset.ratio));
+      th.parentElement.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === th)));
+    }
+    const go = ev.target.closest('[data-go]');
+    if (go) location.hash = go.dataset.go;
+    const q = ev.target.closest('.quick button');
+    if (q) q.parentElement.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b === q && b.getAttribute('aria-checked') !== 'true')));
+  });
+  document.addEventListener('scroll', (ev) => {
+    const t = ev.target;
+    if (!(t instanceof Element) || !t.classList.contains('track')) return;
+    const n = t.children.length;
+    const i = Math.min(n, Math.round(t.scrollLeft / t.clientWidth) + 1);
+    const c = t.parentElement.querySelector('.count');
+    if (c) c.textContent = `${i}/${n}`;
+  }, true);
+
+  M.mountApp(render);
+})();
+</script>
+</body>
+</html>
