@@ -103,7 +103,7 @@ There is **one living file per topic**, not a copy per phase.
 ### Every fact has one home
 | Fact | Lives in | Everywhere else |
 |---|---|---|
-| What users get, and in which phase | The project [README](../README.md), which wins on what and when (D-27) | PRD and SPRINT_PLAN follow it |
+| What users get, and in which phase | The project [README](../README.md), which wins on what and when (D-27) | PRD, SPRINT_PLAN and [marketing/PITCH.md](marketing/PITCH.md) follow it |
 | How and why something works | [DECISIONS.md](DECISIONS.md), which wins on how (D-27) | Links to the D-entry |
 | Tables and columns | [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md), then the migrations once built | Links |
 | Endpoints and shapes | [API_CONTRACT.md](API_CONTRACT.md), then `/v3/api-docs` once built | Links; frontend types are generated, never hand-written |
