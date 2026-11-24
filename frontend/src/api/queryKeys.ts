@@ -13,5 +13,8 @@ const all = ['memoirist'] as const;
 export const queryKeys = {
   all,
   me: () => [...all, 'me'] as const,
+  // Task 4.4. One key for every page of the feed: an infinite query keeps its pages under a single key, so a
+  // save (task 4.6) invalidates the feed with this one prefix and every loaded page refetches in order.
+  feed: () => [...all, 'feed'] as const,
 };
 // └── END ANSWER ▲ ──

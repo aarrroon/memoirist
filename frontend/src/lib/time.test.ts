@@ -1,5 +1,17 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { dayLabel, formatDay, formatMoment, greeting, partOfDay, todayIn } from './time';
+import {
+  countdown,
+  dayLabel,
+  dayParts,
+  formatDay,
+  formatMoment,
+  formatOpens,
+  formatWeekRange,
+  greeting,
+  isWithin,
+  partOfDay,
+  todayIn,
+} from './time';
 
 // Plain unit tests with fixed instants (frontend.md: plain Vitest for lib/). Every instant is written in UTC, so
 // what each test expects can be worked out by hand from the zone's offset at that moment.
@@ -146,5 +158,47 @@ describe('calendar days', () => {
 
   test('yesterday crosses a month and a year', () => {
     expect(dayLabel('2026-12-31', MELBOURNE, utc('2026-12-31T23:30:00Z'))).toBe('Yesterday');
+  });
+});
+
+describe('the feed’s weeks and sealed cards (task 4.4)', () => {
+  test('a week names its dates as briefly as it can', () => {
+    expect(formatWeekRange('2026-11-16', '2026-11-22')).toBe('16–22 November');
+    expect(formatWeekRange('2026-11-30', '2026-12-06')).toBe('30 November – 6 December');
+    expect(formatWeekRange('2026-12-28', '2027-01-03')).toBe('28 December 2026 – 3 January 2027');
+  });
+
+  test('a day is inside a week from its Monday to its Sunday, both included', () => {
+    expect(isWithin('2026-11-23', '2026-11-23', '2026-11-29')).toBe(true);
+    expect(isWithin('2026-11-29', '2026-11-23', '2026-11-29')).toBe(true);
+    expect(isWithin('2026-11-30', '2026-11-23', '2026-11-29')).toBe(false);
+    expect(isWithin('2026-11-22', '2026-11-23', '2026-11-29')).toBe(false);
+  });
+
+  test('the laptop margin splits a day into its weekday and a short date', () => {
+    expect(dayParts('2026-10-26')).toEqual({ weekday: 'Monday', short: '26 Oct' });
+  });
+
+  test('the opening day is the day in the user’s zone, not in UTC', () => {
+    // 9:00 am AEDT on Monday 25 January 2027 is 22:00 UTC on Sunday the 24th.
+    expect(formatOpens('2027-01-24T22:00:00Z', MELBOURNE)).toBe('Mon 25 Jan 2027');
+    expect(formatOpens('2027-01-24T22:00:00Z', NEW_YORK)).toBe('Sun 24 Jan 2027');
+  });
+
+  test('the countdown counts calendar days in the user’s zone', () => {
+    const opens = '2027-01-24T22:00:00Z'; // 9:00 am on 25 January in Melbourne
+    // 23:00 AEDT on 24 January: the opening is tomorrow morning, ten hours away.
+    expect(countdown(opens, MELBOURNE, utc('2027-01-24T12:00:00Z'))).toBe('tomorrow');
+    // 08:00 AEDT on the day itself: still sealed for an hour.
+    expect(countdown(opens, MELBOURNE, utc('2027-01-24T21:00:00Z'))).toBe('today');
+    // 23:47 AEDT on Tuesday 24 November 2026.
+    expect(countdown(opens, MELBOURNE, utc('2026-11-24T12:47:00Z'))).toBe('in 62 days');
+  });
+
+  test('a countdown across the April daylight-saving change is not one day off', () => {
+    // 9:00 am AEST on Tuesday 7 April 2026 is 23:00 UTC on the 6th. Clocks went back on Sunday 5 April.
+    expect(countdown('2026-04-06T23:00:00Z', MELBOURNE, utc('2026-04-03T01:00:00Z'))).toBe(
+      'in 4 days',
+    );
   });
 });

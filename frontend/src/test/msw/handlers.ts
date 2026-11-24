@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import type { Me } from '../../api/users';
+import { page, sampleWeeks } from './feed';
 
 // Answers most tests share (task 4.2). A test that needs another answer adds its own with server.use().
 // Paths start with '*' so they match whatever origin jsdom gives the page.
@@ -13,4 +14,8 @@ export const devUser: Me = {
   birthday: null,
 };
 
-export const handlers = [http.get('*/api/v1/users/me', () => HttpResponse.json(devUser))];
+export const handlers = [
+  http.get('*/api/v1/users/me', () => HttpResponse.json(devUser)),
+  // The Journal is the app's home, so most screens' tests load the feed too (task 4.4): one page of the sample.
+  http.get('*/api/v1/feed', () => HttpResponse.json(page(sampleWeeks))),
+];

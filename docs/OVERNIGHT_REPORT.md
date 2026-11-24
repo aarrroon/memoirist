@@ -33,6 +33,7 @@
 |---|---|---|---|---|
 | 4.2 API client and data layer | done | Sprint 4.2: Add the typed API client and data layer | Generated API types, an `openapi-fetch` client (dev header only in dev), typed `ApiProblem` errors, the query-key factory, the `QueryClient` and `useMe()`; the starter page greets the dev user (73 tests) | [4.2](build-journal/sprint-4/4.2-api-client-data-layer.md) |
 | 4.3 Routing, shell and time utilities | done | Sprint 4.3: Add the routes, the app shell and the time utilities | React Router routes for all eight Phase 1 addresses, the phone-first shell (moon line or back link, five-column tab bar with Write, side nav from `lg`), the Zustand UI store and `lib/time.ts` in the user's zone (131 tests, Melbourne DST and other zones) | [4.3](build-journal/sprint-4/4.3-routing-shell-time.md) |
+| 4.4 Feed | done | Sprint 4.4: Build the feed with weeks filed under their Eras | The Journal at `/` as an infinite query over `GET /feed`: weeks filed under `eras[0]` with one-level nesting and chips (D-22), a sticky Era and week line, a first entry body, a text-only sealed card that is never counted, and loading, empty and error states (165 tests) | [4.4](build-journal/sprint-4/4.4-feed.md) |
 
 ### S4 Usage
 | Time (Melbourne) | 5-hour used | Weekly used | Decision |
@@ -40,6 +41,8 @@
 | 2026-11-24 22:31 | 20% | 44% | Part A started |
 | 2026-11-24 22:52 | 25% | 45% | Start 4.2 (75% left; no task measured yet, needs 30%) |
 | 2026-11-24 23:07 | 43% | 47% | 4.2 cost 18% (largest so far). Start 4.3 (57% left, needs 18%) |
+| 2026-11-24 23:41 | 74% | 51% | 4.3 cost 31% (new largest). 26% left < 31%: wait until 03:15 (the window resets 03:10) |
+| 2026-11-24 23:45 | 74% | 51% | The user changed the rule: start each task while the weekly limit is under 90%, and let the safety net resume a run the 5-hour limit stops. Start 4.4 |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
@@ -57,6 +60,16 @@
 | 11 | 4.3 | No doc gives the copy | Placeholder screens show their title and one line naming the task that builds them |
 | 12 | 4.3 | DESIGN.md §6 | On inner screens: a week marks Journal and goes back to it; Templates, Tags and Recently deleted mark You on a phone and go back to You; an unknown address marks Journal |
 | 13 | 4.3 | DESIGN.md §8 | A visually hidden *Skip to content* link is the first Tab stop and focuses `<main>` |
+| 14 | 4.4 | SPRINT_PLAN 4.4 vs 4.5, 4.8, 4.14 | 4.4 renders a minimal entry: day line, only the first photo in a 4:5 frame, the title, `contentText` as plain text cut after three lines, and the tags. The sealed card is text only and not a link until 4.8; the Era shows its initial until covers (4.14) |
+| 15 | 4.4 | DESIGN.md §4 Feed | A week's line names it by its title, else *This week* when today (user's zone) is inside it, else its dates (*16–22 November*; the year only when the week crosses one), then *· N entries*, left out when it has no readable entry |
+| 16 | 4.4 | D-22, design.md §1 | A nested week isn't indented: its line shows the nested Era over *in <bigger Era>*, inside a nested `<section>`. Groups are runs of neighbouring weeks, so an Era that comes back starts a new run. The sticky Era header is the one sticky line per week |
+| 17 | 4.4 | USER_FLOWS F-08 | A week in no Era keeps only the week link on its line; its group is labelled *Weeks in no Era* for screen readers |
+| 18 | 4.4 | Tasks 4.9 and 4.11 | The Era name and chips link to `/eras` until Era pages exist; tags link to `/entries?tag=<tagId>` (4.11 may rename the parameter) |
+| 19 | 4.4 | design.md §9 vs the mockup | Tags are spaced links, each at least 44 × 44 px, not comma-joined |
+| 20 | 4.4 | Round 3 empty and error screenshots | Empty: heading, line, *Write your first entry* (primary) and *Photo dump* (secondary), both setting capture; no star (4.8) or first-letter card (4.16). Error: *Can't reach memoirist*, a network or `problemMessage` sentence, then *Anything you were writing is still here.* |
+| 21 | 4.4 | No doc gives the component | `components/ui/button.tsx` (primary, secondary, quiet, through `cva`) from DESIGN.md §4 Controls, ahead of 4.6 |
+| 22 | 4.4 | USER_FLOWS F-08 | An IntersectionObserver (rootMargin one screen) loads the next page, with a quiet *Show earlier weeks* button for keyboards; a failed page shows its message and *Try again* in the foot |
+| 23 | 4.4 | DESIGN.md §4 Feed (review) | The entry title is plain text, not a link, until an entry route exists (4.5/4.7); `mediaLabel` shows nothing for an entry with no media, as D-24 names no label for it |
 
 ### S4 Needs attention
 - **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
@@ -68,6 +81,11 @@
 - **4.3:** 4.1's reduced-motion rule (`transition-duration: 0.01ms !important` with `transition-property: all`) makes every change a 0.01 ms transition, so a test that reads computed styles straight after focus sees the start value. Invisible to people; tests should wait a frame.
 - **4.3:** the Write menu's choices set UI state only; nothing visible happens until task 4.6.
 - **4.3:** the tablet-width top bar misalignment found by the review was fixed at close-out; audit.mjs measures only 375 and 1440 px, so tablet width is checked only by the close-out's Playwright probe.
+- **4.4, Q29:** on a throttled phone (`audit.mjs --slow`, production build) the first photo paints at 2.7 s (WARN; target 2.5 s, fail over 4 s), 305 KB in 9 requests, layout shift 0. The sample photos are 34 KB PNGs; real 2–3 MB photos would be much slower, which supports making smaller copies before going online.
+- **4.4, D-25:** the sample's newest week has no photos, so its first photo starts at 651 px (80%); with a photo-first week (and a chip row) it starts at 253 px (31%, limit 284 px). On this day (4.14) adds a 64 px row, which still fits.
+- **4.4:** the production JS is about 166–168 KB gzipped, under the 200 KB feed budget; Vite warns of a chunk over 500 kB minified. Capture (4.6) must be lazy-loaded.
+- **4.4:** the entry title isn't a link yet (DESIGN.md §4 Feed); link it to the entry view when that route lands (4.5/4.7).
+- **4.4:** every test that renders `/` now needs `GET /feed` answered; it is a default MSW handler.
 
 ### S4 Questions for the morning
 

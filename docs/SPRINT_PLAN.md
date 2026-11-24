@@ -280,7 +280,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - `lib/time.ts` (formatting in the user's zone, "today" in the user's zone).
   - **Done when:** time utilities have unit tests covering a Melbourne daylight-saving change and a non-Melbourne zone.
 
-- [ ] **4.4 Feed**
+- [x] **4.4 Feed**
   - **Do:** infinite scroll over `GET /feed` (`useInfiniteQuery`), sticky era headers and week sections. A week in several Eras is grouped under `eras[0]`, with the others as chips; when `eras[0]` sits wholly inside another of the week's Eras, the week shows as a section nested inside that Era, one level deep (D-22).
   - **Done when:** the feed shows the local sample content (3.16); there are empty, loading and error states; component tests pass.
 

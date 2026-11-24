@@ -180,6 +180,12 @@
   }
 }
 
+/* The feed's laptop layout: a 96 px date margin beside the entry (DESIGN.md §3, task 4.4). A named utility, so no
+   component holds an arbitrary grid value (design.md Tokens, D-40). Use it as `lg:feed-grid`. */
+@utility feed-grid {
+  grid-template-columns: 6rem minmax(0, 1fr);
+}
+
 /* prefers-reduced-motion stops motion everywhere, whatever a component asks for. */
 @media (prefers-reduced-motion: reduce) {
   *,

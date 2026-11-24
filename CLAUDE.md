@@ -14,8 +14,8 @@ A private journaling PWA: an Instagram-style feed of your own entries that files
 - If they disagree, stop and ask the user. Record the answer with `/record-decision`, and edit the README only with the user's approval.
 
 ## Current focus
-**Phase 1, Sprint 4. Next task: 4.4** (Feed).
-- Sprints 1–3 are built: the whole Phase 1 API (37 endpoints, about 1,600 tests). Task 4.1 scaffolded `frontend/`: the tokens and fonts from DESIGN.md, ESLint, Prettier, Vitest and MSW, and a starter page. Task 4.2 added `src/api/`: generated types, the `openapi-fetch` client, `ApiProblem` errors, the query-key factory, the `QueryClient` and `useMe()`. Task 4.3 added the eight Phase 1 routes (`router.tsx`), the app shell (top bar, tab bar with Write, side nav), the Zustand UI store and `src/lib/time.ts`; most screens are placeholders.
+**Phase 1, Sprint 4. Next task: 4.5** (Entry card).
+- Sprints 1–3 are built: the whole Phase 1 API (37 endpoints, about 1,600 tests). Task 4.1 scaffolded `frontend/`: the tokens and fonts from DESIGN.md, ESLint, Prettier, Vitest and MSW, and a starter page. Task 4.2 added `src/api/`: generated types, the `openapi-fetch` client, `ApiProblem` errors, the query-key factory, the `QueryClient` and `useMe()`. Task 4.3 added the eight Phase 1 routes (`router.tsx`), the app shell (top bar, tab bar with Write, side nav), the Zustand UI store and `src/lib/time.ts`. Task 4.4 made the Journal at `/` a real feed: an infinite query over `GET /feed`, weeks filed under their Eras (D-22), a text-only sealed card, and empty, loading and error states. Most other screens are placeholders.
 - Progress is tracked by the checkboxes in `docs/SPRINT_PLAN.md`. Update this line when a task is ticked; a Stop hook checks it.
 - Build only what the current phase needs. Don't add tables, endpoints or libraries from later phases.
 

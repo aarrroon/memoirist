@@ -277,9 +277,9 @@ Exact versions are pinned in `backend/build.gradle.kts`, and Gradle's own in `ba
 
 ```
 src/
-├── api/          # schema.d.ts (generated — never hand-edit), client.ts (openapi-fetch), queryKeys.ts
+├── api/          # schema.d.ts (generated — never hand-edit), client.ts (openapi-fetch), queryKeys.ts, problem.ts, one file of hooks per resource (users.ts, feed.ts: useFeed, an infinite query over GET /feed, task 4.4)
 ├── features/
-│   ├── feed/     # FeedPage, WeekSection, sticky era headers with covers (D-36), OpenedStrip (D-10), OnThisDayStrip (D-32)
+│   ├── feed/     # FeedPage (infinite scroll, task 4.4), grouping.ts (weeks under eras[0], nesting and chips, D-22), WeekSection (the sticky Era and week line), FeedEntry, FeedStates (loading, empty, error), a text-only SealedCard until task 4.8; later covers (D-36), OpenedStrip (D-10), OnThisDayStrip (D-32)
 │   ├── week/     # WeekSummaryPage with one bar per entry (D-25)
 │   ├── timeline/ # TimelinePage: every entry, one row each, tag filter (D-25)
 │   ├── entry/    # EntryCard, MediaCarousel, CaptureModal, PhotoDump (D-34), SealDialog with suggested dates, SealedCard, reply to past you (D-33), VoiceRecorder, displayTitle()
@@ -291,8 +291,8 @@ src/
 │   └── deleted/  # RecentlyDeletedPage (D-30)
 ├── components/   # shared UI primitives: Page, Moon, NotFoundPage
 │   ├── shell/    # AppShell, TopBar (moon line or back link), TabBar, SideNav, WriteMenu; places.ts maps a route's `handle` to the current place
-│   └── ui/       # shadcn/ui components (copied in, owned by us, restyled to DESIGN.md)
-├── lib/time.ts   # all date/time formatting + "today" in the user's timezone
+│   └── ui/       # shadcn/ui components (copied in, owned by us, restyled to DESIGN.md), and button.tsx (the three button styles, class-variance-authority)
+├── lib/time.ts   # all date/time formatting + "today" in the user's timezone (and the feed's week ranges and sealed-card countdown); useNow.ts and useDelayed.ts are the two clock hooks
 ├── lib/moon.ts   # the moon's phase and shape for the date line (DESIGN.md §4)
 ├── lib/cn.ts     # clsx + tailwind-merge, taught the design tokens' names
 ├── lib/images.ts # read a photo's own date (exifr, D-34), then compress it before upload (browser-image-compression)
