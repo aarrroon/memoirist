@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Lets the browser paint a dark canvas before the CSS arrives, so a dark phone never flashes white. -->
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>memoirist</title>
+    <script>
+      // Light or dark follows the phone (D-41). It runs before the first paint, so the tokens in src/index.css
+      // switch with no flash. Appearance in settings (task 4.9) will add a choice kept on the device that wins.
+      // A content security policy (Phase 2) must allow this script by its hash.
+      {
+        const dark = window.matchMedia('(prefers-color-scheme: dark)');
+        const apply = () => {
+          document.documentElement.dataset.theme = dark.matches ? 'dark' : 'light';
+        };
+        apply();
+        dark.addEventListener('change', apply);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

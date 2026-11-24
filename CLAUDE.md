@@ -14,8 +14,8 @@ A private journaling PWA: an Instagram-style feed of your own entries that files
 - If they disagree, stop and ask the user. Record the answer with `/record-decision`, and edit the README only with the user's approval.
 
 ## Current focus
-**Phase 1, Sprint 4. Next task: 4.1** (Scaffold the frontend).
-- Sprints 1–3 are built: the whole Phase 1 API (37 endpoints, about 1,600 tests). `frontend/` doesn't exist until task 4.1.
+**Phase 1, Sprint 4. Next task: 4.1** (Scaffold the frontend): built and checked, except the fonts.
+- Sprints 1–3 are built: the whole Phase 1 API (37 endpoints, about 1,600 tests). Task 4.1 scaffolded `frontend/`: the tokens from DESIGN.md, ESLint, Prettier, Vitest and MSW, and a starter page. It stays open until the app serves Instrument Sans and Newsreader as woff2, which waits on the user choosing where the files come from (DESIGN.md §2). Then tick it, and 4.2 is next.
 - Progress is tracked by the checkboxes in `docs/SPRINT_PLAN.md`. Update this line when a task is ticked; a Stop hook checks it.
 - Build only what the current phase needs. Don't add tables, endpoints or libraries from later phases.
 

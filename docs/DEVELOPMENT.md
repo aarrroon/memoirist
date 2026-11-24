@@ -2,7 +2,7 @@
 
 > Setup and day-to-day commands for working on memoirist. For what the app is, see the [README](../README.md). For how it's built, see [TECH_STACK.md](TECH_STACK.md).
 >
-> **Status:** `docker-compose.yml` (task 1.3) and the backend project (`backend/`, tasks 2.1 to 2.6) exist. The backend reads its configuration (`local` and `test` profiles), creates the Phase 1 tables and the dev user in Postgres when it starts, knows who is calling (the dev-user header, task 2.5), answers every error in one RFC 9457 problem shape (task 2.6), answers its health check and serves the first Phase 1 endpoints: `/users/me`, Eras, Templates, Entries, Media, the feed and weekly logs, and Tags (tasks 3.2 to 3.8; the entry lists follow in the rest of Sprint 3). A GitHub Actions workflow (`.github/workflows/ci.yml`, task 2.7) builds and tests it on every push to `main` or a `phase-*` branch and on every pull request (see [Continuous integration](#continuous-integration-task-27)). The frontend (`frontend/`) doesn't exist yet. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
+> **Status:** `docker-compose.yml` (task 1.3) and the backend project (`backend/`, tasks 2.1 to 2.6) exist. The backend reads its configuration (`local` and `test` profiles), creates the Phase 1 tables and the dev user in Postgres when it starts, knows who is calling (the dev-user header, task 2.5), answers every error in one RFC 9457 problem shape (task 2.6), answers its health check and serves the whole Phase 1 API (Sprint 3). A GitHub Actions workflow (`.github/workflows/ci.yml`, task 2.7) builds and tests it on every push to `main` or a `phase-*` branch and on every pull request (see [Continuous integration](#continuous-integration-task-27)). The frontend project (`frontend/`, task 4.1) exists: it builds, lints, type-checks and tests, and its starter page shows the design tokens; the screens come with the rest of Sprint 4. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
 
 ## 1. Prerequisites
 
@@ -11,7 +11,7 @@
 | Git (with Git Bash on Windows) | any recent | `git --version` | Run every command here in Git Bash |
 | Docker Desktop | recent | `docker info` | Must be **running** for Compose and for backend tests (Testcontainers) |
 | JDK | 25 | `java -version` | For example Eclipse Temurin 25 (`winget install EclipseAdoptium.Temurin.25.JDK`). Make sure `java` is on `PATH` |
-| Node.js | 22 or later | `node -v` | npm comes with it |
+| Node.js | 22.22.2+, 24.15.0+ or 26+ | `node -v` | npm comes with it. jsdom needs these versions (not 25), and `npm ci` refuses others (`engine-strict`) |
 | Editor | — | — | IntelliJ IDEA (backend) and/or VS Code |
 | Claude Code | latest | — | Optional, but the repo is set up for it (section 6) |
 
@@ -115,14 +115,16 @@ GitHub Actions runs `.github/workflows/ci.yml`. Its `backend` job does what you 
 ```bash
 cd frontend
 npm ci                  # install exactly what package-lock.json says
-npm run dev             # dev server on :5173
-npm test                # Vitest
-npm run lint            # ESLint
+npm run dev             # dev server on :5173; /api goes to the backend on :8080
+npm test                # Vitest, once (npm run test:watch keeps it running)
+npm run lint            # ESLint, then Prettier's check
+npm run format          # fix formatting with Prettier
 npm run typecheck       # TypeScript
-npm run build           # production build
+npm run build           # type-check, then the production build in dist/
 npm run gen:api         # regenerate API types (backend must be running) — task 4.2
 npx playwright test     # end-to-end smoke tests — task 4.17
 ```
+Before saying frontend work is done: `npm test && npm run lint && npm run typecheck && npm run build`. For a screen, also run the design check with the dev server up: `node docs/design/explorations/tools/audit.mjs http://localhost:5173/<path>` from the repo root, and again with `--dark` (`.claude/rules/design.md`). [TECH_STACK §3](TECH_STACK.md#build-task-41) says how the project is set up and why.
 
 ## 5. Working on the code
 
@@ -145,6 +147,8 @@ The repo is set up so Claude follows the project's rules automatically.
 A typical task: start a fresh session, run `/implement-task`, approve the plan, let it build and test, ask spec-reviewer to check, then commit.
 
 Personal, uncommitted settings go in `.claude/settings.local.json` or `CLAUDE.local.md` (both gitignored).
+
+In the Claude desktop app, `.claude/launch.json` lets Claude start the frontend dev server (`npm --prefix frontend run dev`, port 5173) and open it in the app's browser pane. It runs nothing on its own.
 
 ## 7. Troubleshooting
 
@@ -171,3 +175,5 @@ Personal, uncommitted settings go in `.claude/settings.local.json` or `CLAUDE.lo
 | Tests hang or fail to start containers | Docker isn't running, or it's low on memory. Give Docker Desktop at least 4 GB |
 | CI fails but `./gradlew build` passes on your machine | Four usual causes. (1) Line endings: CI checks out LF files, so `spotlessCheck` fails if the committed text has CRLF; check with `git ls-files --eol backend` (every text file should say `i/lf`). (2) Case: Linux tells `Entry.java` from `entry.java`, Windows doesn't. (3) A test reads `.env` or a Compose service, which CI doesn't have. (4) `gradlew` lost its executable bit (`git ls-files -s backend/gradlew` should start with `100755`). To reproduce on Linux, build a clean copy in a container; the journal entry for task 2.7 shows how |
 | Frontend types out of date | Start the backend, then `npm run gen:api` |
+| `npm run lint` fails only at `prettier --check` | The formatting differs from Prettier's. Run `npm run format`. Line endings don't count: `.prettierrc.json` sets `endOfLine: auto`, so CRLF checkouts pass |
+| `/api` calls from the dev server answer `500` or `ECONNREFUSED` in the Vite log | The backend isn't running on :8080. Start it (and `docker compose up -d` first) |

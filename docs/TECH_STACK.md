@@ -19,7 +19,7 @@
 - Windows with Git Bash
 - Docker Desktop
 - JDK 25 (for example, Eclipse Temurin 25)
-- Node 22 or later (Node 24 is installed)
+- Node 22.22.2 or later on the 22 line, 24.15.0 or later on the 24 line, or 26 and later (Node 24 is installed). jsdom needs one of these (not Node 25), and `frontend/.npmrc` refuses the others
 - IntelliJ IDEA or VS Code
 
 **Running locally:** Docker Compose runs the data services, and the apps run on the host. `.env` (copied from `.env.example`) supplies credentials to Compose and to the backend's `local` profile, via `spring.config.import: optional:file:../.env[.properties]`.
@@ -323,6 +323,17 @@ src/
   - Tailwind v4 is configured in CSS (`@theme` in `src/index.css`), not `tailwind.config.js`.
   - One design system (D-40): one spacing scale, two typefaces at most, one accent colour. Every colour, font, text size, radius and shadow is a token in `@theme`, and Tailwind's own defaults for those are removed. The rules and the check are in `.claude/rules/design.md` and `docs/design/explorations/tools/audit.mjs`.
   - Motion is imported from `motion/react` and honours `prefers-reduced-motion`.
+
+### Build (task 4.1)
+Exact versions are pinned in `frontend/package.json`, and `frontend/.npmrc` sets `save-exact=true` so a later `npm install <pkg>` pins too. Started from `create-vite`'s `react-ts` template, then changed:
+- **Versions at scaffold (2026-11-24):** React 19.3, Vite 8.3, Tailwind 4.3 (`@tailwindcss/vite`), Vitest 5.1 with jsdom, React Testing Library 16, MSW 3, ESLint 10 with typescript-eslint 8, Prettier 3, openapi-typescript 7.
+- **TypeScript 5.9, not 7.** The template now ships TypeScript 7, but typescript-eslint 8 supports TypeScript below 6.1 only and openapi-typescript 7 needs `^5`. Move to 7 when both support it. `strict` is set explicitly, because TypeScript 5.9 doesn't turn it on by default (7 does), and `noUncheckedIndexedAccess` is on.
+- **ESLint, not the template's oxlint,** because the task names ESLint. The config is `eslint.config.js` (flat): type-aware typescript-eslint rules (they catch a promise nobody awaits), React Hooks, React Refresh, then `eslint-config-prettier` last. Three repo rules are lint errors: no `dangerouslySetInnerHTML` (as a JSX attribute or an object key), no writing `innerHTML` or `outerHTML` and no `insertAdjacentHTML`, and no `fetch`, `window.fetch` or `globalThis.fetch` outside `src/api/` and tests. They catch the usual forms, not every possible one (an aliased `window`, for example).
+- **Prettier:** 100 columns, single quotes, `endOfLine: auto` (Windows checkouts are CRLF, CI's are LF). `npm run lint` runs ESLint, then `prettier --check`; `npm run format` fixes formatting.
+- **Tests:** Vitest runs in jsdom with `src/test/setup.ts`, which adds the jest-dom matchers, cleans up after each test (Vitest globals are off) and starts one MSW server, `src/test/msw/server.ts`. A request with no handler fails the test (MSW 3 calls this `onUnhandledFrame: 'error'`; MSW 2 named it `onUnhandledRequest`). Vitest replaces CSS with an empty string unless `test.css.include` lists the file, so `src/index.css` is listed for `src/tokens.test.ts`.
+- **Tokens:** `src/index.css`, with the values of `docs/design/DESIGN.md` §1 to §3 (D-41). The title sizes (`title`, `heading`, `display`) carry Newsreader's weight 500, and the larger two their letter spacing, so `font-display text-heading` is the whole title style. Tailwind's own colours, fonts, text sizes, weights, line heights, letter spacing, radii, shadows (box, inset, drop and text), breakpoints and animations are removed. A plain `transition` takes 200 ms ease-out (DESIGN.md §7), and `code` and `pre` use the text face, because D-40 allows no third typeface. The spacing step stays 4 px, so `p-5`, `leading-6` and the built-in `leading-none` still compile; the design check catches them. `src/tokens.test.ts` fails if dark mode misses a token, if a token has no utility, or if a text pair falls under 4.5:1 (3:1 for control borders).
+- **Light and dark:** an inline script in `index.html` sets `data-theme` on `<html>` from `prefers-color-scheme` before the first paint, and follows changes (D-41). Appearance in settings (task 4.9) adds a saved choice. A content security policy (Phase 2) must allow the script by its hash.
+- **Fonts:** system faces stand in (`ui-sans-serif` for text, `ui-serif` for titles) until the app serves Instrument Sans and Newsreader as woff2. DESIGN.md §2 asks the user to confirm where the files come from first.
 
 ## 4. Database
 
