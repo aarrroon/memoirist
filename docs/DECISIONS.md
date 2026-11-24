@@ -24,16 +24,16 @@ Settled choices for memoirist, and the questions still open.
 | D-14 | Testing and CI approach | 2026-10-25 | 2026-10-30 |
 | D-15 | Backend code style | 2026-10-25 | |
 | D-16 | Flyway migration rules | 2026-10-25 | |
-| D-17 | Media types and limits; photos store their size | 2026-10-25 | 2026-11-24 |
+| D-17 | Media types and limits; photos store their size; big uploads are checked by the client | 2026-10-25 | 2026-11-24 |
 | D-18 | AI providers are chosen at Phase 4 | 2026-10-25 | 2026-10-28 |
 | D-19 | Groups are contribution-based; entries stay personal | 2026-10-26 | 2026-10-28 |
 | D-20 | Paper diaries: pages are marked media; reading them is on tap | 2026-10-26 | 2026-10-28 |
 | D-21 | One AI layer: ask, generate and surface, never chat | 2026-10-27 | 2026-10-28 |
-| D-22 | Eras can overlap and are defined by their dates | 2026-10-27 | 2026-10-28 |
+| D-22 | Eras can overlap and are defined by their dates | 2026-10-27 | 2026-11-24 |
 | D-23 | Capture and sealing behaviour (drafts, empty entries, partial uploads, 9 am unlocks, stale edits) | 2026-10-27 | 2026-10-29 |
 | D-24 | Entries have an optional title; how lists name an entry | 2026-10-27 | |
 | D-25 | Week summary view and an all-entries timeline | 2026-10-27 | 2026-10-28 |
-| D-26 | Manual tags in Phase 1; AI tag suggestions in Phase 4 | 2026-10-27 | 2026-10-28 |
+| D-26 | Manual tags in Phase 1; AI tag suggestions in Phase 4; `tagIds` required on `PUT` | 2026-10-27 | 2026-11-24 |
 | D-27 | The README wins on what and when; this file wins on how | 2026-10-27 | |
 | D-28 | Closing a week or an Era writes its summary; closing an Era is a ritual | 2026-10-27 | 2026-10-28 |
 | D-29 | Search by word and by feeling | 2026-10-27 | 2026-10-28 |
@@ -41,14 +41,15 @@ Settled choices for memoirist, and the questions still open.
 | D-31 | Build order: groups before the AI biographer; installing at launch | 2026-10-28 | |
 | D-32 | Bringing people back: On this day, a yearly letter and a weekly email | 2026-10-28 | 2026-11-24 |
 | D-33 | Loot Drop extras: suggested dates, a reply to past you and a first letter | 2026-10-28 | |
-| D-34 | Photo dump: photos filed by the day they were taken | 2026-10-28 | 2026-10-29 |
+| D-34 | Photo dump: photos filed by the day they were taken | 2026-10-28 | 2026-11-24 |
 | D-35 | Soundtracks: Spotify links, and search through our server | 2026-10-28 | |
-| D-36 | Era covers | 2026-10-28 | 2026-10-29 |
+| D-36 | Era covers | 2026-10-28 | 2026-11-24 |
 | D-37 | App lock | 2026-10-28 | |
 | D-38 | Product metrics: counts only, never content | 2026-10-28 | |
 | D-39 | Hard topics and the AI | 2026-10-28 | |
 | D-40 | One design system for the frontend: one spacing scale, two typefaces at most, one accent colour | 2026-11-14 | 2026-11-24 |
 | D-41 | The design: Starlight refined, phone first, in black, white and gold | 2026-11-24 | |
+| D-42 | Page limits are enforced with a `400`, never clamped | 2026-11-24 | |
 
 ---
 
@@ -214,6 +215,7 @@ These were chosen during setup as sensible defaults. Change them freely, but rec
 - No video in Phases 1–4.
 - HEIC is not accepted. iOS converts photos to JPEG when the file picker's `accept` list excludes HEIC; verify this in Sprint 4.
 - **Photos store their size.** On upload the server reads an image's width and height from its header, without decoding the whole picture, and stores them on `media` (`width`, `height`). The API returns them, so a screen reserves a photo's own shape before it loads: the feed keeps each photo's shape between 4:5 and 1.91:1 (D-41), and the entry view doesn't jump. Voice notes, and an image whose header can't be read, have no size (`null`), and the screen falls back to a 4:5 frame. The browser shrinks and re-encodes photos before upload (D-13), which applies their rotation, so the stored size is the size as seen. The user chose this on 2026-11-24 (it answers Q30).
+- **A file far over 25 MB is stopped by the client.** The frontend checks every file's size, and shrinks photos, before it uploads (D-13, `.claude/rules/frontend.md`). The server keeps Tomcat's default `max-swallow-size` (2 MB), so a file far over the limit sent by another client can end in a dropped connection instead of a `413`. The user chose this on 2026-11-24: reading and throwing away up to 64 MB of every rejected request costs more than it helps, when the app never sends such a file.
 
 ## D-18 AI providers are chosen at Phase 4
 The chat model, the embedding provider and therefore the `vector(N)` dimension are decided when Phase 4 starts (Q6). Nothing in Phases 1–3 depends on them. Model names in the original drafts are outdated.
@@ -291,6 +293,7 @@ Chapters of life overlap: a trip happens inside a year at university, and a rela
 - **An Era is its date range.** A week is in every Era whose dates overlap it: the Era starts on or before the week's Sunday, and has no end date or ends on or after its Monday. Nothing links them in the database; the service works it out from the dates. A new Era, or a change to an Era's dates, therefore applies at once to every week, old ones and backdated entries included.
 - **No changes by hand.** Users don't add single weeks to an Era or take them out. To change what an Era holds, they change its dates. Tags (D-26) cover themes that don't follow dates.
 - **Only the entries inside its dates:** an Era's page and its counts show only the entries whose memory date falls inside the Era's dates. A weekend trip shows just that weekend, although its week also belongs to the Era.
+- **No empty weeks on an Era's page.** `GET /eras/{id}` leaves out a week with no entry to show (all outside the Era's dates, sealed or in Recently deleted), as the feed does (D-08, D-32). The user chose this on 2026-11-24; built in task 4.9.
 - Deleting an Era deletes only the Era. Its weeks, their entries and their other Eras stay.
 - The API shows a week's Eras as a list (`eras`): pinned Eras first, then latest start first. `PUT /weekly-logs/{id}` sets only the title.
 - **The feed lists each week once (answers Q18):**
@@ -335,6 +338,7 @@ Answers to the gaps G-01 to G-07 found while drafting [USER_FLOWS.md](USER_FLOWS
 ## D-26 Manual tags in Phase 1; AI tag suggestions in Phase 4
 - Users create their own tags (for example *Work*, *Family*, *Going out*), add them while writing or editing, and filter the all-entries timeline by tag.
 - `POST` and `PUT /entries` accept `tagIds`. Tags are scoped to the user and unique ignoring case; at most 20 per entry.
+- **`tagIds` is required on `PUT`.** A missing or `null` list is `400` (`fieldErrors.tagIds`), and `[]` removes every tag, so a client bug can't strip a user's tags without an error. On `POST` it stays optional. The frontend always sends it. `soundtrack` and `replyToEntryId` follow the plain full-replace rule: left out means cleared. The user chose this on 2026-11-24.
 - A sealed entry's tags are hidden, can't be changed, and don't count in tag filters or counts (D-10).
 - Phase 4 adds only the AI part: `TAG` suggestions (D-21) that add a tag after the user taps. `entry_tags.source` records `USER` or `AI`.
 
@@ -407,7 +411,7 @@ The phases run in this order. The README Timeline is the source of truth for it 
 **Consequences:** sprints and tasks were renumbered to follow the phases (groups 6.x, the AI 7.x, phones 8.x), which is allowed before a sprint starts.
 
 ## D-32 Bringing people back: On this day, the yearly letter and the weekly email
-- **On this day (Phase 1):** a row at the top of the feed (below the first entry while an Opened row shows, D-41) shows entries from the same day and month in earlier years (`GET /entries/on-this-day`). Sealed entries never appear (D-10), nor do deleted ones (D-30). In a year that isn't a leap year, entries from 29 February show on 28 February.
+- **On this day (Phase 1):** a row at the top of the feed (below the first entry while an Opened row shows, D-41) shows entries from the same day and month in earlier years (`GET /entries/on-this-day`). Sealed entries never appear (D-10), nor do deleted ones (D-30), nor entries whose date is a guess (`dateUnknown`, D-34), because a wrong date would make a false memory; once the user fixes the date the entry can appear (chosen 2026-11-24, built in task 4.14). In a year that isn't a leap year, entries from 29 February show on 28 February.
 - **The yearly letter (Phase 2):** the user picks a yearly date, their birthday by default (`users.birthday`, D-33). At 09:00 on that day, in their timezone, an email and a card in the app invite them to write to next year's self. The letter is sealed as a Loot Drop until 09:00 on the same date next year.
 - **The weekly email (Phase 4):** at 09:00 on Monday, after a week that has entries, an email points to that week: *read its story* if it's closed, or *wrap it up* if it's still open (D-28). It's on by default, has its own switch, and never follows an empty week.
 - **No email contains entry content.** Every memoirist email (unlock, yearly letter, weekly) carries dates, counts and a link, never titles, captions, photos or summary text, because inboxes are often shared or owned by an employer.
@@ -447,6 +451,7 @@ All three are Phase 1.
 - **Phase 1:** an Era can have a cover photo (`eras.cover_media_id`): one of the user's own photos, usually from that Era. The feed shows it as the Era's title page above its weeks, and so does the Era's page.
 - A cover shows only while its entry is neither sealed (D-10) nor in Recently deleted (D-30); otherwise the Era has no cover. Removing the photo clears the cover.
 - Choosing a photo from a sealed entry as the cover is `400`; one from an entry in Recently deleted is `404`, like every other request about that entry (D-30).
+- **Editing an Era never loses a hidden cover.** A `PUT /eras/{id}` that leaves out `coverMediaId` keeps the stored cover while that cover is hidden (its entry sealed or in Recently deleted), because the client can't see its id and must not learn it (D-10). A visible cover that is left out is cleared, as with any full replace. The user chose this on 2026-11-24; built in task 4.14.
 - The cover can be chosen whenever the Era is edited. From Phase 4, closing an Era offers it too (D-28).
 
 **Why:** chapters you can see make the journal feel like a book from day one (R-20, R-48). The user chose covers now and the closing ritual with the AI on 2026-10-28.
@@ -524,6 +529,14 @@ memoirist's look is design 12, *Starlight refined* ([`docs/design/explorations/r
 
 ---
 
+## D-42 Page limits are enforced with a `400`, never clamped
+- Every paged list has a largest `size`: 50, or what its contract row says (`GET /entries` allows 100). A `size` above it or below 1, or a `page` below 0, is `400 validation-failed` naming `size` or `page`. A value that isn't a number is `400 malformed-request`. A page past the end is `200` with no items.
+- The server never quietly lowers a `size`.
+
+**Why:** a client that asks for too much learns the limit at once, instead of quietly getting fewer items than it asked for and believing it has them all. Sprints 3.7, 3.9 and 3.11 were built this way; the user confirmed it on 2026-11-24.
+
+---
+
 ## Open questions
 
 Decide each one before the sprint that needs it, then record it with `/record-decision`: as a new entry, or as an update to the entry it changes.
@@ -554,4 +567,4 @@ Decide each one before the sprint that needs it, then record it with `/record-de
 | Q25 | Writing time and mood: patterns such as "flat on Sunday evenings" need when an entry was really written (`created_at` is wrong for backdated and offline entries) and a mood for each entry | Sprint 8 (mood: Sprint 9) | Offline entries send a client `capturedAt`; Phase 6 adds a per-entry mood as derived AI data, with the usual seal and staleness rules |
 | Q26 | Group Loot Drop dates: if the owner moves the date later, entries added earlier still unlock on the old date; an entry already sealed for longer opens later; and withdrawing doesn't unseal | Sprint 6 | Group views hide content until the later of the entry's and the group's dates; the withdraw dialog says the entry stays sealed |
 | Q28 | Era summaries and partly covered weeks: an Era shows only the entries inside its dates (D-22), but a weekly summary covers the whole week. For a short Era, such as a weekend trip, should the Era summary read the entries inside its dates instead of whole-week summaries? | Sprint 7 | A week the Era covers only partly is read from its entries inside the Era's dates; a week it covers fully uses its weekly summary |
-| Q29 | Smaller copies of photos: the API serves each photo as it was uploaded (about 2 to 3 MB after the browser shrinks it, D-13), even for a 40 px thumbnail. A feed of those can't meet the PRD's 2-second goal on a phone: the round 2 audit measured 10 seconds to the first photo on a slow connection, with photos a fifth of that size (D-40). Make a screen-size copy and a thumbnail at upload (in the browser or on the server), or keep serving the original? | Sprint 5 | Phase 1 serves the original, which is fast on one machine. The frontend loads photos lazily and reserves their space. Decide before going online |
+| Q29 | Smaller copies of photos: the API serves each photo as it was uploaded (about 2 to 3 MB after the browser shrinks it, D-13), even for a 40 px thumbnail. A feed of those can't meet the PRD's 2-second goal on a phone: the round 2 audit measured 10 seconds to the first photo on a slow connection, with photos a fifth of that size (D-40). Make a screen-size copy and a thumbnail at upload (in the browser or on the server), or keep serving the original? | Sprint 5 | Phase 1 serves the original, which is fast on one machine. The frontend loads photos lazily and reserves their space. Sprint 4 (tasks 4.4 and 4.5) measures the time to the first photo on a throttled connection and reports it. Decide before going online |

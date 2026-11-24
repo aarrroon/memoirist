@@ -313,7 +313,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Done when:** sealing an entry turns it into a sealed card; under a day heading the card shows only the opening date and the countdown, and elsewhere the memory date too; the countdown is correct in the user's zone; the star's lit part matches the days travelled; once the unlock time passes, the entry shows in the Opened row until it is opened or dismissed.
 
 - [ ] **4.9 Eras, templates and settings pages**
-  - **Do:** CRUD for eras and templates, with an Era page that lists its weeks and counts only the entries inside its dates (D-22); a gallery of starter templates that adds an editable copy with one tap (D-06); settings for display name, timezone and birthday (D-33), and *Appearance* (match phone, light or dark, kept on the device, D-41); a *show first in the feed* pin on each Era (D-22).
+  - **Do:** CRUD for eras and templates, with an Era page that lists its weeks and counts only the entries inside its dates (D-22); backend: `GET /eras/{id}` leaves out weeks with no entry to show (D-22, with a test holding a sealed, a deleted and an out-of-range entry); a gallery of starter templates that adds an editable copy with one tap (D-06); settings for display name, timezone and birthday (D-33), and *Appearance* (match phone, light or dark, kept on the device, D-41); a *show first in the feed* pin on each Era (D-22).
   - **Done when:** changing the timezone changes the displayed times; Appearance switches the whole app at once and survives a reload, and *Match phone* follows the phone's setting; changing an Era's dates regroups the feed; pinning an Era moves its shared weeks under it; adding a starter template creates an editable copy; component tests pass.
 
 - [ ] **4.10 Week summary view**
@@ -346,8 +346,8 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - the date suggestion for one photo, accepted and dismissed
 
 - [ ] **4.14 On this day strip and Era covers** (D-32, D-36)
-  - **Do:** an *On this day* row at the top of the feed over `GET /entries/on-this-day`, which moves below the first entry while an Opened row shows (D-41); Era covers as title pages in the feed's sticky headers and on Era pages; and a cover picker in the Era form.
-  - **Done when:** component tests cover the strip with and without memories, a cover on its Era's header, and no cover while its entry is sealed.
+  - **Do:** an *On this day* row at the top of the feed over `GET /entries/on-this-day`, which moves below the first entry while an Opened row shows (D-41); Era covers as title pages in the feed's sticky headers and on Era pages; and a cover picker in the Era form. Backend first: `GET /entries/on-this-day` leaves out `dateUnknown` entries (D-32), and a `PUT /eras/{id}` that leaves out `coverMediaId` keeps a hidden cover (D-36).
+  - **Done when:** component tests cover the strip with and without memories, a cover on its Era's header, and no cover while its entry is sealed; integration tests show a `dateUnknown` entry left out of On this day, and a title-only `PUT` keeping a cover whose entry is sealed (the cover comes back when it opens) while a visible cover left out is cleared.
 
 - [ ] **4.15 Soundtrack picker and player** (D-35)
   - **Do:** a soundtrack field on entries, weeks and Eras: paste a Spotify link (turned into a URI), or search through `POST /music/search` when it's available. Spotify's player shows as a placeholder until tapped, and only then loads.
