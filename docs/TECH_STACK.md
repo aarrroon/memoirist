@@ -287,15 +287,20 @@ src/
 │   ├── eras/     # Era pages and the cover picker (D-36)
 │   ├── templates/ # TemplatesPage and the starter gallery (D-06)
 │   ├── tags/     # TagPicker, TagsPage (D-26)
-│   └── settings/ # display name, timezone, birthday (D-33)
-├── components/   # shared UI primitives
+│   ├── settings/ # display name, timezone, birthday (D-33)
+│   └── deleted/  # RecentlyDeletedPage (D-30)
+├── components/   # shared UI primitives: Page, Moon, NotFoundPage
+│   ├── shell/    # AppShell, TopBar (moon line or back link), TabBar, SideNav, WriteMenu; places.ts maps a route's `handle` to the current place
 │   └── ui/       # shadcn/ui components (copied in, owned by us, restyled to DESIGN.md)
 ├── lib/time.ts   # all date/time formatting + "today" in the user's timezone
+├── lib/moon.ts   # the moon's phase and shape for the date line (DESIGN.md §4)
+├── lib/cn.ts     # clsx + tailwind-merge, taught the design tokens' names
 ├── lib/images.ts # read a photo's own date (exifr, D-34), then compress it before upload (browser-image-compression)
-├── stores/       # Zustand: UI-only state (open modals); the capture draft is also persisted to localStorage (D-23)
-└── main.tsx, router.tsx
+├── stores/       # Zustand: UI-only state (which capture view is open); the capture draft is also persisted to localStorage (D-23)
+└── main.tsx, router.tsx  # router.tsx: every route, each with a `handle` saying which nav place it belongs to
 ```
 
+- **Routing (task 4.3):** React Router 8 in data mode: `createBrowserRouter` in `router.tsx`, `RouterProvider` from `react-router/dom`. One layout route draws the shell and every screen renders in its `<Outlet />`. Tests render the same `routes` with `createMemoryRouter` (`src/test/render.tsx`, `renderApp(path)`).
 - **Data:**
   - `npm run gen:api` generates TypeScript types from `http://localhost:8080/v3/api-docs`.
   - `openapi-fetch` makes typed calls.

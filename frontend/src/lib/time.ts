@@ -1,0 +1,80 @@
+import { TZDate } from '@date-fns/tz';
+import { format } from 'date-fns';
+
+// The one place dates are worked out and written for the screen (CLAUDE.md, .claude/rules/frontend.md, task 4.3).
+// Every function that depends on "now" takes the user's IANA timezone from GET /users/me (users.timezone, default
+// Australia/Melbourne) and an explicit instant. Nothing here reads the browser's zone: a Melbourne user on a laptop
+// set to London still sees Melbourne's today, exactly as the server files their entries (non-negotiable 2).
+//
+// TZDate (from @date-fns/tz) is a Date whose getters and date-fns' format() answer in its own zone, so the zone
+// travels with the value and daylight saving is the IANA database's job, not ours.
+
+/** An ISO calendar day, "2026-10-04": what the API sends for entryDate, weekStart and the like. */
+export type IsoDate = string;
+
+/** The part of the day the moon line names: "Wednesday morning", "Wednesday at dusk" (DESIGN.md §4 Shell). */
+export type PartOfDay = 'morning' | 'afternoon' | 'at dusk' | 'at night';
+
+/** "Today" in the user's zone, as an ISO day. The memory-date picker's default and its upper limit (D-09). */
+export function todayIn(zone: string, now: Date = new Date()): IsoDate {
+  return format(new TZDate(now, zone), 'yyyy-MM-dd');
+}
+
+// TODO(human) PRACTICE: Write partOfDay(now, zone): which part of the day it is for the user, in their zone.
+// DESIGN.md §4 says: morning to 12:00, afternoon to 17:00, at dusk to 21:00, then at night until midnight.
+// Hint: the hour must come from the user's zone, not from now.getHours() (the browser's zone). Build a TZDate
+// from the instant and the zone; time.test.ts has a Melbourne daylight-saving case where a fixed +10 offset
+// would give the wrong answer. Check each boundary is half-open: 12:00 itself is afternoon.
+// ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+export function partOfDay(now: Date, zone: string): PartOfDay {
+  const hour = new TZDate(now, zone).getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  if (hour < 21) return 'at dusk';
+  return 'at night';
+}
+// └── END ANSWER ▲ ──
+
+/** The moon line's greeting: "Wednesday at dusk", "Thursday morning" (DESIGN.md §4 Shell). */
+export function greeting(now: Date, zone: string): string {
+  const part = partOfDay(now, zone);
+  const weekday = format(new TZDate(now, zone), 'EEEE');
+  // "Wednesday morning" and "Wednesday afternoon" read without a joining word; the other two carry their own.
+  return `${weekday} ${part}`;
+}
+
+/** Parses "2026-10-04" as that calendar day. A day has no zone, so it is held at midnight UTC and formatted there. */
+function calendarDay(day: IsoDate): TZDate {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!match) throw new RangeError('Not an ISO calendar day');
+  const [, year, month, date] = match;
+  return new TZDate(Number(year), Number(month) - 1, Number(date), 'UTC');
+}
+
+/**
+ * A calendar day in words: "Monday 26 October", or "Monday 26 October 2026" with the year. Calendar days (entryDate,
+ * a week's start) are the same everywhere, so no zone is needed: only "today" depends on one.
+ */
+export function formatDay(day: IsoDate, options: { year?: boolean } = {}): string {
+  return format(calendarDay(day), options.year ? 'EEEE d MMMM yyyy' : 'EEEE d MMMM');
+}
+
+/** The feed's day line: "Today", "Yesterday", or the day in words (DESIGN.md §4 Feed). */
+export function dayLabel(day: IsoDate, zone: string, now: Date = new Date()): string {
+  const today = todayIn(zone, now);
+  if (day === today) return 'Today';
+  const yesterday = format(
+    new TZDate(calendarDay(today).getTime() - 86_400_000, 'UTC'),
+    'yyyy-MM-dd',
+  );
+  if (day === yesterday) return 'Yesterday';
+  return formatDay(day);
+}
+
+/**
+ * A moment in the user's zone, in words: "Thursday 28 October 2027 at 9:00 am" (a Loot Drop's opening moment,
+ * DESIGN.md §4). The time and "am" are joined by a no-break space so a line never splits "9:00 / am".
+ */
+export function formatMoment(instant: string | Date, zone: string): string {
+  return format(new TZDate(new Date(instant), zone), "EEEE d MMMM yyyy 'at' h:mm aaa");
+}

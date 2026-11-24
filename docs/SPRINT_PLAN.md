@@ -272,7 +272,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - A TanStack Query provider and a query-key factory, with `staleTime` below 60 minutes.
   - **Done when:** a typed `useMe()` hook renders the dev user's name against the running backend; a component test uses MSW.
 
-- [ ] **4.3 Routing, shell and time utilities**
+- [x] **4.3 Routing, shell and time utilities**
   - **Do:**
     - React Router routes: `/` (feed), `/entries` (all-entries timeline), `/weeks/:weekId` (week summary), `/eras`, `/templates`, `/tags`, `/settings`, `/recently-deleted`.
     - The app shell.

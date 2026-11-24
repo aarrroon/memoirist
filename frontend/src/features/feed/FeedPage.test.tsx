@@ -1,18 +1,21 @@
 import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { expect, test } from 'vitest';
-import App from './App';
-import { server } from './test/msw/server';
-import { renderWithQuery } from './test/render';
+import { server } from '../../test/msw/server';
+import { renderApp } from '../../test/render';
 
-test('the starter page names the app', () => {
-  renderWithQuery(<App />);
+// The Journal keeps 4.2's greeting until the feed (task 4.4) replaces it. These were App.test.tsx's tests.
 
-  expect(screen.getByRole('heading', { level: 1, name: 'memoirist' })).toBeInTheDocument();
+test('the Journal is named for screen readers and in the browser tab', async () => {
+  renderApp('/');
+
+  expect(screen.getByRole('heading', { level: 1, name: 'Journal' })).toBeInTheDocument();
+  expect(document.title).toBe('Journal · memoirist');
+  await screen.findByText('Welcome back, Dev User.');
 });
 
 test('it says it is loading until the user arrives, then greets them by name', async () => {
-  renderWithQuery(<App />);
+  renderApp('/');
 
   expect(screen.getByRole('status')).toHaveTextContent('Opening your journal…');
   expect(await screen.findByText('Welcome back, Dev User.')).toBeInTheDocument();
@@ -36,7 +39,7 @@ test('a failed request shows a friendly message, never the server detail', async
     ),
   );
 
-  renderWithQuery(<App />);
+  renderApp('/');
 
   expect(await screen.findByRole('alert')).toHaveTextContent('This isn’t here any more.');
   expect(screen.queryByText(/User not found/)).not.toBeInTheDocument();

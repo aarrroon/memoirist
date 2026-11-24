@@ -32,12 +32,14 @@
 | Task | Status | Commit | What it built | Journal |
 |---|---|---|---|---|
 | 4.2 API client and data layer | done | Sprint 4.2: Add the typed API client and data layer | Generated API types, an `openapi-fetch` client (dev header only in dev), typed `ApiProblem` errors, the query-key factory, the `QueryClient` and `useMe()`; the starter page greets the dev user (73 tests) | [4.2](build-journal/sprint-4/4.2-api-client-data-layer.md) |
+| 4.3 Routing, shell and time utilities | done | Sprint 4.3: Add the routes, the app shell and the time utilities | React Router routes for all eight Phase 1 addresses, the phone-first shell (moon line or back link, five-column tab bar with Write, side nav from `lg`), the Zustand UI store and `lib/time.ts` in the user's zone (131 tests, Melbourne DST and other zones) | [4.3](build-journal/sprint-4/4.3-routing-shell-time.md) |
 
 ### S4 Usage
 | Time (Melbourne) | 5-hour used | Weekly used | Decision |
 |---|---|---|---|
 | 2026-11-24 22:31 | 20% | 44% | Part A started |
 | 2026-11-24 22:52 | 25% | 45% | Start 4.2 (75% left; no task measured yet, needs 30%) |
+| 2026-11-24 23:07 | 43% | 47% | 4.2 cost 18% (largest so far). Start 4.3 (57% left, needs 18%) |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
@@ -48,11 +50,24 @@
 | 4 | 4.2 | `.claude/rules/frontend.md` (Structure) | `useMe` lives in `src/api/users.ts`; later resources add their own file in `src/api` |
 | 5 | 4.2 | No doc gives them | `problemMessage()` has one friendly sentence per problem kind; the server's `detail` and any non-problem body are never shown |
 | 6 | 4.2 | Task 4.1's starter page | The starter page shows *Opening your journal…*, then *Welcome back, <name>.*, until 4.3 replaces it with the shell |
+| 7 | 4.3 | DESIGN.md §4 Shell | The parts of the day are followed literally: 00:00 to 11:59 is morning, 12 to 17 afternoon, 17 to 21 at dusk, 21 to 24 at night; no dawn hour |
+| 8 | 4.3 | Tasks 4.3 vs 4.6 | The Write menu's choices only set `useUiStore.capture` (`entry`, `dump`, `page`); nothing is drawn until 4.6 builds the capture sheet |
+| 9 | 4.3 | design.md §5 vs DESIGN.md §4 | The moon in the date line is computed (`lib/moon.ts`, `components/Moon.tsx`) in the moon tokens, because its shape changes daily; drawn as seen from Melbourne |
+| 10 | 4.3 | `.claude/rules/frontend.md` (Structure) | `RecentlyDeletedPage` lives in `src/features/deleted/` and the shell in `src/components/shell/`; TECH_STACK §3 updated, frontend.md not |
+| 11 | 4.3 | No doc gives the copy | Placeholder screens show their title and one line naming the task that builds them |
+| 12 | 4.3 | DESIGN.md §6 | On inner screens: a week marks Journal and goes back to it; Templates, Tags and Recently deleted mark You on a phone and go back to You; an unknown address marks Journal |
+| 13 | 4.3 | DESIGN.md §8 | A visually hidden *Skip to content* link is the first Tab stop and focuses `<main>` |
 
 ### S4 Needs attention
 - **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
 - **4.2:** with a 30-minute `staleTime`, a tab that stays focused for over 60 minutes without a refocus could hold expired presigned URLs. Task 4.4 can add a refetch interval to the feed if it shows up.
 - **4.2:** the two minor review findings (the `payload-too-large` and `entry-sealed` sentences each named only one cause) were fixed at close-out; tasks 4.6 and 4.8 may still want screen-specific sentences.
+- **4.3, approval needed:** the moon is computed in JSX, while design.md §5 asks for approval before any drawing other than the travelling star (DESIGN.md §4 does call the moon our own drawing). Confirm it, and record the answer in DESIGN.md §4 or a D-entry.
+- **4.3, approval needed:** `.claude/rules/frontend.md`'s features list leaves out the new `src/features/deleted/` folder that TECH_STACK §3 now lists; adding it means editing a `.claude` rule file.
+- **4.3:** the production JS grew from 82.52 kB to 163.80 kB gzipped (React Router, tailwind-merge, date-fns, Radix menu), under design.md §6's 200 kB budget but with little room left. Task 4.4 should measure it and lazy-load route screens and capture.
+- **4.3:** 4.1's reduced-motion rule (`transition-duration: 0.01ms !important` with `transition-property: all`) makes every change a 0.01 ms transition, so a test that reads computed styles straight after focus sees the start value. Invisible to people; tests should wait a frame.
+- **4.3:** the Write menu's choices set UI state only; nothing visible happens until task 4.6.
+- **4.3:** the tablet-width top bar misalignment found by the review was fixed at close-out; audit.mjs measures only 375 and 1440 px, so tablet width is checked only by the close-out's Playwright probe.
 
 ### S4 Questions for the morning
 
