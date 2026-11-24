@@ -148,7 +148,7 @@ A typical task: start a fresh session, run `/implement-task`, approve the plan, 
 
 Personal, uncommitted settings go in `.claude/settings.local.json` or `CLAUDE.local.md` (both gitignored).
 
-In the Claude desktop app, `.claude/launch.json` lets Claude start the frontend dev server (`npm --prefix frontend run dev`, port 5173) and open it in the app's browser pane. It runs nothing on its own.
+In the Claude desktop app, `.claude/launch.json` lets Claude start the frontend and open it in the app's browser pane. `frontend` is the dev server (port 5173). `frontend-build` serves the last `npm run build` with `vite preview` (port 4173), which is what `audit.mjs --slow` should measure: the dev server's unbundled scripts are megabytes no phone downloads. It runs nothing on its own.
 
 ## 7. Troubleshooting
 

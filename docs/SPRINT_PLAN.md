@@ -255,7 +255,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 **Every screen task:** build from `docs/design/DESIGN.md` (D-41) and follow `.claude/rules/design.md` (D-40); compare with the round 3 mockup, but never copy its code. Before ticking it, run `node docs/design/explorations/tools/audit.mjs <url>` on each screen the task built or changed, and quote the result at phone and laptop width.
 
-- [ ] **4.1 Scaffold the frontend**
+- [x] **4.1 Scaffold the frontend**
   - **Read:** TECH_STACK §3, D-13, D-40.
   - **Do:**
     - Vite + React 19 + TypeScript in `/frontend`.

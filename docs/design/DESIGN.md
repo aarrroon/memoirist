@@ -45,7 +45,7 @@ Don't put accent text on `--raised` in light mode (4.26:1), and don't put a `--c
 
 ## 2. Type
 
-Two typefaces, served by the app as `woff2` (D-40): **Instrument Sans** 400 and 600 for text and the interface, entry text included, and **Newsreader** 500 for titles only. That is three files, Latin subset, preloading Instrument Sans 400. Both are SIL Open Font License fonts from Google Fonts. The task that adds the files confirms with the user where they come from (a font package would be a new dependency).
+Two typefaces, served by the app as `woff2` (D-40): **Instrument Sans** 400 and 600 for text and the interface, entry text included, and **Newsreader** 500 for titles only. Both are SIL Open Font License fonts. Task 4.1 added them as Latin woff2 files from Google Fonts, the source the user chose on 2026-11-24, in `frontend/public/fonts/` with each font's licence. That is two files, 89 KB together: one variable Instrument Sans holds 400 and 600, and Newsreader 500 keeps its optical-size axis, so titles get the display cuts. Instrument Sans is preloaded.
 
 | Token | Size | Line height | Face and weight | Used for |
 |---|---|---|---|---|

@@ -6,6 +6,14 @@
     <!-- Lets the browser paint a dark canvas before the CSS arrives, so a dark phone never flashes white. -->
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="data:," />
+    <!-- The text face is on every screen, so it starts downloading before the CSS asks for it (design.md §6). -->
+    <link
+      rel="preload"
+      href="/fonts/instrument-sans-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <title>memoirist</title>
     <script>
       // Light or dark follows the phone (D-41). It runs before the first paint, so the tokens in src/index.css
