@@ -325,7 +325,8 @@ class EntityMappingTest {
                 "image/png",
                 Media.PURPOSE_PAGE_SCAN,
                 3,
-                1_048_576L);
+                1_048_576L,
+                new com.memoirist.media.ImageSize(1200, 1600));
 
         Media loaded = saveClearAndLoad(
                 page,
@@ -336,6 +337,8 @@ class EntityMappingTest {
                 .ignoringFields("uploadedAt", "entry")
                 .isEqualTo(page);
         assertThat(loaded.getEntry().getId()).isEqualTo(entry.getId());
+        assertThat(loaded.getWidth()).as("V2, D-17").isEqualTo(1200);
+        assertThat(loaded.getHeight()).isEqualTo(1600);
         assertThat(loaded.getUploadedAt()).as("filled in by @CreationTimestamp").isNotNull();
         assertThat(jdbc.sql("SELECT count(*) FROM information_schema.columns WHERE table_name = 'media'"
                                 + " AND column_name IN ('created_at', 'updated_at')")

@@ -59,8 +59,19 @@ public class Media extends BaseEntity {
     @Column(name = "uploaded_at", nullable = false, updatable = false)
     private Instant uploadedAt;
 
+    /**
+     * The picture's size in pixels as read from its header at upload (D-17, V2), or {@code null} for a voice note and
+     * for an image whose header couldn't be read. Both or neither: {@code chk_media_dimensions}.
+     */
+    @Column(name = "width", updatable = false)
+    private Integer width;
+
+    @Column(name = "height", updatable = false)
+    private Integer height;
+
     protected Media() {}
 
+    /** A media item with no stored size: a voice note, or an image whose header couldn't be read. */
     public Media(
             UUID id,
             Entry entry,
@@ -69,6 +80,19 @@ public class Media extends BaseEntity {
             String purpose,
             int displayOrder,
             long fileSizeBytes) {
+        this(id, entry, objectKey, mediaType, purpose, displayOrder, fileSizeBytes, null);
+    }
+
+    /** @param size the picture's size, or {@code null} when it has none */
+    public Media(
+            UUID id,
+            Entry entry,
+            String objectKey,
+            String mediaType,
+            String purpose,
+            int displayOrder,
+            long fileSizeBytes,
+            ImageSize size) {
         super(id);
         this.entry = entry;
         this.objectKey = objectKey;
@@ -76,6 +100,8 @@ public class Media extends BaseEntity {
         this.purpose = purpose;
         this.displayOrder = displayOrder;
         this.fileSizeBytes = fileSizeBytes;
+        this.width = size == null ? null : size.width();
+        this.height = size == null ? null : size.height();
     }
 
     /** The owning entry. A lazy proxy: reading only its id costs no query, anything else loads the entry. */
@@ -109,5 +135,15 @@ public class Media extends BaseEntity {
 
     public Instant getUploadedAt() {
         return uploadedAt;
+    }
+
+    /** In pixels, or {@code null} (see {@link #width}). */
+    public Integer getWidth() {
+        return width;
+    }
+
+    /** In pixels, or {@code null} exactly when {@link #getWidth()} is. */
+    public Integer getHeight() {
+        return height;
     }
 }

@@ -34,6 +34,7 @@
 | 4.2 API client and data layer | done | Sprint 4.2: Add the typed API client and data layer | Generated API types, an `openapi-fetch` client (dev header only in dev), typed `ApiProblem` errors, the query-key factory, the `QueryClient` and `useMe()`; the starter page greets the dev user (73 tests) | [4.2](build-journal/sprint-4/4.2-api-client-data-layer.md) |
 | 4.3 Routing, shell and time utilities | done | Sprint 4.3: Add the routes, the app shell and the time utilities | React Router routes for all eight Phase 1 addresses, the phone-first shell (moon line or back link, five-column tab bar with Write, side nav from `lg`), the Zustand UI store and `lib/time.ts` in the user's zone (131 tests, Melbourne DST and other zones) | [4.3](build-journal/sprint-4/4.3-routing-shell-time.md) |
 | 4.4 Feed | done | Sprint 4.4: Build the feed with weeks filed under their Eras | The Journal at `/` as an infinite query over `GET /feed`: weeks filed under `eras[0]` with one-level nesting and chips (D-22), a sticky Era and week line, a first entry body, a text-only sealed card that is never counted, and loading, empty and error states (165 tests) | [4.4](build-journal/sprint-4/4.4-feed.md) |
+| 4.5 Entry card | done | Sprint 4.5: Store photo sizes and build the swipe and caption | `V2__media_dimensions.sql` and a header reader (`ImageSize`: JPEG, PNG, WebP) give photos their width and height (D-17); the feed entry gets an Embla swipe framed from the first photo (4:5 to 1.91:1), a caption drawn from TipTap JSON with links checked again, and a voice note row (1621 backend tests, 195 frontend) | [4.5](build-journal/sprint-4/4.5-entry-card.md) |
 
 ### S4 Usage
 | Time (Melbourne) | 5-hour used | Weekly used | Decision |
@@ -43,6 +44,8 @@
 | 2026-11-24 23:07 | 43% | 47% | 4.2 cost 18% (largest so far). Start 4.3 (57% left, needs 18%) |
 | 2026-11-24 23:41 | 74% | 51% | 4.3 cost 31% (new largest). 26% left < 31%: wait until 03:15 (the window resets 03:10) |
 | 2026-11-24 23:45 | 74% | 51% | The user changed the rule: start each task while the weekly limit is under 90%, and let the safety net resume a run the 5-hour limit stops. Start 4.4 |
+| 2026-11-25 00:18 | 100% | not read | 4.4 finished as the limit was reached (cost at least 26%). Wait for the reset (03:10) |
+| 2026-11-25 03:11 | 6% | 56% | The window reset. Start 4.5 |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
@@ -70,6 +73,14 @@
 | 21 | 4.4 | No doc gives the component | `components/ui/button.tsx` (primary, secondary, quiet, through `cva`) from DESIGN.md §4 Controls, ahead of 4.6 |
 | 22 | 4.4 | USER_FLOWS F-08 | An IntersectionObserver (rootMargin one screen) loads the next page, with a quiet *Show earlier weeks* button for keyboards; a failed page shows its message and *Try again* in the foot |
 | 23 | 4.4 | DESIGN.md §4 Feed (review) | The entry title is plain text, not a link, until an entry route exists (4.5/4.7); `mediaLabel` shows nothing for an entry with no media, as D-24 names no label for it |
+| 24 | 4.5 | SPRINT_PLAN 4.5 vs D-41, DESIGN.md §4 | D-41 wins on how (D-27): the swipe holds pictures only (photos and diary pages); each voice note is its own row under the caption: a 44 px play/pause button and the length, with no visible label |
+| 25 | 4.5 | DESIGN.md §4 Voice note row; D-13 | No waveform yet: wavesurfer.js isn't installed and no audio levels are stored. The length shows after the first play (`preload="none"`). Task 4.7 owns the waveform |
+| 26 | 4.5 | design.md §6 ("until the user swipes") | Focus on the swipe, a pointer press or a change of photo counts as starting to swipe; from then on slides render their `<img>` up to one ahead. Before that only slide 1 has an `<img>` |
+| 27 | 4.5 | DESIGN.md §4 Swipe (silent on the ends) | Each laptop arrow shows only while there is a photo in its direction; when a press reaches either end, focus moves to the swipe group |
+| 28 | 4.5 | DESIGN.md §4 Feed; D-06 | In the feed caption a heading is a body-size `<p>` in weight 600, so the outline stays weeks then entries; blank paragraphs and rules are left out of the 3-line clamp; links are accent, underlined, open in a new tab with `rel="noopener noreferrer nofollow"`; an unsafe link shows as plain text |
+| 29 | 4.5 | D-17 (silent on trusting the declared type) | The image format is sniffed from the file's signature, but only files declared as an image are read, so a voice note never gets a size; the 415 check still uses the declared type |
+| 30 | 4.5 | Q29 default | Measured on the production build (`vite preview`), with a real 3.3 MB photo swapped into the feed response by a scratch Playwright script; nothing worked around in the client |
+| 31 | 4.5 | Local dev database from before V2 | The six existing sample photos (960 × 640 PNGs) were given their size with one `UPDATE` in the local database only; a freshly seeded journal gets sizes from the seeder |
 
 ### S4 Needs attention
 - **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
@@ -86,6 +97,12 @@
 - **4.4:** the production JS is about 166–168 KB gzipped, under the 200 KB feed budget; Vite warns of a chunk over 500 kB minified. Capture (4.6) must be lazy-loaded.
 - **4.4:** the entry title isn't a link yet (DESIGN.md §4 Feed); link it to the entry view when that route lands (4.5/4.7).
 - **4.4:** every test that renders `/` now needs `GET /feed` answered; it is a default MSW handler.
+- **4.5, Q29:** on the slow-phone profile a real 3.3 MB 4032 × 3024 photo arrived at 19.2 s and was the LCP at 19.23 s (CLS 0); the 34 KB sample photo gives LCP 2.62 s. This is the case for Q29's smaller copies.
+- **4.5:** `audit.mjs --slow` on the production build is bimodal: 2.7–2.8 s (WARN) or 5.2–5.7 s (FAIL). 4.5's build was slow in 7 of 14 runs, 4.4's in 1 of 9. In slow runs the photo had arrived (about 2.9 s) but painted late (about 5.7 s), with no long task between. Cause not found (audit noise or a small Embla effect); worth a look when Q29 is decided. Audits without `--slow` pass.
+- **4.5, skipped dependency:** wavesurfer.js (D-13, "added when needed") isn't installed, so the voice note row has no waveform; task 4.7 owns it.
+- **4.5, follow-up:** caption links past the third line of the feed's clamp stay in the tab order, so focus can land on clipped text (review minor, not changed unattended). Fix: plain text or `tabIndex={-1}` for links past the clamp.
+- **4.5:** every focus outline measures 3 px solid, while DESIGN.md §8 says 2 px; it comes from the focus style in `index.css` (4.1/4.3), not this task.
+- **4.5:** the first full backend build failed 2 of 1621 tests (`SchemaTest` version, `MediaApiDescriptionTest` field list); both fixed, the second build passed. The local dev database's six sample photos were given sizes with one `UPDATE`.
 
 ### S4 Questions for the morning
 

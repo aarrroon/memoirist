@@ -60,7 +60,9 @@ class MediaUploadTest extends MediaApiTest {
                         "purpose",
                         "displayOrder",
                         "fileSizeBytes",
-                        "uploadedAt");
+                        "uploadedAt",
+                        "width",
+                        "height");
         assertThat(media)
                 .containsEntry("entryId", entryId)
                 .containsEntry("mediaType", "image/jpeg")
@@ -83,6 +85,109 @@ class MediaUploadTest extends MediaApiTest {
         assertThat(fetched.statusCode()).isEqualTo(200);
         assertThat(fetched.body()).isEqualTo(photo);
         assertThat(fetched.headers().firstValue("Content-Type")).hasValue("image/jpeg");
+    }
+
+    // The size of a photo (D-17, task 4.5)
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({"jpeg, image/jpeg, 1200, 1600", "png, image/png, 960, 640", "webp, image/webp, 17, 41"})
+    void aPhotosWidthAndHeightAreReadFromItsHeaderAndStored(String format, String type, int width, int height) {
+        User user = aUser();
+        String entryId = createTitledEntry(user);
+        byte[] photo = switch (format) {
+            case "jpeg" -> TestImages.jpeg(width, height, false);
+            case "png" -> TestImages.png(width, height);
+            default -> TestImages.webp("extended-17x41.webp");
+        };
+
+        Map<String, Object> media = upload(user, entryId, photo, type)
+                .expectStatus()
+                .isCreated()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+
+        assertThat(media).containsEntry("width", width).containsEntry("height", height);
+        assertThat(storedSize(media.get("id"))).isEqualTo(width + "x" + height);
+        // The entry (and so the feed, which maps media the same way) shows the size too.
+        Map<?, ?> shown = (Map<?, ?>) ((List<?>) getEntry(user, entryId).get("media")).get(0);
+        assertThat(shown.get("width")).isEqualTo(width);
+        assertThat(shown.get("height")).isEqualTo(height);
+    }
+
+    @Test
+    void aDiaryPageGetsItsSizeLikeAnyPhoto() {
+        User user = aUser();
+
+        Map<String, Object> media = upload(
+                        user,
+                        createTitledEntry(user),
+                        TestImages.png(700, 1000),
+                        "image/png",
+                        Map.of("purpose", "PAGE_SCAN"))
+                .expectStatus()
+                .isCreated()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+
+        assertThat(media).containsEntry("width", 700).containsEntry("height", 1000);
+    }
+
+    @Test
+    void aVoiceNoteHasNoSize() {
+        User user = aUser();
+
+        Map<String, Object> media = upload(user, createTitledEntry(user), bytes(900, 5), "audio/webm;codecs=opus")
+                .expectStatus()
+                .isCreated()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+
+        assertThat(media).containsEntry("width", null).containsEntry("height", null);
+        assertThat(storedSize(media.get("id"))).isEqualTo("nullxnull");
+    }
+
+    @Test
+    void aVoiceNoteIsNotReadForASizeEvenWhenItsBytesLookLikeAPicture() {
+        User user = aUser();
+
+        // A PNG's bytes declared as audio: the declared type says it is a voice note, so no size is looked for.
+        Map<String, Object> media = upload(user, createTitledEntry(user), TestImages.png(40, 30), "audio/mpeg")
+                .expectStatus()
+                .isCreated()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+
+        assertThat(media).containsEntry("width", null).containsEntry("height", null);
+    }
+
+    @Test
+    void anImageWhoseHeaderCantBeReadIsStillAcceptedWithNoSize() {
+        User user = aUser();
+        String entryId = createTitledEntry(user);
+
+        Map<String, Object> media = upload(user, entryId, bytes(2048, 6), "image/jpeg")
+                .expectStatus()
+                .isCreated()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+
+        assertThat(media).containsEntry("width", null).containsEntry("height", null);
+        assertThat(storedSize(media.get("id"))).isEqualTo("nullxnull");
+        assertThat(stored(objectKeyOf(media.get("id")))).isTrue();
+    }
+
+    /** The row's width and height as SQL sees them, "WxH" ("nullxnull" when both are NULL). */
+    private String storedSize(Object mediaId) {
+        return jdbc.sql("SELECT coalesce(width::text, 'null') || 'x' || coalesce(height::text, 'null') FROM media"
+                        + " WHERE id = :id")
+                .param("id", UUID.fromString(mediaId.toString()))
+                .query(String.class)
+                .single();
     }
 
     @Test

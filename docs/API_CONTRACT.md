@@ -180,9 +180,9 @@ A lightweight row for lists such as the all-entries timeline (D-25). No caption,
   "purpose": "PHOTO",
   "displayOrder": 0,
   "fileSizeBytes": 2483011,
+  "uploadedAt": "2026-10-20T03:31:00Z",
   "width": 1600,
-  "height": 1200,
-  "uploadedAt": "2026-10-20T03:31:00Z"
+  "height": 1200
 }
 ```
 

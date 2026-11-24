@@ -578,6 +578,10 @@ export interface components {
             fileSizeBytes: number;
             /** Format: date-time */
             uploadedAt: string;
+            /** Format: int32 */
+            width: number | null;
+            /** Format: int32 */
+            height: number | null;
         };
         WeekEraResponse: {
             /** Format: uuid */

@@ -75,7 +75,9 @@ class MediaApiDescriptionTest extends MediaApiTest {
                         "purpose",
                         "displayOrder",
                         "fileSizeBytes",
-                        "uploadedAt");
+                        "uploadedAt",
+                        "width",
+                        "height");
     }
 
     @Test

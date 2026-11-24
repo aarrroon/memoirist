@@ -18,7 +18,7 @@
 |---|---|---|---|
 | V1 | `V1__core_schema.sql` | 1 | Applied (Sprint 2, task 2.3); a copy of the SQL below |
 | R | `db/seed-local/R__seed_dev_user.sql` | 1 | Applied (Sprint 2, task 2.3); `local` and `test` profiles only |
-| V2 | `V2__media_dimensions.sql` | 1 | Planned (Sprint 4, task 4.5): `media.width` and `media.height` (D-17) |
+| V2 | `V2__media_dimensions.sql` | 1 | Applied (Sprint 4, task 4.5): `media.width` and `media.height` (D-17); a copy of the SQL below |
 | next | `V{n}__auth_and_sharing.sql` | 2 | Draft below |
 | next | `V{n}__yearly_letter.sql` | 2 | Draft below (D-32) |
 | next | `V{n}__product_events.sql` | 2 | Draft below (D-38) |
@@ -295,6 +295,18 @@ CREATE INDEX idx_eras_cover ON eras (cover_media_id)
 CREATE INDEX idx_entry_tags_tag ON entry_tags (tag_id);
 ```
 
+### V2 SQL: `V2__media_dimensions.sql`
+Task 4.5 (D-17). Photos store their size, read by `media/ImageSize` from the file's header on upload (PNG `IHDR`, a JPEG's start-of-frame segment, WebP `VP8 `, `VP8L` or `VP8X`), without decoding the picture. Rows from before V2 keep `NULL`; the screen gives them a 4:5 frame. The check is written with `IS NOT NULL` on both sides because `CHECK (width > 0 AND height > 0)` would let a width without a height in: with one column `NULL` that expression is `NULL`, and a `CHECK` that is `NULL` passes. `SchemaConstraintsTest` holds a row for each half.
+```sql
+ALTER TABLE media
+    ADD COLUMN width INTEGER,
+    ADD COLUMN height INTEGER,
+    ADD CONSTRAINT chk_media_dimensions CHECK (
+        (width IS NULL AND height IS NULL)
+        OR (width IS NOT NULL AND height IS NOT NULL AND width > 0 AND height > 0)
+    );
+```
+
 ### Local and test seed: `db/seed-local/R__seed_dev_user.sql`
 This is loaded only by the `local` and `test` profiles (D-11), so it never runs in production (`MigrationsTest` runs Flyway with the `prod` location alone and finds no users).
 
@@ -316,7 +328,7 @@ Each Phase 1 table has one JPA entity, in the feature package named in [TECH_STA
 | `templates` | `Template` | `TimestampedEntity` | `subheadings` is a `List<String>` with `@JdbcTypeCode(SqlTypes.JSON)` |
 | `weekly_logs` | `WeeklyLog` | `TimestampedEntity` | `is_closed` is the field `closed`; `start_date` and `end_date` are never updated; `@DynamicUpdate`, so an `UPDATE` writes only the columns that changed (the title and the closed flag are saved by separate requests and the row has no `@Version`) |
 | `entries` | `Entry` | `TimestampedEntity` | `content_json` is a Jackson 3 `JsonNode` (`@JdbcTypeCode(SqlTypes.JSON)`); `version` is `@Version` (D-23); `@SQLRestriction("deleted_at IS NULL")` hides Recently deleted entries (D-30); `media` and `tags` below |
-| `media` | `Media` | `BaseEntity` | No `created_at` or `updated_at` (D-12); `uploaded_at` is `@CreationTimestamp`; `entry` is a `LAZY` `@ManyToOne`; `purpose` and `media_type` are strings checked in the service |
+| `media` | `Media` | `BaseEntity` | No `created_at` or `updated_at` (D-12); `uploaded_at` is `@CreationTimestamp`; `entry` is a `LAZY` `@ManyToOne`; `purpose` and `media_type` are strings checked in the service; `width` and `height` are nullable `Integer`s set once from an `ImageSize` in the constructor (V2) |
 | `tags` | `Tag` | `TimestampedEntity` | `Tag.BY_NAME` is the list order, sorted in Java (`NameCollation`, shared with templates). `TagRepository.insertIfAbsent` is a native `INSERT ... ON CONFLICT (user_id, lower(name)) DO NOTHING` (the create path); the lookup by name is `lower(name) = lower(:name)`, the expression of `uq_tags_user_name`; `findAndLockByIdInAndUserId` adds `FOR SHARE`. `EntryRepository.countOpenEntriesByTag` counts the entries per tag, leaving out sealed ones in the query (task 3.8) |
 | `entry_tags` | no entity | | `Entry.tags` is a `@ManyToMany` through this table. Hibernate writes only `entry_id` and `tag_id`, so `source` (`'USER'`) and `created_at` come from their column defaults. The entry owns the collection, so a changed set raises `entries.version` and moves `updated_at`, and an unchanged set writes nothing (tested). Phase 4 needs an `EntryTag` entity to record `'AI'` |
 

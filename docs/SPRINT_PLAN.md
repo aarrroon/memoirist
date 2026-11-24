@@ -284,7 +284,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:** infinite scroll over `GET /feed` (`useInfiniteQuery`), sticky era headers and week sections. A week in several Eras is grouped under `eras[0]`, with the others as chips; when `eras[0]` sits wholly inside another of the week's Eras, the week shows as a section nested inside that Era, one level deep (D-22).
   - **Done when:** the feed shows the local sample content (3.16); there are empty, loading and error states; component tests pass.
 
-- [ ] **4.5 Entry card**
+- [x] **4.5 Entry card**
   - **Read:** D-17 (photos store their size), D-40, D-41, DESIGN.md §4 (Swipe).
   - **Do:**
     - Backend first (`/new-migration`, then the media endpoints): `V2__media_dimensions.sql` adds `media.width` and `media.height` (nullable, both or neither). An upload reads an image's size from its header without decoding it; voice notes and unreadable headers stay `null`. `Media` responses gain `width` and `height` (`@Schema(nullable = true)`, and `ApiDocsContractTest`), then `npm run gen:api`.

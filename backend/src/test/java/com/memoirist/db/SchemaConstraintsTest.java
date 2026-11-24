@@ -113,6 +113,24 @@ class SchemaConstraintsTest {
                         "INSERT INTO media (entry_id, object_key, media_type, display_order, file_size_bytes) VALUES ("
                                 + ENTRY + ", 'users/dev/media-2.jpg', 'image/jpeg', 1, 0)",
                         "chk_media_file_size"),
+                // V2 (D-17): a size is both numbers or neither, and never 0. The second row is the one a careless
+                // CHECK (width > 0 AND height > 0) lets in, because NULL > 0 is NULL and a NULL check passes.
+                Arguments.of(
+                        "media with a width and no height",
+                        "INSERT INTO media (entry_id, object_key, media_type, display_order, file_size_bytes, width)"
+                                + " VALUES (" + ENTRY + ", 'users/dev/media-2.jpg', 'image/jpeg', 1, 1024, 640)",
+                        "chk_media_dimensions"),
+                Arguments.of(
+                        "media with a height and no width",
+                        "INSERT INTO media (entry_id, object_key, media_type, display_order, file_size_bytes, height)"
+                                + " VALUES (" + ENTRY + ", 'users/dev/media-2.jpg', 'image/jpeg', 1, 1024, 480)",
+                        "chk_media_dimensions"),
+                Arguments.of(
+                        "media zero pixels wide",
+                        "INSERT INTO media (entry_id, object_key, media_type, display_order, file_size_bytes, width,"
+                                + " height) VALUES (" + ENTRY + ", 'users/dev/media-2.jpg', 'image/jpeg', 1, 1024, 0,"
+                                + " 480)",
+                        "chk_media_dimensions"),
                 // The two UNIQUE constraints that V1 declares inline get Postgres's default names, not
                 // uq_<table>_<cols> (journal 2.3, section 4). If a later migration renames them, this test says so.
                 Arguments.of(

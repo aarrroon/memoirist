@@ -3,7 +3,16 @@ import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { useUiStore } from '../../stores/ui';
-import { entry, page, photo, sampleWeeks, sealedEntry, uniDays, week } from '../../test/msw/feed';
+import {
+  doc,
+  entry,
+  page,
+  photo,
+  sampleWeeks,
+  sealedEntry,
+  uniDays,
+  week,
+} from '../../test/msw/feed';
 import { server } from '../../test/msw/server';
 import { renderApp } from '../../test/render';
 
@@ -181,6 +190,7 @@ describe('a sealed Loot Drop (D-10)', () => {
     const leaky = {
       ...sealedEntry('leak', '2026-11-24', '2027-01-24T22:00:00Z'),
       title: 'Secret title',
+      contentJson: doc('Secret caption'),
       contentText: 'Secret caption',
       tags: [{ id: 'tag-secret', name: 'Secret tag', source: 'USER' }],
       media: [photo('secret-photo', 'leak')],

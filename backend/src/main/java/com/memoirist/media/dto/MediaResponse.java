@@ -1,5 +1,6 @@
 package com.memoirist.media.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -8,6 +9,9 @@ import java.util.UUID;
  *
  * @param fileUrl a presigned GET URL, valid for 60 minutes; never the object key or the storage host on its own
  * @param purpose {@code PHOTO}, or {@code PAGE_SCAN} for a photo of a paper diary page (D-20)
+ * @param width the picture's width in pixels, read from its header at upload (D-17); {@code null} for a voice note, an
+ *     image whose header couldn't be read, and anything uploaded before task 4.5
+ * @param height the picture's height in pixels; {@code null} exactly when {@code width} is
  */
 public record MediaResponse(
         UUID id,
@@ -17,4 +21,6 @@ public record MediaResponse(
         String purpose,
         int displayOrder,
         long fileSizeBytes,
-        Instant uploadedAt) {}
+        Instant uploadedAt,
+        @Schema(nullable = true) Integer width,
+        @Schema(nullable = true) Integer height) {}

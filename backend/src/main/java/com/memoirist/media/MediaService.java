@@ -126,6 +126,7 @@ public class MediaService {
 
         UUID mediaId = UUID.randomUUID();
         String objectKey = objectKey(userId, entryId, mediaId, upload.type());
+        ImageSize size = sizeOf(file, upload.type());
 
         // TODO(human) PRACTICE: A file in storage and a row in the database can't be committed together, so write the
         //   compensation: store the file, then insert the row in its own short transaction, and if either step fails
@@ -142,8 +143,8 @@ public class MediaService {
             } catch (IOException unreadableUpload) {
                 throw new UncheckedIOException("The uploaded file couldn't be read back from disk", unreadableUpload);
             }
-            return writing.execute(
-                    status -> insert(entryId, userId, mediaId, objectKey, upload, file.getSize(), requestedOrder));
+            return writing.execute(status ->
+                    insert(entryId, userId, mediaId, objectKey, upload, file.getSize(), size, requestedOrder));
         } catch (RuntimeException failure) {
             deleteQuietly(objectKey);
             throw failure;
@@ -244,6 +245,7 @@ public class MediaService {
             String objectKey,
             Upload upload,
             long fileSize,
+            ImageSize size,
             Integer requestedOrder) {
         Entry entry = lockEntry(entryId, userId);
         refuseIfSealed(entry);
@@ -255,8 +257,24 @@ public class MediaService {
         // which the deferred unique constraint allows until the commit (V1, uq_media_entry_order).
         items.subList(position, items.size()).forEach(later -> later.setDisplayOrder(later.getDisplayOrder() + 1));
         Media created = media.saveAndFlush(
-                new Media(mediaId, entry, objectKey, upload.type(), upload.purpose(), position, fileSize));
+                new Media(mediaId, entry, objectKey, upload.type(), upload.purpose(), position, fileSize, size));
         return mapper.toResponse(entryId, created);
+    }
+
+    /**
+     * An image's width and height from its header (D-17), or {@code null} for a voice note and for an image whose
+     * header can't be read: a photo without a size is still accepted, and the screen gives it a 4:5 frame. It runs
+     * before the file is stored and outside any transaction, and reads only the header's bytes.
+     */
+    private static ImageSize sizeOf(MultipartFile file, String allowedType) {
+        if (!UploadRules.isImage(allowedType)) {
+            return null;
+        }
+        try (InputStream content = file.getInputStream()) {
+            return ImageSize.read(content).orElse(null);
+        } catch (IOException unreadable) {
+            return null;
+        }
     }
 
     /** {@code users/{userId}/entries/{entryId}/{mediaId}.{ext}}: the key shape TECH_STACK (Storage) and the schema give. */

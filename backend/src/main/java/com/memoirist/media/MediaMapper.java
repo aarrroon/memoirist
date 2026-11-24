@@ -33,6 +33,8 @@ public class MediaMapper {
                 media.getPurpose(),
                 media.getDisplayOrder(),
                 media.getFileSizeBytes(),
-                media.getUploadedAt());
+                media.getUploadedAt(),
+                media.getWidth(),
+                media.getHeight());
     }
 }

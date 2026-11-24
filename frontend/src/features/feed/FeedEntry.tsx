@@ -1,13 +1,16 @@
 import { Link } from 'react-router';
-import type { Entry, Media } from '../../api/feed';
+import type { Entry } from '../../api/feed';
+import { RichText } from '../../components/RichText';
+import { Swipe } from '../../components/Swipe';
+import { VoiceNote } from '../../components/VoiceNote';
+import { isPicture as isImage } from '../../lib/media';
+import { hasText } from '../../lib/tiptap';
 import { dayLabel, dayParts } from '../../lib/time';
 import { SealedCard } from './SealedCard';
 
-// One entry in the feed (task 4.4, DESIGN.md §4 Feed). Task 4.5 replaces the single photo with the swipe (Embla,
-// every photo, its stored shape) and the plain caption with one rendered from contentJson; this is the least
-// that shows the sample content faithfully until then.
-
-const isImage = (media: Media) => media.mediaType.startsWith('image/');
+// One entry in the feed (tasks 4.4 and 4.5, DESIGN.md §4 Feed, D-41): the day line, the swipe of its photos,
+// then 12 px below the title, the caption (three lines, drawn from its TipTap JSON), its voice notes and its tags.
+// The soundtrack row is task 4.15.
 
 /** D-24's label for an entry with no title and no caption: what its first media item is. An entry with nothing
  *  at all can't be saved (D-23), and D-24 names no label for it, so it shows none. */
@@ -67,41 +70,23 @@ export function FeedEntry({
 
 function EntryBody({ entry, eagerPhotoId }: { entry: Entry; eagerPhotoId: string | null }) {
   const photos = entry.media.filter(isImage);
-  const first = photos[0];
-  const caption = entry.contentText?.trim() || null;
+  const notes = entry.media.filter((media) => !isImage(media));
+  const caption = hasText(entry.contentJson);
 
   return (
     <>
-      {first && (
-        // The frame is 4:5 until photos carry their size (D-17, task 4.5), so its space is reserved before the
-        // photo arrives and nothing below it moves (layout shift ≤ 0.1, design.md §6). Edge to edge on a phone,
-        // `lg` corners from the tablet width.
-        <div className="-mx-4 aspect-4/5 overflow-hidden bg-surface md:mx-0 md:rounded-lg">
-          <img
-            src={first.fileUrl}
-            alt={
-              first.purpose === 'PAGE_SCAN'
-                ? 'Diary page'
-                : photos.length > 1
-                  ? `Photo 1 of ${photos.length}`
-                  : 'Photo'
-            }
-            decoding="async"
-            {...(first.id === eagerPhotoId
-              ? { loading: 'eager' as const, fetchPriority: 'high' as const }
-              : { loading: 'lazy' as const })}
-            className="size-full object-cover"
-          />
-        </div>
-      )}
+      {photos.length > 0 && <Swipe photos={photos} eagerPhotoId={eagerPhotoId} />}
 
       <div className="flex flex-col gap-2">
         {entry.title && <h3 className="font-display text-title">{entry.title}</h3>}
-        {/* Plain text, never HTML (non-negotiable 6). Task 4.5 renders the caption from contentJson instead. */}
-        {caption && <p className="line-clamp-3 text-body whitespace-pre-line">{caption}</p>}
+        {/* Drawn from the JSON as React elements, never as HTML (non-negotiable 6). */}
+        {caption && <RichText document={entry.contentJson} clamp className="text-body" />}
         {!entry.title && !caption && mediaLabel(entry) && (
           <p className="text-small text-ink-2">{mediaLabel(entry)}</p>
         )}
+        {notes.map((note, index) => (
+          <VoiceNote key={note.id} note={note} index={index} count={notes.length} />
+        ))}
         {entry.tags.length > 0 && (
           // Each tag opens the timeline filtered by it (DESIGN.md §4 Feed; the filter is task 4.11). Every link is
           // at least 44 × 44 px (design.md §9), so a short tag such as "Trip" keeps a blank tail; that is why they

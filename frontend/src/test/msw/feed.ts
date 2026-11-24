@@ -18,7 +18,13 @@ export function era(
   return { id, title, startDate, endDate, pinnedInFeed };
 }
 
-export function photo(id: string, entryId: string, displayOrder = 0): Media {
+/** A photo. The sample pictures are 960 × 640 (backend dev/PlaceholderImages); pass null for one with no size. */
+export function photo(
+  id: string,
+  entryId: string,
+  displayOrder = 0,
+  size: { width: number; height: number } | null = { width: 960, height: 640 },
+): Media {
   return {
     id,
     entryId,
@@ -28,7 +34,26 @@ export function photo(id: string, entryId: string, displayOrder = 0): Media {
     displayOrder,
     fileSizeBytes: 48_000,
     uploadedAt: at,
+    width: size?.width ?? null,
+    height: size?.height ?? null,
   };
+}
+
+/** A voice note: no size (D-17). */
+export function voiceNote(id: string, entryId: string, displayOrder = 0): Media {
+  return {
+    ...photo(id, entryId, displayOrder, null),
+    fileUrl: `http://localhost:8333/memoirist/${id}.webm?X-Amz-Signature=test`,
+    mediaType: 'audio/webm',
+  };
+}
+
+/** A caption as the server stores it: a TipTap document of one paragraph per line (D-05). */
+export function doc(...paragraphs: string[]): Entry['contentJson'] {
+  return {
+    type: 'doc',
+    content: paragraphs.map((text) => ({ type: 'paragraph', content: [{ type: 'text', text }] })),
+  } as unknown as Entry['contentJson'];
 }
 
 export function entry(id: string, entryDate: string, overrides: Partial<Entry> = {}): Entry {
@@ -101,6 +126,7 @@ export const sampleWeeks: Week[] = [
     [
       entry('entry-today', '2026-11-24', {
         title: 'Quiet day',
+        contentJson: doc('Nothing happened, and that was lovely.'),
         contentText: 'Nothing happened, and that was lovely.',
         tags: [family],
       }),
@@ -127,6 +153,7 @@ export const sampleWeeks: Week[] = [
     [
       entry('entry-hobart', '2026-11-03', {
         title: 'Day one in Hobart',
+        contentJson: doc('Landed at nine, wandered the waterfront.'),
         contentText: 'Landed at nine, wandered the waterfront.',
         tags: [trip],
         media: [photo('media-hobart', 'entry-hobart')],
