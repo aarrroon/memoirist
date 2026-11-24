@@ -139,7 +139,7 @@ There is **one living file per topic**, not a copy per phase.
 | `R-xx` | Recommendation from the feature review | product/FEATURE_REVIEW.md |
 
 ## 5. Overnight runs
-Several sprints can be built unattended, each as a stacked PR you review in the morning. The prompt is [prompts/overnight-phase-1.md](prompts/overnight-phase-1.md).
+Several sprints can be built unattended, each as a stacked PR you review in the morning. The prompts are [prompts/overnight-phase-1.md](prompts/overnight-phase-1.md) (Sprints 1–3) and [prompts/overnight-sprint-4.md](prompts/overnight-sprint-4.md) (Sprint 4: it asks its questions and installs the libraries with you first, then paces itself against the usage limits).
 
 **Checklist before you start it:**
 | # | Check |
