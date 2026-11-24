@@ -1,4 +1,53 @@
-# Overnight report: Phase 1, Sprints 1–3
+# Overnight reports: Phase 1
+
+## Sprint 4: the React UI
+
+> An unattended build of tasks 4.2 to 4.17 ([prompt](prompts/overnight-sprint-4.md)), started 2026-11-24 at 22:47 (Melbourne). One workflow run per task, with the usage read between tasks. Every task's close-out step updates this section in the task's own commit.
+
+### S4 Preflight
+| Check | Result |
+|---|---|
+| `java -version` | 25.0.5 (Temurin) ✓, and this session's `JAVA_HOME` is valid |
+| Docker and Compose | Docker 29.9.2; Postgres and SeaweedFS up and healthy ✓ |
+| `gh auth status` | Logged in as `aarrroon` ✓ |
+| `.env` | Exists ✓ (never read) |
+| Branch | `phase-1-sprint-4`, Sprint 4.1 committed and pushed ✓ |
+| Working tree | The four prompt and workflow docs committed as `6e32149` *Docs: add the Sprint 4 overnight prompt* ✓ |
+| Other sessions | None running in this folder ✓ |
+| Frontend checks | `npm ci`, 40 tests, lint, typecheck and build pass ✓ |
+
+### S4 Decisions made before the run (2026-11-24)
+| Question | Answer | Recorded in |
+|---|---|---|
+| `tagIds` on `PUT /entries` | Required; `[]` clears | D-26 |
+| A page `size` over the limit | `400`, never a clamp; `api.md` reworded | D-42 |
+| A `PUT /eras` while the cover is hidden | Leaving `coverMediaId` out keeps a hidden cover (task 4.14) | D-36 |
+| Empty weeks on an Era's page | Hidden, like the feed (task 4.9) | D-22 |
+| `dateUnknown` entries in On this day | Left out (task 4.14) | D-32 |
+| `max-swallow-size` | Keep the default; the client checks sizes | D-17 |
+| Q29 smaller photo copies | The default (originals), and the run measures the slow-phone number | Q29 |
+| Libraries | D-13's set plus `radix-ui`, `clsx`, `tailwind-merge`, `class-variance-authority`, `@hookform/resolvers`, `@tiptap/pm`, `@tiptap/extension-link`, `exifr`, `@playwright/test`, `@testing-library/user-event` | D-13, TECH_STACK §3 (`85206fd`) |
+
+### S4 Tasks
+| Task | Status | Commit | What it built | Journal |
+|---|---|---|---|---|
+
+### S4 Usage
+| Time (Melbourne) | 5-hour used | Weekly used | Decision |
+|---|---|---|---|
+| 2026-11-24 22:31 | 20% | 44% | Part A started |
+
+### S4 Assumptions
+| # | Task | From | Assumption |
+|---|---|---|---|
+
+### S4 Needs attention
+
+### S4 Questions for the morning
+
+---
+
+# Sprints 1–3
 
 > An unattended build of tasks 1.2 to 3.17 ([prompt](prompts/overnight-phase-1.md)), started 2026-10-29. Every task's close-out step updates this file in the task's own commit, so it shows how far the run got even if it was interrupted. The full summary is posted in the chat when the run ends. How each task was built: [build journal](build-journal/README.md).
 
