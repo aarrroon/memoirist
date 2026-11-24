@@ -66,6 +66,11 @@ window.HTMLMediaElement.prototype.play = function play() {
   this.dispatchEvent(new Event('play'));
   return Promise.resolve();
 };
+// Nor does it load media: a voice note's first Play reads its length (lib/audioDuration.ts), so loading answers at
+// once with the metadata event; jsdom's duration stays NaN, which the player treats as not known.
+window.HTMLMediaElement.prototype.load = function load() {
+  queueMicrotask(() => this.dispatchEvent(new Event('loadedmetadata')));
+};
 window.HTMLMediaElement.prototype.pause = function pause() {
   this.dispatchEvent(new Event('pause'));
 };

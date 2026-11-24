@@ -36,6 +36,7 @@
 | 4.4 Feed | done | Sprint 4.4: Build the feed with weeks filed under their Eras | The Journal at `/` as an infinite query over `GET /feed`: weeks filed under `eras[0]` with one-level nesting and chips (D-22), a sticky Era and week line, a first entry body, a text-only sealed card that is never counted, and loading, empty and error states (165 tests) | [4.4](build-journal/sprint-4/4.4-feed.md) |
 | 4.5 Entry card | done | Sprint 4.5: Store photo sizes and build the swipe and caption | `V2__media_dimensions.sql` and a header reader (`ImageSize`: JPEG, PNG, WebP) give photos their width and height (D-17); the feed entry gets an Embla swipe framed from the first photo (4:5 to 1.91:1), a caption drawn from TipTap JSON with links checked again, and a voice note row (1621 backend tests, 195 frontend) | [4.5](build-journal/sprint-4/4.5-entry-card.md) |
 | 4.6 Capture modal | done | Sprint 4.6: Build capture: the write sheet, uploads and the draft | Write opens capture (a lazy Vaul sheet on phones, a dialog on laptops): title, TipTap editor, templates, memory date, tags made inline, a tray of photos with reorder, retry, remove and diary-page marks, a zod-checked draft, and create (client id) → upload → order, with `409 entry-stale` and field errors handled (243 frontend tests) | [4.6](build-journal/sprint-4/4.6-capture-modal.md) |
+| 4.7 Voice notes | done | Sprint 4.7: Record voice notes in capture and play them back | Voice in capture records with `MediaRecorder` (Opus in WebM, or AAC in MP4) with live loudness bars and F-03 messages; voice notes go after the pictures in the media order (D-24); the feed and capture share a keyboard-operable player that finds the length of Chrome's WebM; checked in real Chromium with a fake microphone (upload 201, playback 3.66 s) (273 frontend tests) | [4.7](build-journal/sprint-4/4.7-voice-notes.md) |
 
 ### S4 Usage
 | Time (Melbourne) | 5-hour used | Weekly used | Decision |
@@ -49,6 +50,7 @@
 | 2026-11-25 03:11 | 6% | 56% | The window reset. Start 4.5 |
 | 2026-11-25 04:15 | 53% | 62% | 4.5 cost 47% (largest; it had backend work). Weekly under 90%: start 4.6 (the user's rule) |
 | 2026-11-25 08:39 | 0% | 68% | The 4.6 run stopped with the app session (limit reached). The window reset: resume 4.6 from cache (`wf_901003cf-f88`); safety-net check-in recreated |
+| 2026-11-25 08:53 | 16% | 70% | 4.6 done (the resumed close-out cost 16%). Start 4.7 |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
@@ -96,6 +98,15 @@
 | 41 | 4.6 | Task 4.3's focus test | Choosing from the Write menu moves focus into capture; Escape without a choice still returns it to Write. The 4.3 test was updated |
 | 42 | 4.6 | TECH_STACK §3 Media, frontend.md (Photo dates); review 1 | Every photo is shrunk the same way when picked; diary pages get no gentler setting and the photo's EXIF date isn't read before shrinking. Both are noted on task 4.13, which reworks that step |
 | 43 | 4.6 | D-26 | A null field (template, title, soundtrack, reply) is left out of the `PUT` JSON, because the generated request type doesn't allow null; a left-out field is cleared, the same effect |
+| 44 | 4.7 | DESIGN.md §4 Voice note row; D-13 | No stored audio levels: the 32 bars are drawn only for a note recorded in this capture (an `AnalyserNode` sampled 10 times a second, folded to 32). In the feed and for picked or uploaded files the slider is a plain 2 px line, so no bars show a recording that isn't there |
+| 45 | 4.7 | D-13 (wavesurfer.js is later polish) | A plain player: a 44 px play/pause button, a `role="slider"` (arrows move 5 s, Home and End jump, `aria-valuetext` "0:10 of 0:34", disabled until the length is known) and the time in `meta` |
+| 46 | 4.7 | No doc covers it | Chrome's WebM recordings report their length as `Infinity`; on the first Play the player seeks past the end, waits for `durationchange`, then seeks back and waits for `seeked`. The feed still fetches nothing until Play |
+| 47 | 4.7 | D-24; USER_FLOWS F-03 | Voice notes are kept after the pictures in the order sent to the server (`picturesFirst`), so a photo entry is never named "Voice note"; only pictures can be reordered |
+| 48 | 4.7 | D-17 (25 MB a file) | A recording stops itself at 20 minutes and asks for 64 kb/s (about 10 MB) |
+| 49 | 4.7 | design.md §8 (one filled primary) | Stop is a 44 px round button outlined in the accent with a filled square, so Save stays the one filled primary |
+| 50 | 4.7 | USER_FLOWS F-03 (no copy given) | Refused: *memoirist can't use the microphone. Allow it for this site in your browser's settings, then try again. Photos still work.*; no microphone: *No microphone was found…*; other: *This browser couldn't record a voice note. Photos still work.* Voice is hidden when neither format can be recorded |
+| 51 | 4.7 | DESIGN.md §4 Write (no record control drawn for laptops) | The laptop dialog has a secondary *Record a voice note* button with a mic icon under the photos; phones have Voice in the add bar's second column |
+| 52 | 4.7 | No doc covers it | Focus moves to Stop while recording and back to the button that started it after Stop, Discard or Close; a recording in progress counts as unsaved, so closing asks Keep editing / Discard |
 
 ### S4 Needs attention
 - **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
@@ -125,6 +136,14 @@
 - **4.6:** on the dev server, the first time capture opens Vite re-optimises TipTap and friends and can show *Failed to fetch dynamically imported module* once; a reload fixes it. Production builds aren't affected.
 - **4.6:** the feed's first JS is 180.26 KB gzipped (was 178.31; budget 200); capture's lazy chunk is 220.36 KB gzipped.
 - **4.6:** the real-app save check created one entry in the local dev database and erased it (DELETE 204, erase 204).
+- **4.7, setup needed:** Safari and iOS recording (the `audio/mp4` path) wasn't tested: no Mac, iPhone or Playwright WebKit here. On an iPhone or a Mac, record a voice note in capture, save it, and play it from the feed. Only a component test with a fake recorder covers MP4.
+- **4.7, setup needed:** Docker Desktop had crashed after the restart (*initializing Secrets Engine … rename engine.sock … The file cannot be accessed by the system*). The builder renamed `%LOCALAPPDATA%\docker-secrets-engine` to `docker-secrets-engine.broken-20261125` so Docker could start; nothing was deleted. You can delete that folder once Docker has run normally for a while.
+- **4.7, skipped dependency:** wavesurfer.js still isn't installed (D-13 "later polish"); the player is plain and the feed's voice notes show a line, not bars.
+- **4.7, follow-up (review 2 minor, a flow question):** USER_FLOWS F-03 says the user drags every item, voice notes included, into order; the build keeps voice notes as rows after the photos and reorders pictures only (D-24 naming). Either add that line to F-03, or decide voice notes can move and name the entry another way.
+- **4.7:** the local dev database now holds a test entry *Voice note from the walk* (today, a 3.7 s beep from the fake microphone). As the newest entry, with no photo, it moves the feed audit's first photo to 809 px. Delete it to restore the sample feed's first screen.
+- **4.7:** the fake microphone plays a steady tone, so the bars in the screenshots are nearly flat; a real voice gives uneven bars.
+- **4.7:** `test/setup.ts` now stubs `HTMLMediaElement.load()` to fire `loadedmetadata`, because Play reads the length first; 4.5's FeedEntry keyboard test needed it.
+- **4.7:** the design audit wasn't rerun after the review fixes (pictures-first order, one message, and the phone Voice button's name changed to its visible word "Voice"); no layout changed.
 
 ### S4 Questions for the morning
 

@@ -9,10 +9,11 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove, rectSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { AudioLines, CircleAlert, Plus } from 'lucide-react';
+import { CircleAlert, Plus, RotateCcw, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
-import { ACCEPT, MAX_FILES } from '../../lib/files';
+import { VoiceNote } from '../../components/VoiceNote';
+import { ACCEPT, isImageType, MAX_FILES } from '../../lib/files';
 import type { TrayItem } from './saveEntry';
 
 // The photos and files in capture (DESIGN.md §4 Write, task 4.6): 72 px thumbnails with `sm` corners and a dashed Add
@@ -20,6 +21,10 @@ import type { TrayItem } from './saveEntry';
 // D-13); every thumbnail is also a button whose menu has Move earlier and Move later, so reordering works from the
 // keyboard and a screen reader without a drag. The same menu marks a photo as a diary page before it uploads (D-20),
 // and offers Try again and Remove for one that failed (D-23, G-03).
+// Voice notes aren't thumbnails: each is its own row under them, as in the feed (DESIGN.md §4 Write, task 4.7), with
+// Remove and, after a failed upload, Try again. They are kept after the pictures in the order sent to the server,
+// because the swipe shows pictures only and an entry's first item names it in lists (D-24): a voice note recorded
+// first would otherwise turn 'Photo' into 'Voice note'.
 
 export function MediaTray({
   items,
@@ -45,27 +50,30 @@ export function MediaTray({
   );
   const draggedRef = useRef(false);
 
-  const move = (from: number, to: number) => onReorder(arrayMove(items, from, to));
+  const pictures = items.filter((i) => isImageType(i.mediaType));
+  const voices = items.filter((i) => !isImageType(i.mediaType));
+  const move = (from: number, to: number) =>
+    onReorder([...arrayMove(pictures, from, to), ...voices]);
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     draggedRef.current = true;
     if (!over || active.id === over.id) return;
-    const from = items.findIndex((i) => i.key === active.id);
-    const to = items.findIndex((i) => i.key === over.id);
+    const from = pictures.findIndex((i) => i.key === active.id);
+    const to = pictures.findIndex((i) => i.key === over.id);
     if (from >= 0 && to >= 0) move(from, to);
   };
 
   return (
     <div className="flex flex-col gap-2">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <SortableContext items={items.map((i) => i.key)} strategy={rectSortingStrategy}>
+        <SortableContext items={pictures.map((i) => i.key)} strategy={rectSortingStrategy}>
           <ul aria-label="Photos" className="flex flex-wrap gap-4">
-            {items.map((item, index) => (
+            {pictures.map((item, index) => (
               <Thumbnail
                 key={item.key}
                 item={item}
                 index={index}
-                count={items.length}
+                count={pictures.length}
                 draggedRef={draggedRef}
                 onMove={(to) => move(index, to)}
                 onRemove={() => onRemove(item.key)}
@@ -88,6 +96,21 @@ export function MediaTray({
           </ul>
         </SortableContext>
       </DndContext>
+      {voices.length > 0 && (
+        <ul aria-label="Voice notes" className="flex flex-col gap-2">
+          {voices.map((item, index) => (
+            <VoiceRow
+              key={item.key}
+              item={item}
+              name={
+                voices.length > 1 ? `voice note ${index + 1} of ${voices.length}` : 'voice note'
+              }
+              onRemove={() => onRemove(item.key)}
+              onRetry={onRetry}
+            />
+          ))}
+        </ul>
+      )}
       <input
         ref={addRef}
         type="file"
@@ -130,9 +153,8 @@ function Thumbnail({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.key,
   });
-  const isImage = item.mediaType.startsWith('image/');
   const page = item.purpose === 'PAGE_SCAN';
-  const kind = page ? 'Diary page' : isImage ? 'Photo' : 'Voice note';
+  const kind = page ? 'Diary page' : 'Photo';
   const state =
     item.status === 'failed'
       ? 'Didn’t upload'
@@ -181,23 +203,19 @@ function Thumbnail({
             }}
             className="relative flex size-18 touch-manipulation items-center justify-center overflow-hidden rounded-sm bg-surface"
           >
-            {isImage ? (
-              <img
-                src={item.previewUrl}
-                alt=""
-                width={72}
-                height={72}
-                loading="lazy"
-                decoding="async"
-                className={
-                  item.status === 'uploading'
-                    ? 'size-full object-cover opacity-60'
-                    : 'size-full object-cover'
-                }
-              />
-            ) : (
-              <AudioLines size={20} aria-hidden className="text-ink-2" />
-            )}
+            <img
+              src={item.previewUrl}
+              alt=""
+              width={72}
+              height={72}
+              loading="lazy"
+              decoding="async"
+              className={
+                item.status === 'uploading'
+                  ? 'size-full object-cover opacity-60'
+                  : 'size-full object-cover'
+              }
+            />
             {item.status === 'failed' && (
               <span className="absolute inset-0 flex items-center justify-center bg-scrim text-on-band">
                 <CircleAlert size={20} aria-hidden />
@@ -211,7 +229,7 @@ function Thumbnail({
               Try again
             </button>
           )}
-          {isImage && item.status !== 'uploaded' && item.status !== 'uploading' && (
+          {item.status !== 'uploaded' && item.status !== 'uploading' && (
             <button type="button" className={row} onClick={act(onTogglePage)}>
               {page ? 'Mark as a photo' : 'Mark as a diary page'}
             </button>
@@ -242,6 +260,65 @@ function Thumbnail({
           </button>
         </PopoverContent>
       </Popover>
+      {state && (
+        <span
+          className={item.status === 'failed' ? 'text-meta text-danger' : 'text-meta text-ink-2'}
+        >
+          {state}
+        </span>
+      )}
+    </li>
+  );
+}
+
+/** A voice note in capture: the same row as the feed's (DESIGN.md §4), then Try again (after a failed upload) and
+ *  Remove as 44 px icon buttons, and its state in `meta` under it. */
+function VoiceRow({
+  item,
+  name,
+  onRemove,
+  onRetry,
+}: {
+  item: TrayItem;
+  name: string;
+  onRemove: () => void;
+  onRetry: () => void;
+}) {
+  const state =
+    item.status === 'failed' ? 'Didn’t upload' : item.status === 'uploading' ? 'Uploading' : null;
+  const icon =
+    'flex size-11 shrink-0 items-center justify-center rounded-full text-ink disabled:text-ink-2';
+  return (
+    <li className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <VoiceNote
+            src={item.previewUrl}
+            name={name}
+            levels={item.levels}
+            seconds={item.seconds ?? null}
+          />
+        </div>
+        {item.status === 'failed' && (
+          <button
+            type="button"
+            className={icon}
+            aria-label={`Try again: ${name}`}
+            onClick={onRetry}
+          >
+            <RotateCcw size={20} aria-hidden />
+          </button>
+        )}
+        <button
+          type="button"
+          className={icon}
+          aria-label={`Remove ${name}`}
+          disabled={item.status === 'uploading'}
+          onClick={onRemove}
+        >
+          <X size={20} aria-hidden />
+        </button>
+      </div>
       {state && (
         <span
           className={item.status === 'failed' ? 'text-meta text-danger' : 'text-meta text-ink-2'}

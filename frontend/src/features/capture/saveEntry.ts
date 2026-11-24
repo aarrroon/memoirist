@@ -11,6 +11,7 @@ import {
 } from '../../api/entries';
 import { ApiProblem, problemMessage } from '../../api/problem';
 import type { JSONContent } from '@tiptap/react';
+import { isImageType } from '../../lib/files';
 
 // Capture's save, one flow of several requests (frontend.md, Capture and media; D-12, D-23):
 //   create the entry (with the client's own id) or replace it (with the version last read)
@@ -33,6 +34,9 @@ export interface TrayItem {
   mediaId: string | null;
   /** Why the last upload failed, in words for the user. */
   error: string | null;
+  /** A voice note recorded in this capture (task 4.7): its loudness bars and its length, for its row. Not sent. */
+  levels?: number[];
+  seconds?: number;
 }
 
 /**
@@ -66,6 +70,18 @@ export interface SaveResult {
   entry: Entry | null;
   /** How many files didn't upload. */
   failed: number;
+}
+
+/**
+ * The tray's items with every picture before every voice note, each group in its own order (a stable split). The
+ * swipe shows pictures only, and an entry's first media item names it in lists (D-24), so a voice note recorded before
+ * a photo was picked must not go first and turn 'Photo' into 'Voice note' (task 4.7, review fix).
+ */
+export function picturesFirst(items: TrayItem[]): TrayItem[] {
+  return [
+    ...items.filter((i) => isImageType(i.mediaType)),
+    ...items.filter((i) => !isImageType(i.mediaType)),
+  ];
 }
 
 /** Updates one tray item while the save runs, so each thumbnail shows its own progress. */
@@ -115,7 +131,8 @@ export async function saveEntry(input: SaveInput, onItem: ItemUpdate): Promise<S
 
   const order: string[] = [];
   let failed = 0;
-  for (const item of input.items) {
+  // Pictures before voice notes whatever order the tray was built in (D-24; task 4.7 review fix).
+  for (const item of picturesFirst(input.items)) {
     if (item.status === 'uploaded' && item.mediaId) {
       if (onServer.has(item.mediaId)) order.push(item.mediaId);
       continue;

@@ -303,7 +303,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - The flow: create (client UUID) → upload → reorder.
   - **Done when:** creating an entry with a title, a tag and two photos shows it in the feed in the right week; save is disabled for an empty entry; an empty template prompt isn't saved; a photo marked as a diary page is saved as a page; a backdated save shows a toast that links to its week; a reload keeps the draft; validation errors from the API are shown on the right fields; a `409 entry-stale` keeps the typed text and offers to load the latest version (D-23).
 
-- [ ] **4.7 Voice notes**
+- [x] **4.7 Voice notes**
   - **Do:** a `MediaRecorder` recorder that picks `audio/webm;codecs=opus` or `audio/mp4`.
   - **Done when:** a recording uploads and plays back in Chrome. Note whether Safari or iOS could be tested.
 

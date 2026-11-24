@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { JSONContent } from '@tiptap/react';
-import { Image, Tag } from 'lucide-react';
+import { Image, Mic, Tag } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ import { ApiProblem, problemMessage } from '../../api/problem';
 import { queryKeys } from '../../api/queryKeys';
 import { Button } from '../../components/ui/button';
 import { fileProblem, isImageType, MAX_FILES, shrinkPhoto } from '../../lib/files';
+import { canRecord } from '../../lib/recording';
 import { captionForSave, insertTemplateHeadings, isBlankDoc } from '../../lib/templateDoc';
 import { formatClock, formatWeekRange, isWithin, todayIn, weekOf } from '../../lib/time';
 import type { CaptureKind } from '../../stores/ui';
@@ -17,9 +18,11 @@ import { clearDraft, readDraft, writeDraft, type Draft } from './draft';
 import { EntryEditor } from './Editor';
 import { useEntryEditor } from './editorSetup';
 import { MediaTray } from './MediaTray';
-import { saveEntry, type TrayItem } from './saveEntry';
+import { picturesFirst, saveEntry, type TrayItem } from './saveEntry';
 import { TagPicker } from './TagPicker';
 import { TemplateChip } from './TemplateChip';
+import { useRecorder, type Recording } from './useRecorder';
+import { VoiceRecorder } from './VoiceRecorder';
 
 // Capture: New entry and Diary page (DESIGN.md §4 Write, F-02 to F-05, task 4.6). Everything the user types lives in
 // this component's state, never in Zustand (frontend.md, Data): it is a form, and the server owns the entry once it
@@ -117,13 +120,24 @@ export function CaptureForm({
   const [tagsOpen, setTagsOpen] = useState(false);
   const addRef = useRef<HTMLInputElement>(null);
   const titleFieldId = useId();
+  // Voice (task 4.7): hidden when this browser can't record one of our formats (F-03), decided once.
+  const [recordable] = useState(canRecord);
+  const voiceTrigger = useRef<HTMLButtonElement | null>(null);
   const kindOfDraft = restored?.kind ?? kind;
 
   const editor = useEntryEditor(start.content, setContent);
 
+  // A recording in progress is held by the recorder until Stop, so it is declared before `dirty`, which counts it.
+  // The recorder calls back after Stop; the ref lets that call reach addRecording (declared further down, as it needs
+  // the tray) as it is in the latest render.
+  const recordedRef = useRef<(recording: Recording) => void>(() => undefined);
+  const recorder = useRecorder((done) => recordedRef.current(done));
+  const recording = recorder.state.status === 'recording' || recorder.state.status === 'asking';
+
   const caption = captionForSave(content, prompts);
   const hasContent = title.trim() !== '' || caption !== null || items.length > 0;
   const dirty =
+    recording ||
     title.trim() !== '' ||
     !isBlankDoc(content) ||
     items.some((i) => i.status !== 'uploaded') ||
@@ -216,7 +230,9 @@ export function CaptureForm({
     const problems: string[] = [];
     const room = MAX_FILES - items.length;
     if (files.length > room)
-      problems.push(`An entry holds 20 photos at most, so ${files.length - room} weren’t added.`);
+      problems.push(
+        `An entry holds 20 photos and voice notes at most, so ${files.length - room} weren’t added.`,
+      );
     for (const picked of files.slice(0, Math.max(room, 0))) {
       // The type first, so nothing unsupported is shrunk; then the size of what will really be sent (D-17).
       const typeProblem = fileProblem({ type: picked.type, size: 0 });
@@ -243,10 +259,53 @@ export function CaptureForm({
         mediaId: null,
         error: null,
       };
-      setItems((list) => [...list, item]);
+      // A photo picked after a recording still goes before it (D-24; task 4.7 review fix).
+      setItems((list) => picturesFirst([...list, item]));
     }
     setFileMessages(problems);
   };
+
+  /** A finished recording joins the tray like a picked file, with its bars and length for its row. */
+  const addRecording = ({ file, seconds, levels }: Recording) => {
+    const problem =
+      items.length >= MAX_FILES
+        ? 'An entry holds 20 photos and voice notes at most.'
+        : fileProblem(file);
+    if (problem) {
+      setFileMessages([`Voice note: ${problem}`]);
+      return;
+    }
+    const previewUrl = URL.createObjectURL(file);
+    urls.current.add(previewUrl);
+    setItems((list) => [
+      ...list,
+      {
+        key: nextKey(),
+        file,
+        previewUrl,
+        mediaType: file.type,
+        purpose: 'PHOTO',
+        status: 'waiting',
+        mediaId: null,
+        error: null,
+        levels,
+        seconds,
+      },
+    ]);
+    setFileMessages([]);
+  };
+
+  useEffect(() => {
+    recordedRef.current = addRecording;
+  });
+
+  /** Voice: start recording, remembering which button asked, so focus can go back to it afterwards. */
+  const startVoice = (event: React.MouseEvent<HTMLButtonElement>) => {
+    voiceTrigger.current = event.currentTarget;
+    recorder.start();
+  };
+  const refocusVoice = () => requestAnimationFrame(() => voiceTrigger.current?.focus());
+  const voiceBusy = recording || items.length >= MAX_FILES;
 
   const removeItem = (key: string) => {
     const item = items.find((i) => i.key === key);
@@ -433,6 +492,29 @@ export function CaptureForm({
           ))}
         </ul>
       )}
+      <VoiceRecorder
+        recorder={{
+          ...recorder,
+          stop: () => {
+            recorder.stop();
+            refocusVoice();
+          },
+          discard: () => {
+            recorder.discard();
+            refocusVoice();
+          },
+        }}
+        onClose={() => {
+          recorder.discard();
+          refocusVoice();
+        }}
+      />
+      {layout === 'dialog' && recordable && !recording && (
+        <Button className="self-start" disabled={voiceBusy} onClick={startVoice}>
+          <Mic size={20} aria-hidden />
+          Record a voice note
+        </Button>
+      )}
       <TagPicker
         selected={tagIds}
         onChange={setTagIds}
@@ -512,8 +594,8 @@ export function CaptureForm({
         )}
       </div>
 
-      {/* The add bar (DESIGN.md §4 Write): fixed at the foot of the phone sheet. Voice (4.7), Song (4.15) and Seal
-          (4.8) join Photo and Tag when their tasks build them. */}
+      {/* The add bar (DESIGN.md §4 Write): fixed at the foot of the phone sheet. Voice (4.7) shows when this browser can
+          record; Song (4.15) and Seal (4.8) join when their tasks build them. */}
       {layout === 'sheet' && (
         <div className="grid h-16 shrink-0 grid-cols-5 border-t border-line">
           <button
@@ -524,6 +606,17 @@ export function CaptureForm({
             <Image size={20} aria-hidden className="text-ink" />
             Photo
           </button>
+          {recordable && (
+            <button
+              type="button"
+              onClick={startVoice}
+              disabled={voiceBusy}
+              className="flex flex-col items-center justify-center gap-1 text-meta text-ink-2 focus-visible:-outline-offset-2 disabled:opacity-60"
+            >
+              <Mic size={20} aria-hidden className="text-ink" />
+              Voice
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setTagsOpen(true)}

@@ -85,7 +85,11 @@ function EntryBody({ entry, eagerPhotoId }: { entry: Entry; eagerPhotoId: string
           <p className="text-small text-ink-2">{mediaLabel(entry)}</p>
         )}
         {notes.map((note, index) => (
-          <VoiceNote key={note.id} note={note} index={index} count={notes.length} />
+          <VoiceNote
+            key={note.id}
+            src={note.fileUrl}
+            name={notes.length > 1 ? `voice note ${index + 1} of ${notes.length}` : 'voice note'}
+          />
         ))}
         {entry.tags.length > 0 && (
           // Each tag opens the timeline filtered by it (DESIGN.md §4 Feed; the filter is task 4.11). Every link is
