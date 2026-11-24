@@ -180,13 +180,15 @@ React 19, Vite, TypeScript, Tailwind CSS v4, Motion (`motion` package), TipTap, 
 | TanStack Virtual | Only render on-screen cards in a long feed | When the feed gets slow (Sprint 4 or later) |
 | wavesurfer.js | Waveform display for voice notes | Voice-note polish, any time after 4.7 |
 | Storybook | Build and preview components in isolation | Optional, once `docs/design/DESIGN.md` exists |
-| exifr | Read a photo's own date before it's shrunk (photo dump, D-34) | Task 4.13 (already approved, 2026-10-28) |
+| exifr | Read a photo's own date before it's shrunk (photo dump, D-34) | Installed 2026-11-24 for task 4.13 (approved 2026-10-28) |
 | vite-plugin-pwa | Installable app (D-31) | Phase 2 |
 | react-force-graph or visx | Friendship map | Phase 4 |
 | Dexie | Offline capture | Phase 5 |
 | @react-pdf/renderer | Week PDF export (if Q4 picks it) and zine export | Phase 2 (week PDFs), Phase 5 (zine) |
 
 **Not used:** all-in-one styled kits (MUI, Chakra, Mantine) fight Tailwind and make a distinctive look harder; Next.js adds server rendering a private, logged-in app doesn't need; Redux duplicates TanStack Query plus Zustand.
+
+**Helpers that come with these (approved 2026-11-24, installed before Sprint 4):** `radix-ui` (the one package behind every shadcn/ui primitive), `clsx`, `tailwind-merge` and `class-variance-authority` (the helpers shadcn/ui code imports), `@hookform/resolvers` (joins react-hook-form to zod), `@tiptap/pm` and `@tiptap/extension-link` (TipTap's own parts), `@dnd-kit/sortable` and `@dnd-kit/utilities`, and, for tests only, `@playwright/test` (end-to-end, task 4.17) and `@testing-library/user-event` (keyboard and pointer in component tests).
 
 These were chosen during setup as sensible defaults. Change them freely, but record the change here. Pin exact versions when scaffolding (task 4.1) and check current docs, since several have had recent major releases.
 
