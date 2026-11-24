@@ -14,8 +14,8 @@ A private journaling PWA: an Instagram-style feed of your own entries that files
 - If they disagree, stop and ask the user. Record the answer with `/record-decision`, and edit the README only with the user's approval.
 
 ## Current focus
-**Phase 1, Sprint 4. Next task: 4.2** (API client and data layer).
-- Sprints 1–3 are built: the whole Phase 1 API (37 endpoints, about 1,600 tests). Task 4.1 scaffolded `frontend/`: the tokens and fonts from DESIGN.md, ESLint, Prettier, Vitest and MSW, and a starter page.
+**Phase 1, Sprint 4. Next task: 4.3** (Routing, shell and time utilities).
+- Sprints 1–3 are built: the whole Phase 1 API (37 endpoints, about 1,600 tests). Task 4.1 scaffolded `frontend/`: the tokens and fonts from DESIGN.md, ESLint, Prettier, Vitest and MSW, and a starter page. Task 4.2 added `src/api/`: generated types, the `openapi-fetch` client, `ApiProblem` errors, the query-key factory, the `QueryClient` and `useMe()`.
 - Progress is tracked by the checkboxes in `docs/SPRINT_PLAN.md`. Update this line when a task is ticked; a Stop hook checks it.
 - Build only what the current phase needs. Don't add tables, endpoints or libraries from later phases.
 

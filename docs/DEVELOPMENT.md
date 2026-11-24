@@ -2,7 +2,7 @@
 
 > Setup and day-to-day commands for working on memoirist. For what the app is, see the [README](../README.md). For how it's built, see [TECH_STACK.md](TECH_STACK.md).
 >
-> **Status:** `docker-compose.yml` (task 1.3) and the backend project (`backend/`, tasks 2.1 to 2.6) exist. The backend reads its configuration (`local` and `test` profiles), creates the Phase 1 tables and the dev user in Postgres when it starts, knows who is calling (the dev-user header, task 2.5), answers every error in one RFC 9457 problem shape (task 2.6), answers its health check and serves the whole Phase 1 API (Sprint 3). A GitHub Actions workflow (`.github/workflows/ci.yml`, task 2.7) builds and tests it on every push to `main` or a `phase-*` branch and on every pull request (see [Continuous integration](#continuous-integration-task-27)). The frontend project (`frontend/`, task 4.1) exists: it builds, lints, type-checks and tests, and its starter page shows the design tokens; the screens come with the rest of Sprint 4. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
+> **Status:** `docker-compose.yml` (task 1.3) and the backend project (`backend/`, tasks 2.1 to 2.6) exist. The backend reads its configuration (`local` and `test` profiles), creates the Phase 1 tables and the dev user in Postgres when it starts, knows who is calling (the dev-user header, task 2.5), answers every error in one RFC 9457 problem shape (task 2.6), answers its health check and serves the whole Phase 1 API (Sprint 3). A GitHub Actions workflow (`.github/workflows/ci.yml`, task 2.7) builds and tests it on every push to `main` or a `phase-*` branch and on every pull request (see [Continuous integration](#continuous-integration-task-27)). The frontend project (`frontend/`, task 4.1) exists: it builds, lints, type-checks and tests, and its starter page shows the design tokens and greets the dev user through the typed API client (task 4.2); the screens come with the rest of Sprint 4. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
 
 ## 1. Prerequisites
 
@@ -121,7 +121,7 @@ npm run lint            # ESLint, then Prettier's check
 npm run format          # fix formatting with Prettier
 npm run typecheck       # TypeScript
 npm run build           # type-check, then the production build in dist/
-npm run gen:api         # regenerate API types (backend must be running) — task 4.2
+npm run gen:api         # regenerate src/api/schema.d.ts from /v3/api-docs (backend must be running; task 4.2)
 npx playwright test     # end-to-end smoke tests — task 4.17
 ```
 Before saying frontend work is done: `npm test && npm run lint && npm run typecheck && npm run build`. For a screen, also run the design check with the dev server up: `node docs/design/explorations/tools/audit.mjs http://localhost:5173/<path>` from the repo root, and again with `--dark` (`.claude/rules/design.md`). [TECH_STACK §3](TECH_STACK.md#build-task-41) says how the project is set up and why.
@@ -155,6 +155,7 @@ In the Claude desktop app, `.claude/launch.json` lets Claude start the frontend 
 | Problem | Likely cause and fix |
 |---|---|
 | `failed to connect to the docker API` | Docker Desktop isn't running. Start it and wait until it says it's running |
+| The starter page says "Something went wrong. Try again." in development | The Vite proxy found no backend on :8080 and answered `502` with an empty body itself. That isn't one of our problems, so the client retries twice, then shows the general message. Start the backend from `backend/` |
 | Port 5432, 8333, 8888, 8080 or 5173 already in use | Another Postgres, app or Compose project (check `docker ps`) is using it. Stop it, or find it with `netstat -ano \| findstr :5432` |
 | Port 8080 still answers after you closed the terminal that ran `./gradlew bootRun` | The app runs in its own Java process, started by the Gradle daemon, so closing or killing the terminal can leave it running. Find its PID with `netstat -ano \| findstr :8080`, then `taskkill //PID <pid> //F` in Git Bash (`taskkill /PID <pid> /F` in cmd). Next time, stop it with Ctrl+C in that terminal |
 | The backend fails to start with `Failed to configure a DataSource: 'url' attribute is not specified` (`local` profile) | `.env` wasn't loaded. The `local` profile reads `../.env` relative to the working directory, so start it from `backend/` (an IDE run configuration needs `backend/` as its working directory), and check that `.env` has `DB_URL`. A missing `.env` is skipped without a warning (`optional:`, TECH_STACK §1), so the first sign is the first missing setting. `application.yml` gives an unset variable an empty value (`${DB_URL:}`), which is why the message names the datasource rather than showing a literal `${DB_URL}` |

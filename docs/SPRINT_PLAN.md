@@ -265,7 +265,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - Scripts: `dev`, `build`, `test`, `lint`, `typecheck`, `gen:api`.
   - **Done when:** `npm run build`, `npm test`, `npm run lint` and `npm run typecheck` all pass; the starter page uses only the tokens and passes the design check (`tools/audit.mjs`) at both widths.
 
-- [ ] **4.2 API client and data layer**
+- [x] **4.2 API client and data layer**
   - **Do:**
     - `gen:api` (openapi-typescript writes `src/api/schema.d.ts`).
     - An openapi-fetch client that sends `X-Dev-User-Id` only in dev.

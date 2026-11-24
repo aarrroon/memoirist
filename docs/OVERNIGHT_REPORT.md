@@ -31,17 +31,28 @@
 ### S4 Tasks
 | Task | Status | Commit | What it built | Journal |
 |---|---|---|---|---|
+| 4.2 API client and data layer | done | Sprint 4.2: Add the typed API client and data layer | Generated API types, an `openapi-fetch` client (dev header only in dev), typed `ApiProblem` errors, the query-key factory, the `QueryClient` and `useMe()`; the starter page greets the dev user (73 tests) | [4.2](build-journal/sprint-4/4.2-api-client-data-layer.md) |
 
 ### S4 Usage
 | Time (Melbourne) | 5-hour used | Weekly used | Decision |
 |---|---|---|---|
 | 2026-11-24 22:31 | 20% | 44% | Part A started |
+| 2026-11-24 22:52 | 25% | 45% | Start 4.2 (75% left; no task measured yet, needs 30%) |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
 |---|---|---|---|
+| 1 | 4.2 | `.claude/rules/frontend.md` (Cache timing) vs SPRINT_PLAN 4.2 | `staleTime` is exactly 30 minutes, with refetch on window focus left on |
+| 2 | 4.2 | No doc sets one | Queries retry at most twice, only on a network failure or a `5xx`; a `4xx` fails at once; mutations never retry |
+| 3 | 4.2 | D-11 | The dev header value is a constant (the seeded dev user), not a `VITE_` variable, so `.env.example` doesn't change |
+| 4 | 4.2 | `.claude/rules/frontend.md` (Structure) | `useMe` lives in `src/api/users.ts`; later resources add their own file in `src/api` |
+| 5 | 4.2 | No doc gives them | `problemMessage()` has one friendly sentence per problem kind; the server's `detail` and any non-problem body are never shown |
+| 6 | 4.2 | Task 4.1's starter page | The starter page shows *Opening your journal…*, then *Welcome back, <name>.*, until 4.3 replaces it with the shell |
 
 ### S4 Needs attention
+- **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
+- **4.2:** with a 30-minute `staleTime`, a tab that stays focused for over 60 minutes without a refocus could hold expired presigned URLs. Task 4.4 can add a refetch interval to the feed if it shows up.
+- **4.2:** the two minor review findings (the `payload-too-large` and `entry-sealed` sentences each named only one cause) were fixed at close-out; tasks 4.6 and 4.8 may still want screen-specific sentences.
 
 ### S4 Questions for the morning
 
