@@ -73,7 +73,7 @@ Path-scoped instructions in [.claude/rules/](../.claude/rules/). Claude reads ea
 | `api.md` | Backend Java and API_CONTRACT.md | Paths, status codes, errors, pagination, uploads, OpenAPI, private input |
 | `security.md` | Backend and frontend source | Ownership (deleted entries count as missing), the dev header, Loot Drop redaction (counts and filters too), content safety, secrets, emails and metrics without content |
 | `frontend.md` | `frontend/**` | Structure, data fetching, time, editor, capture, styling, tests |
-| `design.md` | `frontend/**`, `docs/design/DESIGN.md` | The one design system (D-40): tokens, the spacing scale, text sizes, one accent, corners, tap targets, loading targets, the check to run after every fix, and which task fixes which problem from the round 2 audit |
+| `design.md` | `frontend/**`, `docs/design/DESIGN.md` | The one design system (D-40), with the values of the chosen look (D-41, DESIGN.md): tokens, the spacing scale, text sizes, one accent, corners, tap targets, loading targets, the check to run after every fix, and which task fixes which problem from the round 2 audit |
 | `docs.md` | `docs/**`, `README.md` | Which doc wins, changing every mention together, IDs, README edits only with approval, house style |
 | `claude-config.md` | `.claude/**`, `CLAUDE.md`, `.mcp.json` | Keeping CLAUDE.md short, where instructions belong, writing and testing hooks, keeping this file current |
 

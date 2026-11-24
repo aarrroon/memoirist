@@ -18,6 +18,7 @@
 |---|---|---|---|
 | V1 | `V1__core_schema.sql` | 1 | Applied (Sprint 2, task 2.3); a copy of the SQL below |
 | R | `db/seed-local/R__seed_dev_user.sql` | 1 | Applied (Sprint 2, task 2.3); `local` and `test` profiles only |
+| V2 | `V2__media_dimensions.sql` | 1 | Planned (Sprint 4, task 4.5): `media.width` and `media.height` (D-17) |
 | next | `V{n}__auth_and_sharing.sql` | 2 | Draft below |
 | next | `V{n}__yearly_letter.sql` | 2 | Draft below (D-32) |
 | next | `V{n}__product_events.sql` | 2 | Draft below (D-38) |
@@ -121,6 +122,8 @@ Carousel items (images and voice notes) belonging to an entry.
 | purpose | VARCHAR(20) | NOT NULL DEFAULT 'PHOTO'. `PHOTO`, or `PAGE_SCAN` for a photo of a paper diary page, which must be an image. Checked in the service like `media_type`, so a new purpose needs no migration (D-20) |
 | display_order | INTEGER | NOT NULL, ≥ 0. UNIQUE `(entry_id, display_order)` DEFERRABLE INITIALLY DEFERRED, so a reorder, a delete that closes a gap and an insert in the middle can pass through a moment of repeated positions inside one transaction. The service keeps an entry's values as `0, 1, 2, …` with no gap, under a lock on the entry's row (task 3.6) |
 | file_size_bytes | BIGINT | NOT NULL, > 0, ≤ 25 MB (service check) |
+| width | INTEGER | NULL, > 0. An image's width in pixels, read from its header on upload; `NULL` for a voice note or an image whose header can't be read (D-17). Added by V2 |
+| height | INTEGER | NULL, > 0. As `width`. `chk_media_dimensions`: both are set or both are `NULL`. Added by V2 |
 | uploaded_at | TIMESTAMPTZ | NOT NULL DEFAULT NOW() |
 
 At most 20 media items per entry (service check, D-17). The checks of an upload are in API_CONTRACT (Media).

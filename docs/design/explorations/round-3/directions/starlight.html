@@ -964,15 +964,15 @@ button { background: none; border: 0; padding: 0; cursor: pointer; }
 
   // ---------- First run (D-33) and errors (F-14) ----------
   function emptyBody() {
-    const inAYear = M.sealSuggestions().find((s) => s.key === 'year');
+    const inAMonth = M.sealSuggestions().find((s) => s.key === 'month'); // the first letter is sealed for a month (D-33)
     return html`<div class="narrow"><div class="empty">
       <div class="art">${starDrawing(0.5)}</div>
       <h2 class="t-heading">Your journal starts here</h2>
       <p class="muted">Write about today, or bring in the photos from a day you want to keep. Each week files itself.</p>
       <div class="acts"><a class="btn primary" href="#write">${ic('plus')}Write your first entry</a><a class="btn secondary" href="#dump">${ic('photos')}Photo dump</a></div>
     </div>
-    <section class="letter" aria-labelledby="letter-h"><h2 id="letter-h" class="t-title">A letter to open in a year</h2>
-      <p class="muted">Write to the person you will be on ${M.date(inAYear.day, 'plain')}. It stays sealed until then, even from you.</p>
+    <section class="letter" aria-labelledby="letter-h"><h2 id="letter-h" class="t-title">A letter to open in a month</h2>
+      <p class="muted">Write to the person you will be on ${M.date(inAMonth.day, 'plain')}. It stays sealed until then, even from you.</p>
       <a class="btn secondary" href="#write">${starIcon(20)}Write the letter</a></section></div>`;
   }
   function errorBody() {

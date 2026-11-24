@@ -64,7 +64,7 @@ These come from round 1's review ([REVIEW.md](../design/explorations/REVIEW.md))
   - Each week is a one-line header that opens its summary (D-25).
   - A week's entries stay in day order (F-08).
 - **No day tracking:** nothing shows which days were missed (D-32).
-- **Sealed entries:** they are never counted and never leak. A sealed card is a fixed size and shows only the memory date, the opening date and the countdown (D-10).
+- **Sealed entries:** they are never counted and never leak. A sealed card is a fixed size and shows only the memory date, the opening date and the countdown, and under a day heading only the last two (D-10).
 - **Write:**
   - One Write button, in the centre of the phone tab bar, at least 44×44 px.
   - New entry, Photo dump and Diary page sit behind it.

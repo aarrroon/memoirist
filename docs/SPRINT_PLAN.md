@@ -253,7 +253,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 ### Sprint 4: React UI
 
-**Every screen task:** follow `.claude/rules/design.md` (D-40). Before ticking it, run `node docs/design/explorations/tools/audit.mjs <url>` on each screen the task built or changed, and quote the result at phone and laptop width.
+**Every screen task:** build from `docs/design/DESIGN.md` (D-41) and follow `.claude/rules/design.md` (D-40); compare with the round 3 mockup, but never copy its code. Before ticking it, run `node docs/design/explorations/tools/audit.mjs <url>` on each screen the task built or changed, and quote the result at phone and laptop width.
 
 - [ ] **4.1 Scaffold the frontend**
   - **Read:** TECH_STACK §3, D-13, D-40.
@@ -285,9 +285,12 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Done when:** the feed shows the local sample content (3.16); there are empty, loading and error states; component tests pass.
 
 - [ ] **4.5 Entry card**
-  - **Read:** D-40, Q30 (photo sizes; build its default unless it has been decided).
-  - **Do:** an Embla carousel (images and an audio player; keyboard-operable) and a read-only caption rendered from JSON (no `dangerouslySetInnerHTML`).
-  - **Done when:** component tests cover image-only, caption-only and mixed entries.
+  - **Read:** D-17 (photos store their size), D-40, D-41, DESIGN.md §4 (Swipe).
+  - **Do:**
+    - Backend first (`/new-migration`, then the media endpoints): `V2__media_dimensions.sql` adds `media.width` and `media.height` (nullable, both or neither). An upload reads an image's size from its header without decoding it; voice notes and unreadable headers stay `null`. `Media` responses gain `width` and `height` (`@Schema(nullable = true)`, and `ApiDocsContractTest`), then `npm run gen:api`.
+    - An Embla carousel (images and an audio player; keyboard-operable) whose height is reserved from the first photo's shape, kept between 4:5 and 1.91:1 (4:5 when it has no size), with dots below.
+    - A read-only caption rendered from JSON (no `dangerouslySetInnerHTML`).
+  - **Done when:** an upload test stores the size of a JPEG, a PNG and a WebP, and `null` for a voice note and an unreadable image; component tests cover image-only, caption-only and mixed entries, a tall, a wide and a size-less first photo; the feed's layout shift is 0.1 or less (`audit.mjs`).
 
 - [ ] **4.6 Capture modal**
   - **Do:**
@@ -305,17 +308,18 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Done when:** a recording uploads and plays back in Chrome. Note whether Safari or iOS could be tested.
 
 - [ ] **4.8 Loot Drops in the UI**
-  - **Do:** a seal dialog (pick a day; it opens at 09:00 in the user's timezone, D-23; then a confirmation repeating the date and time), a sealed vault card with a live countdown, a `409` that surfaces as a friendly message, and an *Opened* strip at the top of the feed (D-10).
-  - **Done when:** sealing an entry turns it into a vault card; the countdown is correct in the user's zone; once the unlock time passes, the entry shows in the Opened strip until it is opened or dismissed.
+  - **Read:** D-10, D-41, DESIGN.md §4 (Loot Drops) and §5 (the travelling star).
+  - **Do:** a seal dialog (pick a day; it opens at 09:00 in the user's timezone, D-23; then a confirmation repeating the date and time), the travelling star as one SVG in `src/assets/`, a sealed card with a live countdown, the Loot Drop page, a `409` that surfaces as a friendly message, and an *Opened* row that takes On this day's place at the top of the feed (D-10, D-41).
+  - **Done when:** sealing an entry turns it into a sealed card; under a day heading the card shows only the opening date and the countdown, and elsewhere the memory date too; the countdown is correct in the user's zone; the star's lit part matches the days travelled; once the unlock time passes, the entry shows in the Opened row until it is opened or dismissed.
 
 - [ ] **4.9 Eras, templates and settings pages**
-  - **Do:** CRUD for eras and templates, with an Era page that lists its weeks and counts only the entries inside its dates (D-22); a gallery of starter templates that adds an editable copy with one tap (D-06); settings for display name, timezone and birthday (D-33); a *show first in the feed* pin on each Era (D-22).
-  - **Done when:** changing the timezone changes the displayed times; changing an Era's dates regroups the feed; pinning an Era moves its shared weeks under it; adding a starter template creates an editable copy; component tests pass.
+  - **Do:** CRUD for eras and templates, with an Era page that lists its weeks and counts only the entries inside its dates (D-22); a gallery of starter templates that adds an editable copy with one tap (D-06); settings for display name, timezone and birthday (D-33), and *Appearance* (match phone, light or dark, kept on the device, D-41); a *show first in the feed* pin on each Era (D-22).
+  - **Done when:** changing the timezone changes the displayed times; Appearance switches the whole app at once and survives a reload, and *Match phone* follows the phone's setting; changing an Era's dates regroups the feed; pinning an Era moves its shared weeks under it; adding a starter template creates an editable copy; component tests pass.
 
 - [ ] **4.10 Week summary view**
   - **Read:** D-25, USER_FLOWS F-15.
-  - **Do:** tapping a week in the feed opens `/weeks/:weekId`: title, dates, Eras, counts, a few thumbnails, tags, then one bar per entry (display title, day, media icons, lock if sealed). Tapping a bar opens the entry. Leave a slot at the top for the Phase 4 AI summary.
-  - **Done when:** component tests cover a mixed week, a week with a sealed entry (its bar shows only the lock and unlock date), and the display-title fallbacks (title → first non-heading line → *Photo* / *Diary page* / *Voice note*).
+  - **Do:** tapping a week in the feed opens `/weeks/:weekId`: title, dates, Eras, counts, a few thumbnails, tags, then one bar per entry (display title, day, media icons, the Loot Drop's star if sealed, D-41). Tapping a bar opens the entry. Leave a slot at the top for the Phase 4 AI summary.
+  - **Done when:** component tests cover a mixed week, a week with a sealed entry (its bar shows only the star, the day and the unlock date), and the display-title fallbacks (title → first non-heading line → *Photo* / *Diary page* / *Voice note*).
 
 - [ ] **4.11 All-entries timeline and tags UI**
   - **Read:** D-24, D-25, D-26, USER_FLOWS F-16 and F-17.
@@ -342,7 +346,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - the date suggestion for one photo, accepted and dismissed
 
 - [ ] **4.14 On this day strip and Era covers** (D-32, D-36)
-  - **Do:** an *On this day* strip at the top of the feed, beside the Opened strip, over `GET /entries/on-this-day`; Era covers as title pages in the feed's sticky headers and on Era pages; and a cover picker in the Era form.
+  - **Do:** an *On this day* row at the top of the feed over `GET /entries/on-this-day`, which moves below the first entry while an Opened row shows (D-41); Era covers as title pages in the feed's sticky headers and on Era pages; and a cover picker in the Era form.
   - **Done when:** component tests cover the strip with and without memories, a cover on its Era's header, and no cover while its entry is sealed.
 
 - [ ] **4.15 Soundtrack picker and player** (D-35)

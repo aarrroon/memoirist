@@ -65,7 +65,7 @@ Add `--memoirist.sample-content=true` to the `bootRun` arguments to fill an empt
 | Choosing a library or infra pattern | `docs/TECH_STACK.md` |
 | Unsure *how* or *why* something works, or docs disagree | `docs/DECISIONS.md` (wins on how; open questions are at the end) |
 | Working on product behaviour or UX | `docs/PRD.md` (glossary in §3) |
-| Building a screen, or writing an end-to-end test | `docs/USER_FLOWS.md` (draft; flow IDs `F-xx` name the Playwright tests) |
+| Building a screen, or writing an end-to-end test | `docs/design/DESIGN.md` (the look, D-41) and `docs/USER_FLOWS.md` (draft; flow IDs `F-xx` name the Playwright tests) |
 | Wondering how an earlier task solved something | `docs/build-journal/sprint-N/` (each sprint's README ends with its lessons) |
 
 `docs/product/` is market research and `docs/marketing/` is a pitch. Don't load them for coding.
@@ -92,20 +92,21 @@ Details live in `.claude/rules/`, which load when you touch matching files.
 - **Comments** say why, and name the decision (D-xx) or task they come from.
 
 ## Design rules
-**One design system (D-40): one spacing scale, two typefaces at most, one accent colour.** The checkable rules, the token defaults and the check to run after every fix are in `.claude/rules/design.md`, which loads when you touch `frontend/`. The reasons are in `docs/design/explorations/round-2/AUDIT.md`: the ten things that made the mockups look cheap.
+**One design system (D-40): one spacing scale, two typefaces at most, one accent colour.** The checkable rules and the check to run after every fix are in `.claude/rules/design.md`, which loads when you touch `frontend/`. The reasons are in `docs/design/explorations/round-2/AUDIT.md`: the ten things that made the mockups look cheap.
 
-No look is chosen yet: `docs/design/DESIGN.md` doesn't exist, and `docs/design/explorations/` holds two rounds of mockups (feedback in `FEEDBACK.md`). Never copy a mockup into `frontend/`. What is settled:
+**The look is chosen (D-41):** design 12, *Starlight refined*. Every value and component is in `docs/design/DESIGN.md`; build screens from it. The mockup (`docs/design/explorations/round-3/`) is a picture to compare against: never copy its code into `frontend/`. In short:
+- **Phone first:** designed at 375 px, then the laptop. Photos run edge to edge and swipe; a hairline and space separate entries.
 - **Spacing:** 4, 8, 12, 16, 24, 32, 48 or 64 px for every padding, margin and gap. One 16 px gutter on phones. Tap targets are at least 44×44 px, and nothing scrolls sideways at 375 px.
-- **Type:** two typefaces at most, seven text sizes, nothing under 12 px, no condensed poster type, no emoji. The pairing isn't chosen.
-- **Colour:** a neutral base and one accent, on actions and Loot Drops only. No orange, no second accent (the Loot Drop uses the accent, and the Spotify mark is black or white), no page filled with saturated colour. Candidate palettes are in `FEEDBACK.md`; none is final.
-- **Light and dark:** each mode is designed on its own, never inverted. Dark is dark grey, not black, with off-white text and a softer accent.
+- **Type:** Instrument Sans for text and the interface, Newsreader for titles only. Seven text sizes, nothing under 12 px, no emoji.
+- **Colour:** black, white and gold, with gold the one accent, on actions, the selected item, focus and Loot Drops. No second accent (the Spotify mark is black or white), no page filled with saturated colour.
+- **Light and dark:** each mode is designed on its own, never inverted; the app follows the phone, with a switch in settings. Dark is charcoal, not black, with off-white text and a softer gold.
 - **Shape:** two corner radii plus full. Boxes nest two deep at most.
 - **First screen:** on a phone the first entry's photo starts no lower than 35% down the feed, so On this day, the Era and the week stay compact (D-25).
 - **Components:** dialogs, menus, popovers and tabs are shadcn/ui copied into `src/components/ui/` and rewritten to the tokens; icons are `lucide-react` only; capture is a Vaul sheet on phones and a dialog on laptops. One Write button, in the centre of the phone tab bar: a plus or a word, never a pencil, never floating over text. It opens New entry, Photo dump and Diary page.
-- **Loot Drops:** a sealed card has a fixed size and shows only its memory date, opening date and countdown. The page says the opening date once. Its waiting object is one approved drawing: never improvised, never a padlock, pill or capsule (D-39).
+- **Loot Drops:** a sealed card has a fixed size and shows only its memory date, opening date and countdown, and under a day heading only the last two (D-10). The page says the opening date once. Its waiting object is the approved travelling star (DESIGN.md §5): never improvised, never a padlock, pill or capsule (D-39).
 - **Never:** streaks, calendar grids or anything that shows the days with no entry (D-32); film, tape or school-paper props; a fact repeated on one screen; labels that aren't the PRD §3 words (Eras, weeks, entries, Opens, Written).
 - **Also:** contrast is WCAG AA (text 4.5:1; control borders, meaningful graphics and large text 3:1); focus is visible; `prefers-reduced-motion` stops motion; fonts are served by the app; photos load lazily with their space reserved, and are shown whole in the entry view.
-- **Tokens only:** every colour, font, text size and radius is an `@theme` token in `src/index.css`. Never write a hex value, a font name or a one-off size in a component. If a task needs a look that isn't settled, ask.
+- **Tokens only:** every colour, font, text size and radius is an `@theme` token in `src/index.css`. Never write a hex value, a font name or a one-off size in a component. If a task needs a look DESIGN.md doesn't give, ask.
 
 ## Mistakes to avoid
 Each one happened, or nearly did, in Sprints 1–3.

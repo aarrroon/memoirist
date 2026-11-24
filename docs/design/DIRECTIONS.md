@@ -1,6 +1,6 @@
 # Design Directions (pre-design)
 
-> Early options for how memoirist should look and feel. **Nothing here is decided.** When a direction is chosen, record it with `/record-decision` and write the result to `docs/design/DESIGN.md`. **Not needed for coding tasks** until DESIGN.md exists.
+> Early options for how memoirist should look and feel, kept for history. **Decided on 2026-11-24 (D-41):** design 12, *Starlight refined*, grew from direction 3 with parts of 2. The result is [DESIGN.md](DESIGN.md); coding tasks read that, not this file.
 
 **Status:** exploring · **Needed by:** Sprint 4 (React UI)
 

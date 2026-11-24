@@ -6,7 +6,7 @@ paths:
 
 # Design system rules (D-40)
 
-One design system for the whole frontend: **one spacing scale, two typefaces at most, one accent colour.** Each numbered section fixes one of the ten problems that made the round 2 mockups look cheap; the evidence is in `docs/design/explorations/round-2/AUDIT.md`. `docs/design/DESIGN.md` picks the look (which typefaces, which accent, the final values) inside these limits. Until it exists, use the defaults below. If a screen needs something these rules don't give, ask; don't invent it.
+One design system for the whole frontend: **one spacing scale, two typefaces at most, one accent colour.** Each numbered section fixes one of the ten problems that made the round 2 mockups look cheap; the evidence is in `docs/design/explorations/round-2/AUDIT.md`. `docs/design/DESIGN.md` holds the chosen look (D-41): the typefaces, the accent, the final values and every component, inside these limits. Build screens from it, never from the mockups' code. If a screen needs something these rules and DESIGN.md don't give, ask; don't invent it.
 
 ## Tokens (`frontend/src/index.css`)
 - Every colour, font, text size, weight, radius and shadow is a token. A component never holds a hex value, a font name or an arbitrary value (`p-[13px]`, `text-[15px]`, `rounded-[10px]`, `bg-[#fff]`).
@@ -16,7 +16,8 @@ One design system for the whole frontend: **one spacing scale, two typefaces at 
 @import "tailwindcss";
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
-:root { --page: …; --surface: …; --raised: …; --ink: …; --ink-2: …; --line: …; --control: …; --accent: …; --on-accent: …; --danger: …; --scrim: …; }
+:root { --page: …; --surface: …; --raised: …; --ink: …; --ink-2: …; --line: …; --control: …; --accent: …; --on-accent: …; --danger: …; --scrim: …;
+        --band: …; --on-band: …; --on-band-2: …; --moon-lit: …; --moon-dark: …; } /* values: DESIGN.md §1 */
 [data-theme="dark"] { /* the same names, designed on their own, never inverted */ }
 
 @theme {
@@ -38,14 +39,14 @@ One design system for the whole frontend: **one spacing scale, two typefaces at 
 - This syntax was checked against the Tailwind v4 docs on 2026-11-14. Check it again with context7 in task 4.1.
 - shadcn/ui components arrive with Tailwind's default class names (`text-sm`, `rounded-md`, `bg-background`). Rewrite every class to these tokens when you copy one in (D-13).
 
-| Kind | Limit | Default until DESIGN.md |
+| Kind | Limit | Value (DESIGN.md, D-41) |
 |---|---|---|
 | Spacing | One scale | 4, 8, 12, 16, 24, 32, 48, 64 px: the steps `1 2 3 4 6 8 12 16` |
-| Typefaces | Two | One for text and the interface, one more for titles only |
+| Typefaces | Two | Instrument Sans for text and the interface, entry text included; Newsreader for titles only |
 | Text sizes | Seven, none under 12 px, in rem | meta 12, small 14, body 16, read 18, title 20, heading 28, display 40 px |
-| Weights | Three | 400 and 600, plus one weight of the title typeface |
+| Weights | Three | Instrument Sans 400 and 600, Newsreader 500 |
 | Line heights | Three | 1.2 for titles, 1.5 for the interface, 1.6 for reading |
-| Colours | One accent hue in each theme | page, surface, raised, ink, ink-2, line, control, accent, on-accent, danger, scrim |
+| Colours | One accent hue in each theme | Black, white and gold: page, surface, raised, ink, ink-2, line, control, accent (gold), on-accent, danger, scrim, plus band, on-band and on-band-2 for an Era's title band and moon-lit and moon-dark for the moon. Values in DESIGN.md §1 |
 | Corners | Two radii, plus full | sm 8 px (controls, thumbnails), lg 16 px (cards, photos, sheets), full (pills, avatars) |
 | Shadow | One | Only on things that float: a menu, a dialog, a sheet |
 | Breakpoints | Two | Layout changes at `md` (48rem) and `lg` (64rem) only |
@@ -63,7 +64,7 @@ One design system for the whole frontend: **one spacing scale, two typefaces at 
 
 ## 3. First screen (phone feed)
 - At 375×812 the first entry's photo starts no lower than 35% down (284 px), after at most five rows of text and three filled boxes. The checker prints both numbers.
-- The budget is fixed; how to meet it is DESIGN.md's choice (for example the Era and the week on one line, and On this day as one short row). Never add a row above the first entry without removing one.
+- The budget is fixed. DESIGN.md meets it with the moon line in the top bar, On this day as one row, and the Era and the week on one line (the mockup's first photo starts at 223 px). Never add a row above the first entry without removing one: the Opened row takes On this day's place.
 - The top bar and the tab bar together take at most 15% of the height.
 
 ## 4. Shape
@@ -72,8 +73,8 @@ One design system for the whole frontend: **one spacing scale, two typefaces at 
 - Controls in one row or column share a height: 44 px for buttons and fields, 32 px for chips.
 
 ## 5. Loot Drop object
-- Never improvise a drawing in JSX. The object is one SVG file in `src/assets/`, drawn on one grid with one stroke width, in token colours only, with no text in it and nothing rotated. The user approves it before it ships.
-- Until an approved file exists, the sealed card and the Loot Drop page are typographic: the countdown in `display` and the dates, with the accent.
+- Never improvise a drawing in JSX. The object is one SVG file in `src/assets/`, drawn on one grid with one stroke width, in token colours only, with no text in it and nothing rotated.
+- The approved object is the **travelling star** (D-41); its geometry is in DESIGN.md §5. Any other drawing needs the user's approval first.
 - Dates and the countdown are always HTML text. No padlock, and no pill or capsule shape (D-39).
 
 ## 6. Loading
@@ -81,7 +82,7 @@ One design system for the whole frontend: **one spacing scale, two typefaces at 
 - Every `<img>` has `width` and `height`, or sits in a box with a fixed `aspect-ratio`, and has `decoding="async"`. The first photo on a screen is eager with `fetchpriority="high"`; every other one has `loading="lazy"`. A list loads only the first photo of each entry until the user swipes.
 - Anything that arrives late (photos, the Opened strip, On this day) has its space reserved, so nothing jumps: layout shift stays at 0.1 or less.
 - The feed doesn't ship the editor: load capture (TipTap, dnd-kit, Vaul), the lightbox and the date picker with `React.lazy`. The feed's first JavaScript is 200 KB gzipped or less.
-- Target on the slow-phone profile: the largest thing on screen appears within 2.5 s. Photos can't meet it while the API serves originals (Q29), and a photo's own shape can't be reserved without its size (Q30). Report the numbers, use Q30's default, and don't work around either in the client.
+- Target on the slow-phone profile: the largest thing on screen appears within 2.5 s. Photos can't meet it while the API serves originals (Q29): report the numbers, and don't work around it in the client. A photo's shape is reserved from its stored `width` and `height` (D-17, from task 4.5), with a 4:5 frame when they are `null`.
 
 ## 7. Colour
 - One accent hue. It marks the primary action, links, the selected item, focus and the Loot Drop. It never colours headings, body text or decoration.
