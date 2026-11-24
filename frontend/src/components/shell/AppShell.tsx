@@ -2,6 +2,7 @@ import { Outlet, ScrollRestoration, useMatches } from 'react-router';
 import { SideNav } from './SideNav';
 import { TabBar } from './TabBar';
 import { TopBar } from './TopBar';
+import { CaptureHost } from '../../features/capture/CaptureHost';
 import { shellFor, tabFor } from './places';
 
 // The app shell (task 4.3, DESIGN.md §3 and §4 Shell). Phone first: a top bar, the screen, and the tab bar fixed
@@ -39,6 +40,8 @@ export function AppShell() {
         </main>
       </div>
       <TabBar tab={tabFor(shell.place)} />
+      {/* Capture, opened by Write (task 4.6): a sheet on a phone, a dialog on a laptop, loaded on first use. */}
+      <CaptureHost />
       <ScrollRestoration />
     </div>
   );

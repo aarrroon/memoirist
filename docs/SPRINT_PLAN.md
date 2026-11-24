@@ -292,7 +292,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - A read-only caption rendered from JSON (no `dangerouslySetInnerHTML`).
   - **Done when:** an upload test stores the size of a JPEG, a PNG and a WebP, and `null` for a voice note and an unreadable image; component tests cover image-only, caption-only and mixed entries, a tall, a wide and a size-less first photo; the feed's layout shift is 0.1 or less (`audit.mjs`).
 
-- [ ] **4.6 Capture modal**
+- [x] **4.6 Capture modal**
   - **Do:**
     - An optional title field and a TipTap editor (StarterKit + Link with a protocol allow-list).
     - A template picker that inserts headings above any existing text (D-23); template headings left empty are removed on save (D-06).
@@ -338,6 +338,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - It creates one backdated entry per day, reusing the capture upload flow; a day with more than 20 photos becomes several entries.
     - Undated photos go into one entry dated today, created with `dateUnknown: true`; the card shows a *date unknown, fix it* badge (D-34).
     - In capture, a single photo's own date is offered as the memory date.
+    - Since task 4.6, capture shrinks each photo as soon as it is picked (`shrinkPhoto` in `lib/files.ts`), which drops its date: read the date before that call. Diary pages are shrunk like photos for now; give them the gentler setting TECH_STACK §3 Media describes, by shrinking once the purpose is known.
   - **Done when:** component tests cover:
     - photos from three days becoming three entries
     - a 25-photo day becoming two entries

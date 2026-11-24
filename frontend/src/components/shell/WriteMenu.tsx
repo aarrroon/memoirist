@@ -9,7 +9,7 @@ import {
 
 // The one Write button (CLAUDE.md, Design rules; DESIGN.md §4 Shell): a plus, never a pencil. It is a menu button
 // (DESIGN.md §8) that offers New entry, Photo dump and Diary page, and choosing one opens that capture view through
-// the UI store. The capture sheet itself is task 4.6.
+// the UI store. features/capture/CaptureHost draws the capture sheet or dialog (task 4.6).
 
 const CHOICES: { kind: CaptureKind; label: string; Icon: typeof Plus }[] = [
   { kind: 'entry', label: 'New entry', Icon: Type },
@@ -48,6 +48,11 @@ export function WriteMenu({ variant }: { variant: 'tab' | 'side' }) {
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent
+        // A choice opens capture, which takes focus (task 4.6). Radix would otherwise put focus back on Write as the
+        // menu closes, behind the sheet. Escape without a choice still returns focus to Write.
+        onCloseAutoFocus={(event) => {
+          if (useUiStore.getState().capture !== null) event.preventDefault();
+        }}
         side={variant === 'tab' ? 'top' : 'bottom'}
         align={variant === 'tab' ? 'center' : 'start'}
       >

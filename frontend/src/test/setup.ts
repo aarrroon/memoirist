@@ -43,6 +43,24 @@ function inertMediaQuery(query: string): MediaQueryList {
   };
 }
 
+// jsdom has no object URLs. Capture (task 4.6) shows each picked photo from one; a test only needs a string.
+// (Vitest's URL passes them to Node's, which has them; this is for when it doesn't.)
+let objectUrls = 0;
+stub(URL, 'createObjectURL', () => `blob:test/${++objectUrls}`);
+stub(URL, 'revokeObjectURL', () => undefined);
+
+// jsdom lacks these, and Radix's popover, Vaul and Sonner call them (task 4.6).
+stub(Element.prototype, 'scrollIntoView', () => undefined);
+stub(Element.prototype, 'hasPointerCapture', () => false);
+stub(Element.prototype, 'releasePointerCapture', () => undefined);
+stub(Element.prototype, 'setPointerCapture', () => undefined);
+
+/** Adds a do-nothing method only where jsdom has none, so a real one is never replaced. */
+function stub(target: object, name: string, value: (...args: never[]) => unknown) {
+  if (!(name in target))
+    Object.defineProperty(target, name, { configurable: true, writable: true, value });
+}
+
 // jsdom has no media playback: pressing Play on a voice note would print "Not implemented".
 window.HTMLMediaElement.prototype.play = function play() {
   this.dispatchEvent(new Event('play'));

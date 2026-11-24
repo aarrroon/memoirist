@@ -124,7 +124,7 @@ npm run build           # type-check, then the production build in dist/
 npm run gen:api         # regenerate src/api/schema.d.ts from /v3/api-docs (backend must be running; task 4.2)
 npx playwright test     # end-to-end smoke tests — task 4.17
 ```
-Before saying frontend work is done: `npm test && npm run lint && npm run typecheck && npm run build`. For a screen, also run the design check with the dev server up: `node docs/design/explorations/tools/audit.mjs http://localhost:5173/<path>` from the repo root, and again with `--dark` (`.claude/rules/design.md`). [TECH_STACK §3](TECH_STACK.md#build-task-41) says how the project is set up and why.
+Before saying frontend work is done: `npm test && npm run lint && npm run typecheck && npm run build`. For a screen, also run the design check with the dev server up: `node docs/design/explorations/tools/audit.mjs http://localhost:5173/<path>` from the repo root, and again with `--dark` (`.claude/rules/design.md`). Capture opens from a link, so it can be checked the same way: `http://localhost:5173/?write=entry` (or `?write=page` for Diary page, task 4.6). [TECH_STACK §3](TECH_STACK.md#build-task-41) says how the project is set up and why.
 
 ## 5. Working on the code
 

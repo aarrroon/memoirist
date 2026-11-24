@@ -278,26 +278,28 @@ Exact versions are pinned in `backend/build.gradle.kts`, and Gradle's own in `ba
 
 ```
 src/
-├── api/          # schema.d.ts (generated — never hand-edit), client.ts (openapi-fetch), queryKeys.ts, problem.ts, one file of hooks per resource (users.ts, feed.ts: useFeed, an infinite query over GET /feed, task 4.4)
+├── api/          # schema.d.ts (generated — never hand-edit), client.ts (openapi-fetch), queryKeys.ts, problem.ts, one file of hooks per resource (users.ts, feed.ts: useFeed, an infinite query over GET /feed, task 4.4; tags.ts and templates.ts; entries.ts: the writes capture makes, as plain functions, task 4.6)
 ├── features/
+│   ├── capture/  # task 4.6: CaptureHost (in the shell; lazy-loads the rest, `?write=entry|page` opens it), CaptureView (Vaul sheet below `lg`, dialog from `lg`, keep-or-discard question), CaptureForm, editorSetup.ts + Editor (TipTap: StarterKit without underline and codeBlock, plus Link with the http/https/mailto allow-list), DateChip (react-day-picker), TemplateChip, TagPicker (find or make a tag), MediaTray (dnd-kit; a menu moves, marks a diary page, retries, removes), saveEntry.ts (create → upload → reorder, D-12, D-23), draft.ts (the one draft in localStorage, checked with zod), CaptureToaster (Sonner)
 │   ├── feed/     # FeedPage (infinite scroll, task 4.4), grouping.ts (weeks under eras[0], nesting and chips, D-22), WeekSection (the sticky Era and week line), FeedEntry, FeedStates (loading, empty, error), a text-only SealedCard until task 4.8; later covers (D-36), OpenedStrip (D-10), OnThisDayStrip (D-32)
 │   ├── week/     # WeekSummaryPage with one bar per entry (D-25)
 │   ├── timeline/ # TimelinePage: every entry, one row each, tag filter (D-25)
-│   ├── entry/    # EntryCard, MediaCarousel, CaptureModal, PhotoDump (D-34), SealDialog with suggested dates, SealedCard, reply to past you (D-33), VoiceRecorder, displayTitle()
+│   ├── entry/    # EntryCard, MediaCarousel, PhotoDump (D-34), SealDialog with suggested dates, SealedCard, reply to past you (D-33), VoiceRecorder, displayTitle()
 │   ├── music/    # SoundtrackPicker (paste or search) and SoundtrackPlayer, which loads Spotify only when tapped (D-35)
 │   ├── eras/     # Era pages and the cover picker (D-36)
 │   ├── templates/ # TemplatesPage and the starter gallery (D-06)
-│   ├── tags/     # TagPicker, TagsPage (D-26)
+│   ├── tags/     # TagsPage (D-26); capture's tag picker is in capture/
 │   ├── settings/ # display name, timezone, birthday (D-33)
 │   └── deleted/  # RecentlyDeletedPage (D-30)
 ├── components/   # shared UI primitives: Page, Moon, NotFoundPage
 │   ├── shell/    # AppShell, TopBar (moon line or back link), TabBar, SideNav, WriteMenu; places.ts maps a route's `handle` to the current place
-│   └── ui/       # shadcn/ui components (copied in, owned by us, restyled to DESIGN.md), and button.tsx (the three button styles, class-variance-authority)
+│   └── ui/       # shadcn/ui components (copied in, owned by us, restyled to DESIGN.md): dropdown-menu, popover, dialog and alert dialog (task 4.6); button.tsx (the three button styles, class-variance-authority) and chip.tsx (32 px chip in a 44 px target, task 4.6)
 ├── lib/time.ts   # all date/time formatting + "today" in the user's timezone (and the feed's week ranges and sealed-card countdown); useNow.ts and useDelayed.ts are the two clock hooks
 ├── lib/moon.ts   # the moon's phase and shape for the date line (DESIGN.md §4)
 ├── lib/cn.ts     # clsx + tailwind-merge, taught the design tokens' names
-├── lib/images.ts # read a photo's own date (exifr, D-34), then compress it before upload (browser-image-compression)
-├── stores/       # Zustand: UI-only state (which capture view is open); the capture draft is also persisted to localStorage (D-23)
+├── lib/files.ts  # the D-17 checks before upload (type allow-list, 25 MB, 20 files) and shrinking photos (browser-image-compression, task 4.6); reading a photo's own date (exifr, D-34) comes with task 4.13
+├── lib/templateDoc.ts # template prompts in the editor: insert above the text, drop the empty ones on save (D-06, D-23)
+├── stores/       # Zustand: UI-only state (which capture view is open). The capture draft is form state, kept in CaptureForm and in localStorage (D-23), not in Zustand
 └── main.tsx, router.tsx  # router.tsx: every route, each with a `handle` saying which nav place it belongs to
 ```
 
@@ -316,8 +318,10 @@ src/
   - Each feed card and each page section sits inside a `react-error-boundary`, so one broken card doesn't blank the app.
 - **Media:**
   - An Embla carousel shows images and an audio player in `displayOrder`. Tapping a photo opens yet-another-react-lightbox (full screen, pinch-zoom).
-  - In capture, the staging strip is reordered with dnd-kit (pointer, touch and keyboard).
-  - Before upload, `lib/images.ts` reads each photo's own date, because compression drops it; capture offers it as the memory date, and a photo dump groups photos by it (D-34). It then compresses photos to roughly 2–3 MB with browser-image-compression. Photos marked as diary pages (`purpose = PAGE_SCAN`, D-20) use a gentler setting so handwriting stays readable. Audio is uploaded as recorded.
+  - In capture, the staging strip is reordered by dragging with dnd-kit (mouse and touch sensors); by keyboard, each thumbnail's menu moves it earlier or later (task 4.6).
+  - `lib/files.ts` checks each picked file (type, 25 MB, 20 files, D-17) and shrinks photos to roughly 2–3 MB with browser-image-compression as soon as they are picked (`shrinkPhoto`, task 4.6). Audio is uploaded as recorded.
+  - Diary pages (`purpose = PAGE_SCAN`, D-20) are shrunk like any photo for now, because a photo is shrunk before it can be marked as a page. A gentler setting for pages, so handwriting stays readable, comes with task 4.13, which reworks the shrinking step: keep the picked file and shrink once the purpose is known.
+  - Reading a photo's own date (exifr) must happen before `shrinkPhoto`, because compression drops it; capture then offers it as the memory date, and a photo dump groups photos by it (D-34, task 4.13).
   - Voice notes use `MediaRecorder` with the first supported type of `audio/webm;codecs=opus` or `audio/mp4`.
   - Soundtracks show a placeholder until tapped; only then does the page load Spotify's embedded player (D-35). A content security policy, if one is added, must allow Spotify's embed frame.
 - **Capture flow:**

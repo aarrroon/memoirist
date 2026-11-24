@@ -35,6 +35,7 @@
 | 4.3 Routing, shell and time utilities | done | Sprint 4.3: Add the routes, the app shell and the time utilities | React Router routes for all eight Phase 1 addresses, the phone-first shell (moon line or back link, five-column tab bar with Write, side nav from `lg`), the Zustand UI store and `lib/time.ts` in the user's zone (131 tests, Melbourne DST and other zones) | [4.3](build-journal/sprint-4/4.3-routing-shell-time.md) |
 | 4.4 Feed | done | Sprint 4.4: Build the feed with weeks filed under their Eras | The Journal at `/` as an infinite query over `GET /feed`: weeks filed under `eras[0]` with one-level nesting and chips (D-22), a sticky Era and week line, a first entry body, a text-only sealed card that is never counted, and loading, empty and error states (165 tests) | [4.4](build-journal/sprint-4/4.4-feed.md) |
 | 4.5 Entry card | done | Sprint 4.5: Store photo sizes and build the swipe and caption | `V2__media_dimensions.sql` and a header reader (`ImageSize`: JPEG, PNG, WebP) give photos their width and height (D-17); the feed entry gets an Embla swipe framed from the first photo (4:5 to 1.91:1), a caption drawn from TipTap JSON with links checked again, and a voice note row (1621 backend tests, 195 frontend) | [4.5](build-journal/sprint-4/4.5-entry-card.md) |
+| 4.6 Capture modal | done | Sprint 4.6: Build capture: the write sheet, uploads and the draft | Write opens capture (a lazy Vaul sheet on phones, a dialog on laptops): title, TipTap editor, templates, memory date, tags made inline, a tray of photos with reorder, retry, remove and diary-page marks, a zod-checked draft, and create (client id) → upload → order, with `409 entry-stale` and field errors handled (243 frontend tests) | [4.6](build-journal/sprint-4/4.6-capture-modal.md) |
 
 ### S4 Usage
 | Time (Melbourne) | 5-hour used | Weekly used | Decision |
@@ -46,6 +47,8 @@
 | 2026-11-24 23:45 | 74% | 51% | The user changed the rule: start each task while the weekly limit is under 90%, and let the safety net resume a run the 5-hour limit stops. Start 4.4 |
 | 2026-11-25 00:18 | 100% | not read | 4.4 finished as the limit was reached (cost at least 26%). Wait for the reset (03:10) |
 | 2026-11-25 03:11 | 6% | 56% | The window reset. Start 4.5 |
+| 2026-11-25 04:15 | 53% | 62% | 4.5 cost 47% (largest; it had backend work). Weekly under 90%: start 4.6 (the user's rule) |
+| 2026-11-25 08:39 | 0% | 68% | The 4.6 run stopped with the app session (limit reached). The window reset: resume 4.6 from cache (`wf_901003cf-f88`); safety-net check-in recreated |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
@@ -81,6 +84,18 @@
 | 29 | 4.5 | D-17 (silent on trusting the declared type) | The image format is sniffed from the file's signature, but only files declared as an image are read, so a voice note never gets a size; the 415 check still uses the declared type |
 | 30 | 4.5 | Q29 default | Measured on the production build (`vite preview`), with a real 3.3 MB photo swapped into the feed response by a scratch Playwright script; nothing worked around in the client |
 | 31 | 4.5 | Local dev database from before V2 | The six existing sample photos (960 × 640 PNGs) were given their size with one `UPDATE` in the local database only; a freshly seeded journal gets sizes from the seeder |
+| 32 | 4.6 | D-34, task 4.13 | Choosing Photo dump opens the New entry capture until 4.13 builds the dump; Diary page opens the same capture titled *Diary page*, with every added photo marked `PAGE_SCAN` (D-20) |
+| 33 | 4.6 | DESIGN.md §4 Write (five-column add bar) | The phone add bar keeps five columns but shows only Photo and Tag; Voice (4.7), Song (4.15) and Seal (4.8) join with their tasks. The laptop dialog has no add bar, as in the round 3 mockup |
+| 34 | 4.6 | D-23, G-01 | The draft holds the text, title, date, template and prompts, tags, client id, and the entry id and version once saved. Picked photos aren't kept, so a reload loses photos not yet uploaded; uploaded ones are read back from the entry |
+| 35 | 4.6 | DESIGN.md §4 Controls vs the round 3 mockup | An entry's tags are outlined chips with a remove button; *+ Tag* opens a popover that filters the user's tags or offers *Make "x"* |
+| 36 | 4.6 | frontend.md (StarterKit and Link only) | No Placeholder extension: *What happened?* is drawn over the empty editor and hidden from screen readers; the editor is labelled *Entry text*, the title *Title (optional)* |
+| 37 | 4.6 | DESIGN.md (sheet on phones, dialog on laptops; silent on resizing) | The frame is chosen once when capture opens (dialog from `lg`), because following the width live remounted the form and lost the picked photos |
+| 38 | 4.6 | No doc gives the words | Field errors and capture messages are the app's own sentences (*A title is at most 150 characters.*, *Saved, but 1 photo didn't upload…*, *This entry changed somewhere else…*); the server's text is never shown |
+| 39 | 4.6 | Docs silent | A disabled primary button uses `--surface` with `--ink-2` text, so a disabled Save doesn't read as the action to take |
+| 40 | 4.6 | G-04 ("lands outside the week on screen") | Backdated means the memory date falls outside this week (Monday to Sunday, the user's zone); the toast reads *Saved in the week of 16–22 November* with *Go there* to `/weeks/<id>` |
+| 41 | 4.6 | Task 4.3's focus test | Choosing from the Write menu moves focus into capture; Escape without a choice still returns it to Write. The 4.3 test was updated |
+| 42 | 4.6 | TECH_STACK §3 Media, frontend.md (Photo dates); review 1 | Every photo is shrunk the same way when picked; diary pages get no gentler setting and the photo's EXIF date isn't read before shrinking. Both are noted on task 4.13, which reworks that step |
+| 43 | 4.6 | D-26 | A null field (template, title, soundtrack, reply) is left out of the `PUT` JSON, because the generated request type doesn't allow null; a left-out field is cleared, the same effect |
 
 ### S4 Needs attention
 - **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
@@ -103,6 +118,13 @@
 - **4.5, follow-up:** caption links past the third line of the feed's clamp stay in the tab order, so focus can land on clipped text (review minor, not changed unattended). Fix: plain text or `tabIndex={-1}` for links past the clamp.
 - **4.5:** every focus outline measures 3 px solid, while DESIGN.md §8 says 2 px; it comes from the focus style in `index.css` (4.1/4.3), not this task.
 - **4.5:** the first full backend build failed 2 of 1621 tests (`SchemaTest` version, `MediaApiDescriptionTest` field list); both fixed, the second build passed. The local dev database's six sample photos were given sizes with one `UPDATE`.
+- **4.6, follow-up (D-23):** removing the last photo from a saved entry with no text can't be saved, and nothing offers to delete the entry; Discard is the only way out and the photo stays on the server. Task 4.12 (the delete confirmation) is the natural home (review 2 minor, not changed unattended).
+- **4.6, follow-up:** the failed-upload overlay draws its icon in `text-on-band` on `bg-scrim`, a pair `tokens.test` doesn't check, and no audit has run with a failed item on screen.
+- **4.6:** under jsdom, an MSW handler can't read a multipart body holding a jsdom `File` ("Premature close"). The fake upload handler records forms by wrapping `FormData.prototype.append`; later upload tests (4.7, 4.13, 4.17) should use `fakeBackend()` from `test/msw/capture.ts`, not `request.formData()`.
+- **4.6:** two earlier tests changed on purpose: AppShell (4.3) now expects focus inside capture after a Write menu choice, and the 4.4 "shapes only after 300 ms" test, flaky in the full suite, waits on a 3 s fake answer.
+- **4.6:** on the dev server, the first time capture opens Vite re-optimises TipTap and friends and can show *Failed to fetch dynamically imported module* once; a reload fixes it. Production builds aren't affected.
+- **4.6:** the feed's first JS is 180.26 KB gzipped (was 178.31; budget 200); capture's lazy chunk is 220.36 KB gzipped.
+- **4.6:** the real-app save check created one entry in the local dev database and erased it (DELETE 204, erase 204).
 
 ### S4 Questions for the morning
 

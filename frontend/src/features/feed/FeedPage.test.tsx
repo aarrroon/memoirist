@@ -226,7 +226,9 @@ describe('states', () => {
   test('loading: a status for screen readers at once, and the shapes only after 300 ms', async () => {
     server.use(
       http.get('*/api/v1/feed', async () => {
-        await delay(1000);
+        // Long enough that the 300 ms timer fires first even on a busy machine: with the whole suite running in
+        // parallel (task 4.6 added the heavy capture tests), a 1 s answer sometimes beat the timer.
+        await delay(3000);
         return HttpResponse.json(page(sampleWeeks));
       }),
     );
@@ -234,9 +236,9 @@ describe('states', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('Opening your journal…');
     expect(screen.queryByTestId('feed-skeleton')).not.toBeInTheDocument();
-    expect(await screen.findByTestId('feed-skeleton')).toBeInTheDocument();
+    expect(await screen.findByTestId('feed-skeleton', {}, { timeout: 2500 })).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'Quiet day' }, { timeout: 3000 }),
+      await screen.findByRole('heading', { name: 'Quiet day' }, { timeout: 6000 }),
     ).toBeInTheDocument();
   });
 

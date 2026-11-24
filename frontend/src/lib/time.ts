@@ -128,3 +128,47 @@ export function countdown(instant: string | Date, zone: string, now: Date = new 
   if (days === 1) return 'tomorrow';
   return `in ${days} days`;
 }
+
+/** A moment's time of day in the user's zone, as capture's "Draft saved 7:41 pm" writes it (DESIGN.md §2, meta). */
+export function formatClock(instant: string | Date, zone: string): string {
+  return format(new TZDate(new Date(instant), zone), 'h:mm aaa');
+}
+
+/** The Monday-to-Sunday week holding a calendar day (D-08: every week starts on Monday, for every user). */
+export function weekOf(day: IsoDate): { start: IsoDate; end: IsoDate } {
+  const date = calendarDay(day);
+  // getDay() is 0 for Sunday; Monday is 1. Days back to Monday: Sunday 6, Monday 0, Tuesday 1, ...
+  const back = (date.getDay() + 6) % 7;
+  const start = new TZDate(date.getTime() - back * 86_400_000, 'UTC');
+  const end = new TZDate(start.getTime() + 6 * 86_400_000, 'UTC');
+  return { start: format(start, 'yyyy-MM-dd'), end: format(end, 'yyyy-MM-dd') };
+}
+
+/**
+ * The memory-date chip in capture (DESIGN.md §4 Write): "Today, Wed 28 Oct", "Mon 26 Oct", or "Fri 14 Mar 2003"
+ * when the day is in another year than today.
+ */
+export function chipDay(day: IsoDate, zone: string, now: Date = new Date()): string {
+  const today = todayIn(zone, now);
+  const date = calendarDay(day);
+  if (day === today) return `Today, ${format(date, 'EEE d MMM')}`;
+  return format(date, day.slice(0, 4) === today.slice(0, 4) ? 'EEE d MMM' : 'EEE d MMM yyyy');
+}
+
+/**
+ * A calendar day as the date picker's Date (react-day-picker works in the browser's own zone): midnight of that day
+ * on the browser's clock, so the picker shows the same day whatever zone the browser is in. Only the picker uses it.
+ */
+export function toPickerDate(day: IsoDate): Date {
+  const date = calendarDay(day);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+/** The day the picker chose, read back on the browser's clock it was made on (toPickerDate's inverse). */
+export function fromPickerDate(date: Date): IsoDate {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** The earliest memory date the API accepts (D-09). */
+export const EARLIEST_DAY: IsoDate = '1900-01-01';

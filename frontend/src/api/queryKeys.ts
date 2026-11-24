@@ -16,5 +16,10 @@ export const queryKeys = {
   // Task 4.4. One key for every page of the feed: an infinite query keeps its pages under a single key, so a
   // save (task 4.6) invalidates the feed with this one prefix and every loaded page refetches in order.
   feed: () => [...all, 'feed'] as const,
+  // Task 4.6, capture. Tags and templates are short lists read whole (GET /tags, GET /templates); creating a tag
+  // inline invalidates `tags`. One entry is read back when a save meets 409 entry-stale (D-23).
+  tags: () => [...all, 'tags'] as const,
+  templates: () => [...all, 'templates'] as const,
+  entry: (id: string) => [...all, 'entries', id] as const,
 };
 // └── END ANSWER ▲ ──

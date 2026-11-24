@@ -135,7 +135,7 @@ describe('the moon line', () => {
 });
 
 describe('the Write menu', () => {
-  test('opens from the keyboard, chooses with Enter, and closes back onto the button', async () => {
+  test('opens from the keyboard, chooses with Enter, and hands focus to capture', async () => {
     const user = userEvent.setup();
     renderApp('/');
     const write = within(navs().tabBar).getByRole('button', { name: 'Write' });
@@ -153,8 +153,11 @@ describe('the Write menu', () => {
 
     expect(useUiStore.getState().capture).toBe('dump');
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
-    expect(write).toHaveFocus();
-  });
+    // Task 4.6: the choice opens capture, which takes focus; the menu doesn't pull it back to Write behind the sheet.
+    const sheet = await screen.findByRole('dialog', {}, { timeout: 10_000 });
+    await waitFor(() => expect(sheet).toContainElement(document.activeElement as HTMLElement));
+    expect(write).not.toHaveFocus();
+  }, 15_000);
 
   test('Escape closes it without opening anything', async () => {
     const user = userEvent.setup();

@@ -11,7 +11,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-accent px-4 text-on-accent',
+        // Disabled (capture's Save on an empty entry, task 4.6): no accent, so it doesn't read as the action to take.
+        primary: 'bg-accent px-4 text-on-accent disabled:bg-surface disabled:text-ink-2',
         secondary: 'border border-control px-4 text-ink',
         quiet: 'px-3 text-ink',
       },

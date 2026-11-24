@@ -11,6 +11,11 @@ import {
   isWithin,
   partOfDay,
   todayIn,
+  chipDay,
+  formatClock,
+  fromPickerDate,
+  toPickerDate,
+  weekOf,
 } from './time';
 
 // Plain unit tests with fixed instants (frontend.md: plain Vitest for lib/). Every instant is written in UTC, so
@@ -200,5 +205,35 @@ describe('the feed’s weeks and sealed cards (task 4.4)', () => {
     expect(countdown('2026-04-06T23:00:00Z', MELBOURNE, utc('2026-04-03T01:00:00Z'))).toBe(
       'in 4 days',
     );
+  });
+});
+
+describe('capture (task 4.6)', () => {
+  test('weekOf finds the Monday-to-Sunday week, across a month and a year', () => {
+    expect(weekOf('2026-11-24')).toEqual({ start: '2026-11-23', end: '2026-11-29' });
+    expect(weekOf('2026-11-23')).toEqual({ start: '2026-11-23', end: '2026-11-29' });
+    expect(weekOf('2026-11-29')).toEqual({ start: '2026-11-23', end: '2026-11-29' });
+    expect(weekOf('2027-01-01')).toEqual({ start: '2026-12-28', end: '2027-01-03' });
+  });
+
+  test('the date chip says Today in the user’s zone, and the year only for another year', () => {
+    // 23:30 on Monday 23 November in New York is already Tuesday the 24th in Melbourne.
+    const now = utc('2026-11-24T04:30:00Z');
+    expect(chipDay('2026-11-24', MELBOURNE, now)).toBe('Today, Tue 24 Nov');
+    expect(chipDay('2026-11-24', NEW_YORK, now)).toBe('Tue 24 Nov');
+    expect(chipDay('2026-11-23', NEW_YORK, now)).toBe('Today, Mon 23 Nov');
+    expect(chipDay('2003-03-14', MELBOURNE, now)).toBe('Fri 14 Mar 2003');
+  });
+
+  test('"Draft saved" gives the time in the user’s zone, across Melbourne’s change to daylight time', () => {
+    expect(formatClock('2026-10-03T15:30:00Z', MELBOURNE)).toBe('1:30 am');
+    expect(formatClock('2026-10-03T16:30:00Z', MELBOURNE)).toBe('3:30 am');
+    expect(formatClock('2026-11-24T08:41:00Z', KOLKATA)).toBe('2:11 pm');
+  });
+
+  test('the picker’s Date round-trips to the same calendar day, back to 1900', () => {
+    for (const day of ['2026-11-24', '1900-01-01', '2026-10-04', '2024-02-29']) {
+      expect(fromPickerDate(toPickerDate(day))).toBe(day);
+    }
   });
 });
