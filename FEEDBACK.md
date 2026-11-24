@@ -90,3 +90,98 @@ Aaron set one accent colour for each theme on 2026-11-14 (D-40): a Loot Drop use
 - Bookcloth green and Ink and red already used one colour, and so does round 2's Sunset rose.
 - The Spotify mark is black or white in every palette.
 - `shared/content.js` still holds the old values, because round 2's pages must render as they did. The next round adds its own palettes from the table above.
+
+## Round 2 feedback (2026-11-24)
+
+Round 2 is the five designs in `round-2/directions/`, numbered 7–11 on the boards in `round-2/screenshots/boards/`. The senior review, with ratings, is [round-2/SENIOR-REVIEW.md](round-2/SENIOR-REVIEW.md).
+
+### Aaron
+
+| Rank | # | Design | What Aaron said |
+|---|---|---|---|
+| 1 | 8 | Starlight | The winner, as the phone version. It is the main theme |
+| 2 | 10 | Folio | Still likes its modern, sleek parts |
+| 3 | 9 | Nightstand | |
+| 4 | 7 | Afterglow | Its Loot Drop is good. A bit too round, and not as modern as Starlight |
+| Out | 11 | Keepsake | Bad |
+
+- **Phone first.** About 90% of use will be on phones, so the design is planned for the phone. The laptop follows it.
+- **Too compact.** Entries need a clear break between them.
+- **Photos are screen-sized:** edge to edge, swiped left and right, as on Instagram.
+- **Loot Drop:** Starlight's and Afterglow's are both good.
+- **Colour:** Black, white and gold is good. Sunset rose and Dusk blue should be options.
+
+### Answers (2026-11-24)
+
+**Feed on the phone**
+
+| Question | Answer |
+|---|---|
+| Break between entries | A full-width hairline with 24 px of space above and below it. It was option A of four drawn: hairline and space, tinted band, space only, day header as divider |
+| Photo shape in the feed | Full width, by Instagram's rule: the first photo keeps its own shape, between 4:5 tall and 1.91:1 wide. The other photos in the swipe are cropped to match. The entry view still shows every photo whole |
+| Several photos | Swiped left and right, with dots below and a "1/4" count on the photo. Diary pages are slides too. A voice note is a play row under the swipe |
+| Order of an entry | A short line (time · place), the photo edge to edge, then the title, the first lines of text, the tags and the soundtrack |
+| Top of the feed | The Era and the week merge into one slim sticky line ("The Brunswick Years · This week · 3 entries"). On this day is one row you tap. The first photo still starts within 284 px (D-25) |
+
+**Look**
+
+| Question | Answer |
+|---|---|
+| Palette | Black, white and gold is the default. Phase 1 ships only this palette, in light and dark, and the tokens keep the others a swap away |
+| Choosing a palette | A picker with Dusk blue and Sunset rose comes later, with settings in Phase 2. That is a README change, made when it is planned |
+| Light or dark | Follows the phone's setting, with a switch in settings |
+| Typefaces | Folio's pair replaces Fraunces and Hanken Grotesk: Newsreader for titles only, as D-40 says, and Instrument Sans for everything else, entry text included |
+| Dark mode | Neutral charcoal, as in Black, white and gold. The dusk blue-grey belongs to the Dusk blue palette |
+| Shape | Not as round as Afterglow. Small corners, within D-40's two radii |
+
+**From Starlight and Folio**
+
+| Part | Answer |
+|---|---|
+| Moon date line | Kept, but shrunk to one line in the top bar in place of the "memoirist" wordmark. "94% lit" goes |
+| Constellation | Kept, as the picture at the top of an Era's week list. The list does the finding, because 98 stars can't each be a 44 px tap target |
+| On this day | Labelled "On this day", the PRD word. "The same night, other years" goes |
+| Era page | Folio's title page in neutral colours: an ink band in light mode and a raised grey in dark, never a gold or green band. The stats sit in one row split by hairlines, not in a box |
+| Week list | Folio's dot-leader list: "This week ······ 3 entries" |
+| Laptop | Three columns, as in Starlight and Folio: the side nav, the feed in the centre with Folio's margin dates, and On this day on the right. Write opens as a dialog. Every screen is drawn at 1440 px, but after the phone, never driving it |
+| Running head | Dropped. The slim sticky line does its job |
+
+**Loot Drop**
+
+| Question | Answer |
+|---|---|
+| Waiting object | Starlight's travelling star, redrawn so that it also works in light mode (round 2's light version read like a diagram) |
+| Progress | From Nightstand's hourglass: the trail is lit for the part of the wait already travelled, with a clear "you are here" point |
+| Sealed card in the feed | Under a day header it shows only the opening date and the countdown, because the header already is its memory date. Everywhere else it keeps the memory date. This changes D-10's list of what a sealed card shows: record it with `/record-decision` |
+
+**Process**
+
+| Question | Answer |
+|---|---|
+| Next pass | One refined Starlight, not another round of several designs. Phone first, in Black, white and gold, light and dark, within D-40, and every screen checked with `tools/audit.mjs` |
+| Screens it adds | The ones no round has drawn: the week summary, the timeline, the Eras list, templates and the starter gallery, settings, Recently deleted, photo dump, an opened Loot Drop with its reply, and empty and error states |
+| After it | Aaron approves it, the choice is recorded with `/record-decision`, and `docs/design/DESIGN.md` is written from it |
+| Friends | Aaron's feedback is recorded first. Friends' notes go in this section if they arrive before the next pass starts |
+
+### What it means for the next pass
+
+| Keep | From |
+|---|---|
+| The structure: the moon date line, an Era as a constellation, the travelling-star Loot Drop, Write in the centre of the tab bar, and Write as a laptop dialog with Seal on its first screen | 8 Starlight |
+| The type, the Era title page, the week list and the laptop margin dates | 10 Folio |
+| A waiting object that shows how much of the wait has passed | 9 Nightstand |
+
+| Change | Why |
+|---|---|
+| Photos run edge to edge and swipe | Aaron: the phone is the main device, and photos should fill it |
+| A hairline and space between entries | Aaron: round 2's phone feeds were too compact |
+| Three stacked rows at the top become one slim line | Bigger photos must still start within 284 px (D-25) |
+| The star works in light mode as well as dark | Round 2's light star read like a diagram |
+
+| Avoid | Because of |
+|---|---|
+| Large radii and soft, bubbly shapes | 7 Afterglow (too round, not modern) |
+| Medicine-like shapes | 11 Keepsake's capsule read as a pill (D-39) |
+| A floating button over text | 8 Starlight's first version covered the caption |
+| A filled box for every row at the top of the feed | Round 2's feeds stacked three |
+| A page-wide band of colour | One accent, on actions and Loot Drops only (D-40) |

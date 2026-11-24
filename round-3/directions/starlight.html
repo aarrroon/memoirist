@@ -1,0 +1,1042 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>memoirist, Starlight refined</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+<style>
+/* Starlight, refined (round 3, design 12). Phone first. Black, white and gold, light and dark, inside D-40:
+   one spacing scale, two typefaces (Newsreader for titles only), one accent. Every value below is a token. */
+:root {
+  --font-text: 'Instrument Sans', system-ui, sans-serif;
+  --font-display: 'Newsreader', Georgia, serif;
+  --text-meta: .75rem; --text-small: .875rem; --text-body: 1rem; --text-read: 1.125rem;
+  --text-title: 1.25rem; --text-heading: 1.75rem; --text-display: 2.5rem;
+  --radius-sm: 8px; --radius-lg: 16px;
+  --gutter: 16px;
+  --page: #FFFFFF; --surface: #F4F4F3; --raised: #EBEBE9; --ink: #111111; --ink-2: #5B5B5B;
+  --line: #E2E2E0; --control: #8A8A88; --accent: #8F6614; --on-accent: #FFFFFF;
+  --scrim: rgba(17, 17, 17, .48); --shadow-float: 0 16px 48px rgba(0, 0, 0, .18);
+  --band: #111111; --on-band: #FFFFFF; --on-band-2: #C8C8C6;
+  --moon-lit: #D6D6D3; --moon-dark: #6E6E6C; --moon-edge: transparent; /* a grey moon: neutral, so gold stays for the Loot Drop */
+  color-scheme: light;
+}
+/* Dark is designed on its own: charcoal, not black and not blue; off-white text; a softer gold. */
+:root[data-mode="dark"] {
+  --page: #161616; --surface: #1F1F1F; --raised: #292929; --ink: #EDEDED; --ink-2: #A3A3A3;
+  --line: #2E2E2E; --control: #6B6B6B; --accent: #E3C06A; --on-accent: #161616;
+  --scrim: rgba(0, 0, 0, .6); --shadow-float: 0 16px 48px rgba(0, 0, 0, .5);
+  --band: #292929; --on-band: #EDEDED; --on-band-2: #A3A3A3;
+  --moon-lit: #EDEDED; --moon-dark: #3A3A3A; --moon-edge: transparent;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; background: var(--page); }
+body { margin: 0; background: var(--page); color: var(--ink); font: 400 var(--text-body)/1.5 var(--font-text); overflow-x: clip; -webkit-font-smoothing: antialiased; }
+html[data-screen^="write"] body, html[data-screen="dump"] body { overflow: hidden; }
+h1, h2, h3, h4, p, ul, ol, figure, fieldset, legend, dl, dd { margin: 0; padding: 0; }
+h1, h2, h3, h4 { font-size: inherit; font-weight: inherit; }
+ul, ol { list-style: none; }
+fieldset { border: 0; min-width: 0; }
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+b, strong { font-weight: 600; }
+button, input, textarea { font: inherit; color: inherit; margin: 0; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.icon { flex: none; }
+
+/* ---------- Type: seven sizes, three line heights ---------- */
+.t-meta { font-size: var(--text-meta); line-height: 1.5; color: var(--ink-2); }
+.t-small { font-size: var(--text-small); line-height: 1.5; }
+.t-read { font-size: var(--text-read); line-height: 1.6; }
+.t-title, .t-heading, .t-display { font-family: var(--font-display); font-weight: 500; line-height: 1.2; }
+.t-title { font-size: var(--text-title); }
+.t-heading { font-size: var(--text-heading); letter-spacing: -.01em; }
+.t-display { font-size: var(--text-display); letter-spacing: -.02em; }
+.muted { color: var(--ink-2); }
+.strong { font-weight: 600; }
+.gold { color: var(--accent); }
+
+/* ---------- Controls: primary, secondary, quiet; chips ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 999px; font-size: var(--text-body); line-height: 1.5; font-weight: 600; }
+.btn.primary { background: var(--accent); color: var(--on-accent); }
+.btn.secondary { border: 1px solid var(--control); }
+.btn.quiet { padding: 0 12px; color: var(--ink); }
+.btn.block { width: 100%; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 999px; }
+.chip { position: relative; display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 12px; border: 1px solid var(--control); border-radius: 999px; font-size: var(--text-small); line-height: 1.5; white-space: nowrap; }
+.chip::before { content: ""; position: absolute; top: -6px; bottom: -6px; left: 0; right: 0; } /* a 44 px hit area */
+.chip[aria-pressed="true"], .chip[aria-current="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.links a { text-decoration: underline; text-decoration-color: var(--control); text-underline-offset: 4px; }
+
+/* ---------- Shell: top bar, tab bar, side nav ---------- */
+.topbar { position: sticky; top: 0; z-index: 30; height: 56px; padding: 0 var(--gutter); display: flex; align-items: center; gap: 8px; background: var(--page); }
+.topbar .spacer { flex: 1; }
+.tonight { display: flex; align-items: center; gap: 8px; }
+.moon .lit { fill: var(--moon-lit); } .moon .dark { fill: var(--moon-dark); } .moon .edge { fill: none; stroke: var(--moon-edge); stroke-width: 1.2; }
+.back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-left: -4px; padding: 0 4px; font-weight: 600; }
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; height: 64px; display: grid; grid-template-columns: repeat(5, 1fr); background: var(--page); border-top: 1px solid var(--line); }
+.tabbar > a, .tabbar .write-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: var(--text-meta); line-height: 1.5; color: var(--ink-2); }
+.tabbar > a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+.tabbar .write { position: relative; display: flex; }
+.tabbar .write-btn { width: 100%; color: var(--ink); } /* the pill gives Write its weight; the label matches the other tabs */
+.tabbar .write-btn .pill { display: flex; align-items: center; justify-content: center; width: 48px; height: 28px; border-radius: 999px; background: var(--accent); color: var(--on-accent); }
+.write-menu { position: absolute; z-index: 50; min-width: 208px; padding: 8px; background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-float); }
+.write-menu a { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: var(--radius-sm); font-size: var(--text-body); line-height: 1.5; font-weight: 400; color: var(--ink); }
+.write-menu a:hover { background: var(--raised); }
+.tabbar .write-menu { left: 50%; transform: translateX(-50%); bottom: 72px; }
+.sidenav { display: none; }
+.main::after { content: ""; display: block; height: 112px; } /* room above the tab bar */
+.rail { display: none; }
+
+/* ---------- Feed ---------- */
+.otd-row, .opened-row { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px var(--gutter); }
+.otd-row img, .otd-item img { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-sm); }
+.otd-row .txt, .opened-row .txt, .otd-item .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.otd-row { width: 100%; text-align: left; }
+.otd-row[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.otd-list { display: flex; flex-direction: column; gap: 8px; padding: 0 var(--gutter) 16px; }
+.otd-item { display: flex; align-items: center; gap: 12px; min-height: 48px; }
+.opened-row .mark { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; color: var(--accent); }
+.opened-row .x { color: var(--ink-2); }
+.weekline { position: sticky; top: 56px; z-index: 20; display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 var(--gutter); background: var(--page); border-bottom: 1px solid var(--line); font-size: var(--text-small); line-height: 1.5; }
+.weekline .era-link { display: flex; align-items: center; gap: 8px; min-height: 44px; min-width: 0; flex: 1 1 auto; font-weight: 600; }
+/* A long Era or week name wraps to two lines before it is cut. */
+.weekline .era-link span, .weekline .week-link span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.weekline .era-link img, .weekline .initial { width: 32px; height: 32px; object-fit: cover; border-radius: var(--radius-sm); flex: none; }
+.initial { display: flex; align-items: center; justify-content: center; background: var(--raised); color: var(--ink); font-family: var(--font-display); font-weight: 500; }
+.weekline .week-link { display: flex; align-items: center; gap: 4px; min-height: 44px; min-width: 0; margin-left: auto; flex: 0 1 auto; text-align: right; color: var(--ink-2); }
+.posts { display: flex; flex-direction: column; }
+.post { display: flex; flex-direction: column; padding-top: 24px; }
+.post + .post, .post + .sealed-wrap, .sealed-wrap + .post, .post + .otd-col, .otd-col + .post { border-top: 1px solid var(--line); margin-top: 24px; }
+.post + .otd-col { padding-top: 12px; }
+.sealed-wrap { padding-top: 24px; }
+.post .day { padding: 0 var(--gutter) 8px; font-size: var(--text-small); line-height: 1.5; font-weight: 600; }
+.margin-date { display: none; }
+.swipe { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; background: var(--surface); }
+.swipe::-webkit-scrollbar { display: none; }
+.swipe .slide { flex: 0 0 100%; scroll-snap-align: start; }
+.swipe img { width: 100%; height: 100%; object-fit: cover; }
+.swipe-wrap { position: relative; }
+.swipe-nav { display: none; }
+.dots { display: flex; justify-content: center; gap: 4px; padding-top: 8px; }
+.dots i { width: 6px; height: 6px; border-radius: 999px; background: var(--control); }
+.dots i.on { background: var(--accent); }
+.post-body { display: flex; flex-direction: column; gap: 8px; padding: 12px var(--gutter) 0; }
+.post-body .clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.post-body .clamp p + p { margin-top: 8px; }
+.tags { font-size: var(--text-small); line-height: 1.5; color: var(--ink-2); }
+.tags a { color: var(--ink-2); }
+.voice { display: flex; align-items: center; gap: 12px; }
+.voice .play { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 999px; border: 1px solid var(--control); flex: none; }
+.voice .wave { flex: 1; display: flex; align-items: center; gap: 4px; height: 32px; max-width: 240px; }
+.voice .wave i { flex: 1; max-width: 3px; border-radius: 999px; background: var(--ink-2); }
+.sound { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: var(--text-small); line-height: 1.5; }
+.sound .mark { color: var(--ink); display: flex; }
+.sound .what { flex: 1; min-width: 0; }
+.sound .btn { margin-right: -12px; }
+
+/* The sealed card: one fixed size, only the dates and the countdown (D-10). */
+.sealed { display: grid; grid-template-columns: 128px 1fr; align-items: center; gap: 16px; height: 112px; margin: 0 var(--gutter); padding: 0 16px; background: var(--surface); border-radius: var(--radius-lg); }
+.sealed .facts { display: flex; flex-direction: column; }
+.sealed .count { font-family: var(--font-display); font-weight: 500; font-size: var(--text-title); line-height: 1.2; color: var(--accent); }
+
+/* The travelling star (one drawing, one grid, one stroke width, token colours, nothing rotated). */
+.star-drawing { display: block; width: 100%; height: auto; overflow: visible; }
+.star-drawing .rest { fill: none; stroke: var(--control); stroke-width: 2; stroke-dasharray: 2 6; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.star-drawing .lit { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.star-drawing .star { fill: var(--accent); }
+.star-drawing .ray { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.star-drawing .front { fill: var(--accent); }
+.star-drawing .halo { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.star-drawing .you { fill: var(--page); stroke: var(--ink); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.star-drawing .you.arrived { fill: var(--accent); stroke: var(--accent); }
+.star-drawing .dust { fill: var(--ink-2); opacity: .5; }
+.twinkle { transform-box: fill-box; transform-origin: center; animation: twinkle 3.2s ease-in-out infinite; }
+@keyframes twinkle { 0%, 100% { transform: scale(1); } 50% { transform: scale(.86); } }
+
+/* ---------- Pages ---------- */
+.page-head { display: flex; flex-direction: column; gap: 8px; padding: 8px var(--gutter) 24px; }
+.page-head .row { display: flex; align-items: center; gap: 12px; }
+.page-head .row > :first-child { flex: 1; }
+.section { display: flex; flex-direction: column; gap: 12px; padding: 0 var(--gutter); }
+.section + .section { margin-top: 32px; }
+.section > h2 { font-family: var(--font-display); font-weight: 500; font-size: var(--text-title); line-height: 1.2; }
+.rows { display: flex; flex-direction: column; }
+.row-link { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.row-link:first-child { border-top: 1px solid var(--line); }
+.row-link .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.row-link .val { color: var(--ink-2); }
+.row-link .chev { color: var(--ink-2); }
+.stats { display: grid; grid-template-columns: repeat(var(--n, 4), 1fr); }
+.stats > div { display: flex; flex-direction: column; padding: 0 0 0 12px; border-left: 1px solid var(--line); }
+.stats > div:first-child { padding-left: 0; border-left: 0; }
+
+/* Entry */
+.entry-photos .swipe { background: var(--page); }
+.entry-photos .swipe img { object-fit: contain; }
+.entry-head { display: flex; flex-direction: column; gap: 8px; padding: 24px var(--gutter) 16px; }
+.entry-text { display: flex; flex-direction: column; gap: 16px; padding: 0 var(--gutter); }
+.entry-text h2 { font-family: var(--font-display); font-weight: 500; font-size: var(--text-title); line-height: 1.2; margin-top: 8px; }
+.entry-text ul { display: flex; flex-direction: column; gap: 4px; padding-left: 24px; list-style: disc; }
+.entry-extras { display: flex; flex-direction: column; gap: 16px; padding: 24px var(--gutter) 0; }
+.filed { padding: 24px var(--gutter) 0; }
+
+/* Era: Folio's title page in neutral colours */
+.era-cover { aspect-ratio: 3 / 2; }
+.era-cover img { width: 100%; height: 100%; object-fit: cover; }
+.band { display: flex; flex-direction: column; gap: 16px; padding: 32px var(--gutter); background: var(--band); color: var(--on-band); }
+.band .t-meta, .band .muted { color: var(--on-band-2); }
+.band .sound .mark, .band .btn.quiet { color: var(--on-band); }
+.band .stats > div { border-color: rgba(255, 255, 255, .24); }
+:root[data-mode="dark"] .band .stats > div { border-color: var(--line); }
+.sky { position: relative; aspect-ratio: 4 / 3; }
+.sky .lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sky .lines path { fill: none; stroke: var(--control); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.sky i { position: absolute; transform: translate(-50%, -50%); border-radius: 999px; background: var(--ink-2); }
+.sky i.bright { background: var(--ink); }
+.leader { display: flex; align-items: baseline; gap: 8px; min-height: 56px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.leader .name { display: flex; flex-direction: column; }
+.leader .dots-line { flex: 1; min-width: 24px; border-bottom: 2px dotted var(--control); transform: translateY(-4px); }
+.leader .n { color: var(--ink-2); white-space: nowrap; }
+
+/* Eras list */
+.era-row { display: flex; align-items: center; gap: 16px; min-height: 88px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.era-row img, .era-row .initial { width: 64px; height: 64px; object-fit: cover; border-radius: var(--radius-sm); flex: none; font-size: var(--text-heading); line-height: 1.2; }
+.era-row.inside { padding-left: 24px; }
+.era-row.inside img, .era-row.inside .initial { width: 48px; height: 48px; font-size: var(--text-title); }
+
+/* Week summary */
+.thumb-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.thumb-grid img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-sm); }
+.bar { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 12px; min-height: 56px; border-bottom: 1px solid var(--line); }
+.bar:first-child { border-top: 1px solid var(--line); }
+.bar .sealed-mark { color: var(--accent); display: flex; }
+
+/* Timeline */
+.filter { display: flex; gap: 8px; overflow-x: auto; padding: 8px var(--gutter) 16px; scrollbar-width: none; }
+.filter::-webkit-scrollbar { display: none; }
+.month { position: sticky; top: 56px; z-index: 10; padding: 12px var(--gutter) 8px; background: var(--page); }
+.tl-row { display: grid; grid-template-columns: 72px 1fr; gap: 12px; min-height: 56px; padding: 12px var(--gutter); border-bottom: 1px solid var(--line); }
+.tl-row .when { display: flex; flex-direction: column; }
+.tl-row .what { display: flex; flex-direction: column; min-width: 0; }
+.tl-row .what .one { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.kinds { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; color: var(--ink-2); }
+.kinds .k { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Loot Drop page */
+.loot { display: flex; flex-direction: column; gap: 24px; padding: 24px var(--gutter) 0; }
+.loot .ends { display: flex; justify-content: space-between; margin-top: -16px; }
+.loot .words { display: flex; flex-direction: column; gap: 8px; }
+.loot .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Write: a full-screen sheet on phones, a dialog on laptops */
+.layer { position: fixed; inset: 0; z-index: 60; display: flex; }
+.sheet { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; background: var(--page); }
+.sheet-bar { display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 8px; border-bottom: 1px solid var(--line); flex: none; }
+.sheet-bar .mid { flex: 1; display: flex; flex-direction: column; align-items: center; }
+.sheet-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 16px var(--gutter) 64px; }
+.title-input { width: 100%; min-height: 44px; padding: 0; border: 0; background: none; font-family: var(--font-display); font-weight: 500; font-size: var(--text-title); line-height: 1.2; }
+.title-input::placeholder { color: var(--ink-2); }
+.fmt { display: flex; gap: 4px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.editor { display: flex; flex-direction: column; gap: 12px; min-height: 160px; outline: none; }
+.editor h3 { font-weight: 600; font-size: var(--text-body); line-height: 1.5; }
+.editor ul { display: flex; flex-direction: column; gap: 4px; padding-left: 24px; list-style: disc; }
+.sheet-body .col { display: flex; flex-direction: column; gap: 16px; }
+.attach { display: flex; gap: 8px; }
+.attach img, .attach .add { width: 72px; height: 72px; border-radius: var(--radius-sm); object-fit: cover; }
+.attach .add { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 1px dashed var(--control); font-size: var(--text-meta); line-height: 1.5; color: var(--ink-2); }
+.tools { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; display: grid; grid-template-columns: repeat(5, 1fr); background: var(--page); border-top: 1px solid var(--line); }
+.tools button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: var(--text-meta); line-height: 1.5; color: var(--ink-2); }
+.tools button.seal { color: var(--accent); font-weight: 600; }
+.panel { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; display: flex; flex-direction: column; gap: 16px; padding: 24px var(--gutter) 32px; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; box-shadow: var(--shadow-float); }
+.scrim { position: absolute; inset: 0; z-index: 1; background: var(--scrim); }
+.quick { display: flex; flex-direction: column; }
+.quick label { display: flex; align-items: center; gap: 12px; min-height: 56px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.quick label:first-child { border-top: 1px solid var(--line); }
+.quick label .txt { flex: 1; display: flex; flex-direction: column; }
+/* A 44 px radio, drawn as a 20 px ring: the whole row is the label, and the input itself is a full target. */
+.quick input { appearance: none; flex: none; width: 44px; height: 44px; margin: 0 -12px; border-radius: 999px; cursor: pointer;
+  background: radial-gradient(circle, transparent 0 8px, var(--control) 8px 10px, transparent 10px); }
+.quick input:checked { background: radial-gradient(circle, var(--accent) 0 5px, transparent 5px 8px, var(--accent) 8px 10px, transparent 10px); }
+.quick input:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+.seal-summary { display: flex; flex-direction: column; }
+
+/* Photo dump */
+.day-group { display: flex; flex-direction: column; gap: 12px; }
+.day-group .head { display: flex; align-items: center; gap: 8px; }
+.day-group .head > :first-child { flex: 1; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.grid3 img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-sm); }
+
+/* Settings */
+.segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border: 1px solid var(--control); border-radius: 999px; }
+.segmented label { position: relative; display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 999px; font-size: var(--text-small); line-height: 1.5; cursor: pointer; }
+.segmented input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.segmented label:has(input:checked) { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.segmented label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Recently deleted */
+.del-row { display: flex; flex-direction: column; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.del-row:first-child { border-top: 1px solid var(--line); }
+.del-row .top { display: flex; align-items: center; gap: 16px; }
+.del-row .top img, .del-row .top .ph { width: 48px; height: 48px; border-radius: var(--radius-sm); object-fit: cover; flex: none; }
+.del-row .top .ph { display: flex; align-items: center; justify-content: center; background: var(--surface); color: var(--ink-2); }
+.del-row .top .ph.gold { color: var(--accent); }
+.del-row .txt { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.del-row .acts { display: flex; gap: 8px; padding-left: 64px; } /* lines up with the text: a 48 px thumbnail and a 16 px gap */
+
+/* First run and errors */
+.empty { display: flex; flex-direction: column; gap: 16px; padding: 32px var(--gutter) 0; }
+.empty .art { width: 160px; }
+.empty .acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.letter { display: flex; flex-direction: column; gap: 12px; margin: 32px var(--gutter) 0; padding: 24px; background: var(--surface); border-radius: var(--radius-lg); }
+.letter .btn { align-self: flex-start; }
+
+/* ---------- Tablet: one column, wider gutter (md, 48rem) ---------- */
+@media (min-width: 48rem) {
+  :root { --gutter: 24px; }
+  .main { max-width: 640px; margin: 0 auto; }
+  .swipe, .era-cover img { border-radius: var(--radius-lg); }
+  .post .swipe-wrap, .entry-photos { padding: 0 var(--gutter); }
+}
+
+/* ---------- Laptop (lg, 64rem): side nav, a 600 px column, a rail ---------- */
+@media (min-width: 64rem) {
+  :root { --gutter: 32px; }
+  .topbar.home, .tabbar { display: none; }
+  .app { display: grid; grid-template-columns: 264px 1fr; min-height: 100vh; }
+  .sidenav { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 24px; padding: 24px 16px; border-right: 1px solid var(--line); }
+  .sidenav .tonight { padding: 0 12px; min-height: 44px; }
+  .sidenav .write { position: relative; }
+  .sidenav .write-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-weight: 600; }
+  .sidenav .write-btn .pill { display: contents; }
+  .sidenav .write-menu { left: 0; top: 52px; }
+  .sidenav nav { display: flex; flex-direction: column; gap: 4px; }
+  .sidenav nav a { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: var(--radius-sm); color: var(--ink-2); }
+  .sidenav nav a[aria-current="page"] { background: var(--surface); color: var(--ink); font-weight: 600; }
+  .sidenav .foot { margin-top: auto; }
+  .main { max-width: none; margin: 0; padding: 0 0 64px; }
+  .topbar { padding: 0 var(--gutter); }
+  .feed-grid { display: grid; grid-template-columns: minmax(0, 696px) 320px; gap: 48px; padding: 24px var(--gutter) 0; }
+  .feed-grid .weekline { top: 0; padding: 0; }
+  .feed-grid .otd-col { display: none; }
+  .rail { position: sticky; top: 0; align-self: start; display: flex; flex-direction: column; gap: 16px; padding-top: 24px; }
+  .rail h2 { font-family: var(--font-display); font-weight: 500; font-size: var(--text-title); line-height: 1.2; }
+  .rail .otd-item img { width: 64px; height: 64px; }
+  .post { display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 32px; }
+  .post > * { grid-column: 2; }
+  .post .day { display: none; }
+  .margin-date { display: flex; flex-direction: column; grid-column: 1; grid-row: 1 / span 3; text-align: right; padding-top: 4px; }
+  .post .swipe-wrap, .entry-photos { padding: 0; }
+  .post-body { padding: 16px 0 0; }
+  .sealed-wrap { display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 32px; }
+  .sealed-wrap .sealed { grid-column: 2; margin: 0; }
+  .swipe-nav { position: absolute; top: 50%; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-top: -22px; border-radius: 999px; background: var(--page); color: var(--ink); box-shadow: var(--shadow-float); }
+  .swipe-nav.prev { left: 12px; } .swipe-nav.next { right: 12px; }
+  .narrow { max-width: 760px; padding-top: 24px; }
+  .entry-wrap { max-width: 744px; padding: 24px var(--gutter) 0; }
+  .entry-wrap .entry-head, .entry-wrap .entry-text, .entry-wrap .entry-extras, .entry-wrap .filed { padding-left: 0; padding-right: 0; }
+  .entry-wrap .entry-text { max-width: 680px; }
+  .era-hero { display: grid; grid-template-columns: 1fr 1fr; margin: 24px var(--gutter) 0; border-radius: var(--radius-lg); overflow: hidden; }
+  .era-hero .era-cover { aspect-ratio: auto; }
+  .era-hero .era-cover img { border-radius: 0; }
+  .era-hero .band { padding: 48px; justify-content: center; }
+  .era-lower { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; padding: 48px var(--gutter) 0; }
+  .era-lower .section { padding: 0; }
+  .era-lower .section + .section { margin-top: 0; }
+  .loot-wrap { display: flex; justify-content: center; padding: 64px var(--gutter) 0; }
+  .loot { width: 100%; max-width: 640px; padding: 0; }
+  .layer { align-items: center; justify-content: center; background: var(--scrim); }
+  .sheet { width: min(960px, calc(100% - 64px)); height: auto; max-height: calc(100vh - 64px); border-radius: var(--radius-lg); box-shadow: var(--shadow-float); overflow: hidden; }
+  .sheet-body.two { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; padding: 24px 32px 32px; }
+  .sheet-body.two .col { display: flex; flex-direction: column; gap: 16px; }
+  .tools { display: none; }
+  .sheet .seal-inline { display: flex; } /* on a laptop Seal sits in the dialog's side column, quick dates showing */
+  .panel { left: auto; right: 0; top: 0; bottom: 0; width: 400px; border-radius: 0; overflow-y: auto; }
+}
+.seal-inline { display: none; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--control); border-radius: var(--radius-lg); }
+.seal-inline legend { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--accent); float: left; width: 100%; }
+.seal-inline .quick label { min-height: 48px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .twinkle { animation: none; }
+  .swipe { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="../../shared/content.js"></script>
+<script src="../../shared/helpers.js"></script>
+<script>
+(function () {
+  const { html, raw, icon } = M;
+  const D = M.data;
+  const app = document.getElementById('app');
+  const plural = (n, one, many = one + 's') => `${n.toLocaleString('en-AU')} ${n === 1 ? one : many}`;
+  const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
+  const shortDay = (d) => `${M.date(d, 'weekdayShort')} ${Number(d.slice(8, 10))}`; // Mon 19
+  const keepAmPm = (s) => s.replace(/ (am|pm)$/, ' $1'); // never leave "am" alone on a line
+
+  // Each sample photo's own size, so its space is reserved before it loads.
+  const SIZE = {"boroka-lookout":[1280,720],"campfire":[1280,853],"diary-page":[1260,1680],"empty-bedroom":[1280,960],"fitzroy-terrace":[1800,1200],"flat-white":[1280,1707],"grampians-sandstone":[1280,720],"halls-gap-kangaroo":[1280,853],"halls-gap-ranges":[1280,853],"lecture-theatre":[1280,964],"mackenzie-falls":[1280,1920],"pinnacle-lookout":[1280,853],"pinnacle-sunrise":[1920,1281],"princes-park":[1280,853],"sydney-road-tram":[1280,853]};
+  const sizeOf = (m) => SIZE[m.file.replace('.jpg', '')] || [1280, 853];
+
+  // ---------- The two practice pieces ----------
+  // TODO(human) PRACTICE: write feedRatio(width, height): the shape of a photo in the feed, as width / height.
+  // Instagram's rule (FEEDBACK.md, round 2 answers): a photo keeps its own shape, but never taller than 4:5 and
+  // never wider than 1.91:1. A 1280×1920 waterfall comes back as 0.8; a 1280×720 lake as about 1.78.
+  // Hint: one division and a clamp. Math.min and Math.max read best in the order "at least, then at most".
+  function feedRatio(width, height) {
+    // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+    const ratio = width / height;
+    return Math.min(1.91, Math.max(0.8, ratio));
+    // └── END ANSWER ▲ ──
+  }
+  console.assert(feedRatio(1280, 1920) === 0.8 && feedRatio(4000, 1000) === 1.91 && Math.abs(feedRatio(1280, 720) - 1.778) < 0.01, 'feedRatio clamps between 4:5 and 1.91:1');
+
+  // TODO(human) PRACTICE: write slideIndex(scrollLeft, slideWidth, count): which photo of a swipe is showing,
+  // from how far the row has scrolled. The dots under the photo follow it.
+  // Hint: a half-scrolled row should count as the nearer photo, and a browser can overscroll past either end,
+  // so keep the answer between 0 and count - 1. Guard against a slide width of 0 before layout.
+  function slideIndex(scrollLeft, slideWidth, count) {
+    // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+    if (!slideWidth) return 0;
+    const nearest = Math.round(scrollLeft / slideWidth);
+    return Math.min(count - 1, Math.max(0, nearest));
+    // └── END ANSWER ▲ ──
+  }
+  console.assert(slideIndex(0, 375, 4) === 0 && slideIndex(560, 375, 4) === 1 && slideIndex(2000, 375, 4) === 3 && slideIndex(-30, 375, 4) === 0 && slideIndex(100, 0, 4) === 0, 'slideIndex rounds to the nearest photo and stays in range');
+
+  // ---------- Mock content only this design needs ----------
+  const doc = (...content) => ({ type: 'doc', content });
+  const p = (t) => ({ type: 'paragraph', content: [{ type: 'text', text: t }] });
+  const h = (t) => ({ type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: t }] });
+  // A Loot Drop sealed on 27 Oct 2025 that opened at 9:00 am yesterday (D-10, D-33).
+  const OPENED = {
+    id: 'e-2025-1027-letter', entryDate: '2025-10-27', title: 'Letter to future me', templateId: 'tpl-letter',
+    openedAt: '2026-10-26T22:00:00Z', tags: [], media: [],
+    contentJson: doc(
+      h('Dear future me'),
+      p('Tomorrow Priya moves out and the big room is mine. I hope by now it has a bed in it, and that you stopped saying you would get to the Grampians one day.'),
+      h('What I hope has changed'),
+      p('That you still walk home the long way. That the lemon tree finally did something.'),
+    ),
+  };
+  // Recently deleted (F-18): erased 30 days after deletion. The sealed one shows only its dates.
+  const DELETED = [
+    { title: 'Dentist, again', entryDate: '2026-10-13', erases: '2026-11-26', photo: 'flat-white' },
+    { title: 'Notes from the planning day', entryDate: '2026-10-20', erases: '2026-11-20', photo: null },
+    { sealed: true, entryDate: '2026-10-11', unlock: '2027-10-11', erases: '2026-11-24' },
+  ];
+  // A photo dump of the trip, grouped by the day each photo was taken (F-19, D-34).
+  const DUMP = [
+    { day: '2026-10-23', files: ['halls-gap-ranges', 'halls-gap-kangaroo', 'campfire'] },
+    { day: '2026-10-24', files: ['pinnacle-sunrise', 'pinnacle-lookout', 'grampians-sandstone', 'boroka-lookout'] },
+    { day: null, files: ['flat-white'] },
+  ];
+
+  // ---------- Drawn pieces ----------
+  const STAR = 'M12 1.5c.55 5.5 5 9.95 10.5 10.5-5.5.55-9.95 5-10.5 10.5C11.45 16.5 7 12.05 1.5 12 7 11.45 11.45 7 12 1.5z';
+  const starIcon = (size = 20) => raw(`<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><path d="${STAR}" fill="currentColor"/></svg>`);
+  const EXTRA = {
+    bold: '<path d="M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z"/>',
+    italic: '<path d="M10 5h8M6 19h8M14 5l-4 14"/>',
+    heading: '<path d="M6 5v14M18 5v14M6 12h12"/>',
+    x: '<path d="M6 6l12 12M18 6 6 18"/>',
+    cloudOff: '<path d="m3 3 18 18M8.5 8.5A5 5 0 0 0 6 18h11M20.5 15.5A4 4 0 0 0 17 9.2 6 6 0 0 0 10.8 5"/>',
+    refresh: '<path d="M20 11a8 8 0 0 0-14.6-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.6 4.5L20 16M20 20v-4h-4"/>',
+  };
+  const ic = (name, size = 20) => (EXTRA[name]
+    ? raw(`<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${EXTRA[name]}</svg>`)
+    : icon(name, { size }));
+
+  // The moon as seen from Melbourne: a waning moon is lit on its right in the southern hemisphere.
+  function moonSvg(day, size) {
+    const m = M.moon(day);
+    const r = 10, c = 12, k = m.illumination;
+    const so = !m.waxing ? 1 : 0;
+    const si = k > 0.5 ? so : 1 - so;
+    const rx = (r * Math.abs(1 - 2 * k)).toFixed(2);
+    const d = `M${c} ${c - r}A${r} ${r} 0 0 ${so} ${c} ${c + r}A${rx} ${r} 0 0 ${si} ${c} ${c - r}Z`;
+    return raw(`<svg class="moon icon" width="${size}" height="${size}" viewBox="0 0 24 24" role="img" aria-label="${M.esc(m.name + ' moon')}"><circle class="dark" cx="12" cy="12" r="10"/><path class="lit" d="${d}"/><circle class="edge" cx="12" cy="12" r="10"/></svg>`);
+  }
+
+  // The travelling star, the one Loot Drop drawing: a star, a trail curving down to you, the part of the
+  // wait already travelled lit in the accent, and a marked point where the light has got to (the hourglass idea).
+  // One grid (240 × 96), one stroke width (2 px at any size), token colours, no text, nothing rotated.
+  function starDrawing(progress, { dust = false, arrived = false } = {}) {
+    const P0 = [44, 30], C1 = [104, 30], C2 = [150, 74], P3 = [212, 74];
+    const at = (t) => [0, 1].map((k) => (1 - t) ** 3 * P0[k] + 3 * (1 - t) ** 2 * t * C1[k] + 3 * (1 - t) * t ** 2 * C2[k] + t ** 3 * P3[k]);
+    const pts = Array.from({ length: 201 }, (_, i) => at(i / 200));
+    const lens = [0];
+    for (let i = 1; i < pts.length; i++) lens.push(lens[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    const want = lens[200] * Math.min(1, Math.max(0, progress));
+    const reached = Math.max(0, lens.findIndex((l) => l >= want));
+    const [fx, fy] = pts[reached];
+    const path = `M${P0.join(' ')}C${C1.join(' ')} ${C2.join(' ')} ${P3.join(' ')}`;
+    // The lit stretch is drawn as its own line up to the light front: a dash pattern can't measure along the
+    // curve once the stroke keeps one width at every size (non-scaling-stroke).
+    const litPath = 'M' + pts.slice(0, reached + 1).map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join('L');
+    const rnd = M.seeded('starlight-r3');
+    const specks = dust ? Array.from({ length: 14 }, () => `<circle class="dust" cx="${(8 + rnd() * 224).toFixed(1)}" cy="${(4 + rnd() * 88).toFixed(1)}" r="1"/>`).join('') : '';
+    return raw(`<svg class="star-drawing" viewBox="0 0 240 96" aria-hidden="true" focusable="false">
+      ${specks}
+      <path class="rest" d="${path}"/>
+      ${reached > 0 ? `<path class="lit" d="${litPath}"/>` : ''}
+      <g class="twinkle"><path class="ray" d="M24 6V42M8 24H40"/><path class="star" transform="translate(10 10) scale(1.1667)" d="${STAR}"/></g>
+      ${arrived ? '' : `<circle class="halo" cx="${fx.toFixed(1)}" cy="${fy.toFixed(1)}" r="7"/><circle class="front" cx="${fx.toFixed(1)}" cy="${fy.toFixed(1)}" r="3.5"/>`}
+      <circle class="you${arrived ? ' arrived' : ''}" cx="220" cy="78" r="6"/>
+    </svg>`);
+  }
+
+  // ---------- Small parts ----------
+  let wm = 0;
+  function writeMenu() {
+    const id = `write-menu-${++wm}`;
+    return html`<div class="write">
+      <button class="write-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="${id}"><span class="pill">${icon('plus', { size: 20, stroke: 2.2 })}</span><span>Write</span></button>
+      <div class="write-menu" id="${id}" role="menu" hidden>
+        <a role="menuitem" href="#write">${ic('book')}New entry</a>
+        <a role="menuitem" href="#dump">${ic('photos')}Photo dump</a>
+        <a role="menuitem" href="#write">${ic('page')}Diary page</a>
+      </div></div>`;
+  }
+  // helpers.js already opens and closes every .write-btn menu.
+
+  function voice(m) {
+    const bars = M.waveform(m.id, 32);
+    return html`<div class="voice">
+      <button class="play" type="button" aria-label="${'Play voice note, ' + M.duration(m.durationSeconds)}">${ic('play')}</button>
+      <span class="wave" aria-hidden="true">${bars.map((b) => html`<i style="height:${Math.round(b * 100)}%"></i>`)}</span>
+      <span class="t-meta">${M.duration(m.durationSeconds)}</span></div>`;
+  }
+  // The Spotify mark is black in light mode and white in dark (D-40): it takes the ink colour.
+  const sound = (s, action = 'Play') => html`<div class="sound">
+      <span class="mark">${icon('spotify', { size: 20, label: 'Spotify' })}</span>
+      <span class="what"><b>${s.title}</b>, ${s.artist}</span>
+      <button class="btn quiet" type="button">${action}</button></div>`;
+
+  function tonight(tag = 'p') {
+    const t = M.today();
+    const hour = Number(M.instant(D.now, { hour: 'numeric', hourCycle: 'h23' }));
+    const part = hour < 5 ? 'at night' : hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : hour < 21 ? 'at dusk' : 'at night';
+    return html`<div class="tonight">${moonSvg(t, 24)}${raw(`<${tag} class="t-title">`)}${M.date(t, 'weekday')} ${part}${raw(`</${tag}>`)}</div>`;
+  }
+
+  function sidenav(current) {
+    const item = (href, ic_, label, key) => html`<a href="${href}" ${current === key ? raw('aria-current="page"') : ''}>${ic(ic_)}${label}</a>`;
+    return html`<aside class="sidenav" aria-label="Main">
+      ${tonight()}
+      ${writeMenu()}
+      <nav>
+        ${item('#feed', 'home', 'Journal', 'feed')}${item('#timeline', 'list', 'Timeline', 'timeline')}
+        ${item('#eras', 'layers', 'Eras', 'eras')}${item('#templates', 'page', 'Templates', 'templates')}
+      </nav>
+      <nav class="foot">${item('#deleted', 'trash', 'Recently deleted', 'deleted')}${item('#you', 'user', 'You', 'you')}</nav>
+    </aside>`;
+  }
+  function tabbar(current) {
+    const tab = (href, ic_, label, key) => html`<a href="${href}" ${current === key ? raw('aria-current="page"') : ''}>${ic(ic_, 24)}<span>${label}</span></a>`;
+    return html`<nav class="tabbar" aria-label="Main">
+      ${tab('#feed', 'home', 'Journal', 'feed')}${tab('#timeline', 'list', 'Timeline', 'timeline')}
+      ${writeMenu()}
+      ${tab('#eras', 'layers', 'Eras', 'eras')}${tab('#you', 'user', 'You', 'you')}
+    </nav>`;
+  }
+  const topHome = () => html`<header class="topbar home">${tonight('h1')}</header>`;
+  const topBack = (href, label, extra = '') => html`<header class="topbar"><a class="back" href="${href}">${ic('arrowLeft')}${label}</a><span class="spacer"></span>${extra}</header>`;
+  function shell(nav, top, body, { tabs = true } = {}) {
+    return html`<div class="app">${sidenav(nav)}<div>${top}<main class="main" id="main">${body}</main></div></div>${tabs ? tabbar(nav) : ''}`;
+  }
+
+  // ---------- Photos: the swipe ----------
+  let swipeN = 0;
+  function swipe(imgs, { first = false, whole = false, link = '#entry', label = 'Photos' } = {}) {
+    const [w, hgt] = sizeOf(imgs[0]);
+    const ratio = whole ? w / hgt : feedRatio(w, hgt);
+    const id = `swipe-${++swipeN}`;
+    const many = imgs.length > 1;
+    const slide = (m, i) => {
+      const [iw, ih] = sizeOf(m);
+      const img = html`<img src="${M.src(m)}" alt="${m.alt}" width="${iw}" height="${ih}" decoding="async" ${first && i === 0 ? raw('fetchpriority="high"') : raw('loading="lazy"')}>`;
+      return link ? html`<a class="slide" href="${link}" tabindex="${i === 0 ? '0' : '-1'}">${img}</a>` : html`<div class="slide">${img}</div>`;
+    };
+    return html`<div class="swipe-wrap">
+      <div class="swipe" id="${id}" style="aspect-ratio:${ratio.toFixed(4)}" ${many ? raw(`role="group" aria-roledescription="carousel" aria-label="${label}, ${imgs.length} photos"`) : ''}>${imgs.map(slide)}</div>
+      ${many ? html`<button class="swipe-nav prev" type="button" data-for="${id}" data-step="-1" aria-label="Previous photo">${ic('chevronLeft')}</button><button class="swipe-nav next" type="button" data-for="${id}" data-step="1" aria-label="Next photo">${ic('chevronRight')}</button>` : ''}
+    </div>
+    ${many ? html`<div class="dots" data-dots="${id}" aria-hidden="true">${imgs.map((_, i) => html`<i class="${i === 0 ? 'on' : ''}"></i>`)}</div>` : ''}`;
+  }
+
+  // ---------- Feed ----------
+  const dayLine = (d) => (d === M.today() ? 'Today' : M.date(d, 'dayLong'));
+  function marginDate(d) {
+    return html`<div class="margin-date" aria-hidden="true"><span class="t-meta">${d === M.today() ? 'Today' : M.date(d, 'weekday')}</span><span class="t-title">${M.date(d, 'dayMonth')}</span></div>`;
+  }
+
+  function otdRow(k) {
+    const [a, b] = D.onThisDay;
+    return html`<div class="otd ${k}">
+      <button class="otd-row" type="button" aria-expanded="false" aria-controls="otd-${k}"><img src="${M.src(M.images(a)[0])}" alt="" width="40" height="40" decoding="async">
+        <span class="txt"><span class="t-small strong">On this day</span><span class="t-small muted">${M.displayTitle(a)}, and ${D.onThisDay.length - 1} more</span></span>
+        <span class="chev muted">${ic('chevronRight')}</span></button>
+      <div class="otd-list" id="otd-${k}" hidden>${D.onThisDay.map((e) => html`<a class="otd-item" href="#entry"><img src="${M.src(M.images(e)[0])}" alt="${M.images(e)[0].alt}" width="40" height="40" loading="lazy" decoding="async"><span class="txt"><span class="t-small strong">${M.displayTitle(e)}</span><span class="t-meta">${M.yearsAgo(e.entryDate)}</span></span></a>`)}</div>
+    </div>`;
+  }
+  function openedRow() {
+    return html`<div class="opened-row">
+      <a class="txt" href="#opened" style="flex-direction:row;align-items:center;gap:12px;min-height:44px">
+        <span class="mark">${starIcon(24)}</span>
+        <span class="txt"><span class="t-small strong">A Loot Drop opened</span><span class="t-small muted">${OPENED.title}</span></span>
+      </a>
+      <button class="icon-btn x" type="button" aria-label="Dismiss">${ic('x')}</button>
+    </div>`;
+  }
+
+  function weekline(era, w) {
+    const s = M.weekStats(w);
+    const img = M.cover(era);
+    return html`<div class="weekline">
+      <a class="era-link" href="#era">${img ? html`<img src="${img}" alt="" width="32" height="32" loading="lazy" decoding="async">` : html`<span class="initial" aria-hidden="true">${era.title[0]}</span>`}<span>${era.title}</span></a>
+      <a class="week-link" href="#week"><span>${M.weekLabel(w)} · ${plural(s.entryCount, 'entry', 'entries')}</span>${ic('chevronRight', 16)}</a>
+    </div>`;
+  }
+
+  function post(e, showDay, first) {
+    const imgs = M.images(e), vns = M.voiceNotes(e);
+    const hasHeadings = (e.contentJson?.content || []).some((n) => n.type === 'heading');
+    const text = e.contentJson ? (hasHeadings ? html`<p>${M.previewLine(e)}</p>` : M.caption(e.contentJson)) : '';
+    return html`<article class="post" data-entry="${e.id}">
+      ${showDay ? html`<p class="day">${dayLine(e.entryDate)}</p>${marginDate(e.entryDate)}` : ''}
+      ${imgs.length ? swipe(imgs, { first, label: M.displayTitle(e) }) : ''}
+      <div class="post-body">
+        ${e.title ? html`<h3 class="t-title"><a href="#entry">${e.title}</a></h3>` : (!text ? html`<h3 class="t-small muted"><a href="#entry">${M.displayTitle(e)}</a></h3>` : '')}
+        ${text ? html`<div class="clamp">${text}</div>` : ''}
+        ${vns.map(voice)}
+        ${e.soundtrack ? sound(e.soundtrack) : ''}
+        ${e.tags.length ? html`<p class="tags">${e.tags.map((t, i) => html`${i ? ', ' : ''}<a href="#timeline">${t.name}</a>`)}</p>` : ''}
+      </div>
+    </article>`;
+  }
+
+  // A sealed card. Under a day line it leaves the memory date out: the line already says it (D-10 update).
+  function sealedCard(e, underDay) {
+    const v = M.sealedView(e);
+    const total = daysBetween(v.memoryDate, v.unlockDay);
+    const travelled = daysBetween(v.memoryDate, M.today());
+    return html`<div class="sealed-wrap">${underDay ? '' : marginDate(v.memoryDate)}
+      <a class="sealed" href="#loot" data-sealed aria-label="${`Loot Drop. ${underDay ? '' : 'Written ' + M.date(v.memoryDate, 'long') + '. '}${v.opens}, ${v.countdown}`}">
+        <span>${starDrawing(travelled / total)}</span>
+        <span class="facts">${underDay ? '' : html`<span class="t-small strong">${M.date(v.memoryDate, 'dayLong')}</span>`}
+          <span class="t-small muted">Opens ${M.date(v.unlockDay, 'weekdayShort')} ${M.date(v.unlockDay, 'medium')}</span>
+          <span class="count">${v.countdown}</span></span>
+      </a></div>`;
+  }
+
+  function feedPosts({ otdAfterFirst = false } = {}) {
+    let count = 0;
+    return html`${M.feedGroups().map((g) => html`<section aria-label="${g.era.title}">
+      ${g.weeks.map((w) => html`${weekline(g.era, w)}<div class="posts">${w.entries.map((e, i) => {
+        const prev = w.entries[i - 1];
+        const newDay = !prev || prev.entryDate !== e.entryDate;
+        if (M.isSealed(e)) return sealedCard(e, !newDay);
+        const out = html`${post(e, newDay, count === 0)}${otdAfterFirst && count === 0 ? html`<div class="otd-col">${otdRow('after')}</div>` : ''}`;
+        count++;
+        return out;
+      })}</div>`)}
+    </section>`)}`;
+  }
+
+  function rail() {
+    return html`<aside class="rail" aria-labelledby="rail-h"><h2 id="rail-h">On this day</h2>
+      ${D.onThisDay.map((e) => html`<a class="otd-item" href="#entry"><img src="${M.src(M.images(e)[0])}" alt="${M.images(e)[0].alt}" width="64" height="64" loading="lazy" decoding="async"><span class="txt"><span class="t-small strong">${M.displayTitle(e)}</span><span class="t-meta">${M.yearsAgo(e.entryDate)}</span></span></a>`)}</aside>`;
+  }
+
+  function feedBody({ opened = false } = {}) {
+    return html`<div class="feed-grid"><div>
+      ${opened ? openedRow() : html`<div class="otd-col">${otdRow('top')}</div>`}
+      ${feedPosts({ otdAfterFirst: opened })}
+    </div>${rail()}</div>`;
+  }
+
+  // ---------- Entry ----------
+  function entryBody() {
+    const e = M.featured.entry();
+    const w = M.weekOf(e.id);
+    const tpl = M.template(e.templateId);
+    const eras = w.eras.map((x) => html`<a href="#era">${x.title}</a>`);
+    return html`<article class="entry-wrap" data-entry="${e.id}">
+      <div class="entry-photos">${swipe(M.images(e), { first: true, whole: true, link: null, label: e.title })}</div>
+      <header class="entry-head"><p class="t-small muted">${M.date(e.entryDate, 'long')}</p><h1 class="t-heading">${e.title}</h1></header>
+      <div class="entry-text t-read">${M.caption(e.contentJson, { headingTag: 'h2' })}</div>
+      <div class="entry-extras">${M.voiceNotes(e).map(voice)}${sound(e.soundtrack)}
+        <div class="chips">${e.tags.map((t) => html`<a class="chip" href="#timeline">${t.name}</a>`)}</div></div>
+      <p class="filed t-small muted links">In ${eras[0]} and ${eras[1]}. Written from the ${tpl.name} template.</p>
+    </article>`;
+  }
+
+  // ---------- Era ----------
+  // The constellation: every week of the Era as a star, sized by its entries. A picture of the Era's shape;
+  // the list below does the finding (FEEDBACK.md, round 2 answers).
+  const FIGURE = [[47, 74], [56, 63], [65, 71], [71, 52], [64, 38], [77, 26], [89, 37]];
+  const JAPAN = [[16, 34], [24, 24], [29, 38]];
+  function constellation(page) {
+    const series = M.eraSeries(page.era.id);
+    const listed = series.filter((s) => s.listed);
+    const japan = series.filter((s) => s.title === 'Japan, finally');
+    const others = series.filter((s) => !s.listed && s.title !== 'Japan, finally');
+    const rnd = M.seeded('brunswick-sky');
+    const taken = [...FIGURE, ...JAPAN];
+    const placed = others.map((s) => {
+      let pt;
+      for (let tries = 0; tries < 60; tries++) {
+        pt = [4 + rnd() * 92, 6 + rnd() * 88];
+        if (taken.every((q) => Math.hypot((pt[0] - q[0]) * 1.4, pt[1] - q[1]) > 7)) break;
+      }
+      taken.push(pt);
+      return { ...s, p: pt };
+    });
+    const size = (n, big) => (big ? 6 + n * 1.2 : 2 + n * 0.5).toFixed(1);
+    const line = (pts) => 'M' + pts.map((q) => q.join(' ')).join('L');
+    const dot = (pt, n, big) => html`<i class="${big ? 'bright' : ''}" style="left:${pt[0].toFixed(1)}%;top:${pt[1].toFixed(1)}%;width:${size(n, big)}px;height:${size(n, big)}px"></i>`;
+    return html`<div class="sky" role="img" aria-label="${`The ${page.totals.weekCount} weeks of ${page.era.title} as stars, each sized by its entries. The newest weeks form its brightest figure; Japan, finally makes a small one of its own.`}">
+      <svg class="lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${line(FIGURE)}"/><path d="${line(JAPAN)}"/></svg>
+      ${placed.map((s) => dot(s.p, s.entryCount))}${japan.map((s, i) => dot(JAPAN[i], s.entryCount, true))}${listed.map((s, i) => dot(FIGURE[i], s.entryCount, true))}
+    </div>`;
+  }
+
+  function eraBody() {
+    const page = M.eraPage(D.featured.eraId);
+    const e = page.era, t = page.totals;
+    return html`<div class="era-hero">
+        <figure class="era-cover"><img src="${M.cover(e)}" alt="A row of Victorian terrace houses with iron lace verandas" width="1800" height="1200" fetchpriority="high" decoding="async"></figure>
+        <div class="band">
+          <h1 class="t-display">${e.title}</h1>
+          <p class="t-small muted">${M.range(e.startDate, e.endDate)} · ${page.span}</p>
+          <p>${e.description}</p>
+          ${sound(e.soundtrack)}
+          <div class="stats">
+            ${[[t.weekCount, 'weeks'], [t.entryCount, 'entries'], [t.photoCount, 'photos'], [t.voiceNoteCount, 'voice notes']].map(([n, l]) => html`<div><span class="t-title">${n.toLocaleString('en-AU')}</span><span class="t-meta">${l}</span></div>`)}
+          </div>
+        </div>
+      </div>
+      <div class="era-lower">
+        <section class="section" aria-labelledby="sky-h" style="padding-top:32px">
+          <h2 id="sky-h">Its weeks as stars</h2>
+          ${constellation(page)}
+        </section>
+        <div>
+          <section class="section" aria-labelledby="wk-h" style="padding-top:32px">
+            <h2 id="wk-h">Weeks</h2>
+            <div class="rows">
+              ${page.rows.map((r) => html`<a class="leader" href="#week">
+                <span class="name"><span>${r.title}</span>${r.title === M.range(r.startDate, r.endDate) ? '' : html`<span class="t-meta">${M.range(r.startDate, r.endDate)}</span>`}</span>
+                <span class="dots-line" aria-hidden="true"></span><span class="n">${plural(r.entryCount, 'entry', 'entries')}</span></a>`)}
+            </div>
+            <button class="btn secondary" type="button">Show ${page.notListedWeeks} earlier weeks</button>
+          </section>
+          <section class="section" aria-labelledby="in-h">
+            <h2 id="in-h">Eras inside this one</h2>
+            <div class="rows">${page.chaptersInside.map((c) => eraRow(c, false))}</div>
+          </section>
+        </div>
+      </div>`;
+  }
+
+  // ---------- Eras ----------
+  function eraRow(e, inside) {
+    const img = M.cover(e);
+    return html`<a class="era-row ${inside ? 'inside' : ''}" href="#era">
+      ${img ? html`<img src="${img}" alt="" width="64" height="64" loading="lazy" decoding="async">` : html`<span class="initial" aria-hidden="true">${e.title[0]}</span>`}
+      <span class="txt" style="flex:1;display:flex;flex-direction:column"><span class="t-title">${e.title}</span><span class="t-small muted">${M.range(e.startDate, e.endDate)} · ${M.span(e.startDate, e.endDate)}</span></span>
+      <span class="muted">${ic('chevronRight')}</span></a>`;
+  }
+  function erasBody() {
+    const byId = (id) => M.era(id);
+    return html`<div class="narrow"><div class="page-head"><div class="row"><h1 class="t-heading">Eras</h1><button class="btn secondary" type="button">${ic('plus')}New Era</button></div></div>
+      <div class="section"><div class="rows">
+        ${eraRow(byId('era-brunswick'), false)}${eraRow(byId('era-grampians'), true)}${eraRow(byId('era-japan'), true)}${eraRow(byId('era-uni'), false)}
+      </div></div></div>`;
+  }
+
+  // ---------- Week summary (F-15, D-25) ----------
+  // Small media counts for a row: a photo icon and how many, a microphone and how many, then any extra text.
+  function kinds(e, extra = '') {
+    const n = M.images(e).length, v = M.voiceNotes(e).length;
+    if (!n && !v && !extra) return '';
+    return html`<span class="kinds t-small">${n ? html`<span class="k">${ic('image', 16)}${n}</span>` : ''}${v ? html`<span class="k">${ic('mic', 16)}${v}</span>` : ''}${extra ? html`<span>${extra}</span>` : ''}</span>`;
+  }
+  function weekBody() {
+    const w = D.weeks[1];
+    const s = M.weekStats(w);
+    const eras = w.eras.map((x) => html`<a href="#era">${x.title}</a>`);
+    return html`<div class="narrow">
+      <div class="page-head"><h1 class="t-heading">${M.weekLabel(w)}</h1><p class="t-small muted links">${M.range(w.startDate, w.endDate)}, in ${eras[0]} and ${eras[1]}</p></div>
+      <div class="section">
+        <div class="stats" style="--n:3">${[[s.entryCount, 'entry', 'entries'], [s.photoCount, 'photo'], [s.voiceNoteCount, 'voice note']].map(([n, one, many]) => html`<div><span class="t-title">${n}</span><span class="t-meta">${(n === 1 ? one : many || one + 's')}</span></div>`)}</div>
+        <div class="thumb-grid">${s.thumbs.slice(0, 10).map((m) => html`<img src="${M.src(m)}" alt="${m.alt}" width="120" height="120" loading="lazy" decoding="async">`)}</div>
+        <div class="chips">${s.tags.map((t) => html`<a class="chip" href="#timeline">${t.name} <span>${t.count}</span></a>`)}</div>
+      </div>
+      <section class="section" aria-labelledby="bars-h"><h2 id="bars-h">Entries</h2>
+        <div class="rows">${w.entries.map((e) => {
+          if (M.isSealed(e)) {
+            const v = M.sealedView(e);
+            return html`<a class="bar" href="#loot" data-sealed><span class="t-small muted">${shortDay(v.memoryDate)}</span><span class="t-small">Loot Drop · Opens ${M.date(v.unlockDay, 'medium')}</span><span class="sealed-mark">${starIcon(16)}</span></a>`;
+          }
+          return html`<a class="bar" href="#entry"><span class="t-small muted">${shortDay(e.entryDate)}</span><span>${M.displayTitle(e)}</span>${kinds(e)}</a>`;
+        })}</div>
+        <div class="chips" style="gap:8px"><button class="btn secondary" type="button">Rename week</button><button class="btn secondary" type="button">Close week</button></div>
+      </section></div>`;
+  }
+
+  // ---------- Timeline (F-16) ----------
+  function timelineBody() {
+    const all = [...D.weeks.flatMap((w) => w.entries), ...D.onThisDay].sort((a, b) => (a.entryDate === b.entryDate ? (a.createdAt < b.createdAt ? 1 : -1) : a.entryDate < b.entryDate ? 1 : -1));
+    const months = [];
+    for (const e of all) {
+      const key = e.entryDate.slice(0, 7);
+      if (!months.length || months[months.length - 1].key !== key) months.push({ key, entries: [] });
+      months[months.length - 1].entries.push(e);
+    }
+    const row = (e) => {
+      if (M.isSealed(e)) {
+        const v = M.sealedView(e);
+        return html`<a class="tl-row" href="#loot" data-sealed><span class="when"><span class="t-title">${M.date(v.memoryDate, 'dayMonth')}</span><span class="t-meta">${M.date(v.memoryDate, 'weekdayShort')}</span></span>
+          <span class="what"><span class="one gold" style="display:flex;align-items:center;gap:8px">${starIcon(16)}<span class="strong">Loot Drop</span></span><span class="t-small muted">Opens ${M.date(v.unlockDay, 'medium')}</span></span></a>`;
+      }
+      return html`<a class="tl-row" href="#entry"><span class="when"><span class="t-title">${M.date(e.entryDate, 'dayMonth')}</span><span class="t-meta">${M.date(e.entryDate, 'weekdayShort')}</span></span>
+        <span class="what"><span class="one">${M.displayTitle(e)}</span>${kinds(e, e.tags.map((t) => t.name).join(', '))}</span></a>`;
+    };
+    return html`<div class="narrow"><div class="page-head"><h1 class="t-heading">Timeline</h1></div>
+      <div class="filter" role="group" aria-label="Filter by tag"><button class="chip" type="button" aria-pressed="true">All entries</button>${D.tags.map((t) => html`<button class="chip" type="button" aria-pressed="false">${t.name}</button>`)}</div>
+      ${months.map((m) => html`<h2 class="month t-small strong muted">${M.date(m.key + '-01', 'monthYear')}</h2><div>${m.entries.map(row)}</div>`)}</div>`;
+  }
+
+  // ---------- Loot Drop, sealed (F-07) ----------
+  function lootBody() {
+    const e = M.featured.lootDrop();
+    const v = M.sealedView(e);
+    const total = daysBetween(v.memoryDate, v.unlockDay);
+    const travelled = daysBetween(v.memoryDate, M.today());
+    return html`<div class="loot-wrap"><div class="loot">
+      <div role="img" aria-label="${`A star whose light set out on ${M.date(v.memoryDate, 'long')}. It has travelled ${travelled} days of ${total}.`}">${starDrawing(travelled / total, { dust: true })}</div>
+      <div class="ends"><span class="t-meta">Written ${M.date(v.memoryDate, 'medium')}</span><span class="t-meta">You</span></div>
+      <div class="words">
+        <p class="t-display gold">${v.countdown}</p>
+        <h1 class="t-title">${keepAmPm(v.opens)}</h1>
+        <p class="muted">Its light is still on its way to you. Nobody can open or change this Loot Drop before then, you included.</p>
+      </div>
+      <div class="actions"><button class="btn secondary" type="button">${ic('clock')}Extend the seal</button><button class="btn quiet" type="button">Delete</button></div>
+    </div></div>`;
+  }
+
+  // ---------- Loot Drop, opened (F-07, D-33) ----------
+  function openedBody() {
+    return html`<div class="loot-wrap"><div class="loot">
+      <div role="img" aria-label="The star's light has arrived.">${starDrawing(1, { dust: true, arrived: true })}</div>
+      <div class="ends"><span class="t-meta">Written ${M.date(OPENED.entryDate, 'medium')}</span><span class="t-meta">Opened yesterday</span></div>
+      <div class="words"><h1 class="t-heading">${OPENED.title}</h1></div>
+      <div class="entry-text t-read" style="padding:0">${M.caption(OPENED.contentJson, { headingTag: 'h2' })}</div>
+      <p class="t-small muted">Written from the Letter to future me template.</p>
+      <div class="actions"><a class="btn primary" href="#write">${ic('pen')}Reply to past you</a></div>
+    </div></div>`;
+  }
+
+  // ---------- Write (F-02 to F-06, F-11) ----------
+  function writeSheet({ sealOpen = false } = {}) {
+    const d = M.draft();
+    const e = d.entry;
+    const imgs = M.images(e), vns = M.voiceNotes(e);
+    const tpl = M.template(e.templateId);
+    const sugg = M.sealSuggestions();
+    const pick = sugg.find((s) => s.key === 'year');
+    const quick = (name) => html`<div class="quick">${sugg.map((s) => html`<label><input type="radio" name="${name}" value="${s.key}" ${sealOpen && s.key === 'year' ? raw('checked') : ''}><span class="txt"><span class="strong">${s.label}</span><span class="t-small muted">${M.date(s.day, 'weekdayShort')} ${M.date(s.day, 'medium')}</span></span></label>`)}
+      <label><input type="radio" name="${name}" value="pick"><span class="txt"><span class="strong">Pick a date</span></span></label></div>`;
+    return html`<div class="layer" role="dialog" aria-modal="true" aria-labelledby="write-h">
+      <form class="sheet" onsubmit="return false">
+        <div class="sheet-bar">
+          <a class="btn quiet" href="#feed">Cancel</a>
+          <div class="mid"><h1 id="write-h" class="t-small strong">New entry</h1><p class="t-meta" aria-live="polite">Draft saved ${M.time(d.savedAt)}</p></div>
+          <button class="btn primary" type="submit">Save</button>
+        </div>
+        <div class="sheet-body two">
+          <div class="col">
+            <div class="chips">
+              <button class="chip" type="button" aria-label="${'Memory date: today, ' + M.date(e.entryDate, 'day') + '. Change'}">${ic('calendar', 16)}Today, ${M.date(e.entryDate, 'day')}</button>
+              <button class="chip" type="button" aria-label="${'Template: ' + tpl.name + '. Change'}">${ic('layers', 16)}${tpl.name}</button>
+            </div>
+            <input class="title-input" type="text" value="${e.title}" placeholder="Title (optional)" aria-label="Title, optional">
+            <div class="fmt" role="toolbar" aria-label="Formatting">
+              <button class="icon-btn" type="button" aria-label="Bold">${ic('bold')}</button><button class="icon-btn" type="button" aria-label="Italic">${ic('italic')}</button>
+              <button class="icon-btn" type="button" aria-label="Heading">${ic('heading')}</button><button class="icon-btn" type="button" aria-label="Bulleted list">${ic('list')}</button>
+            </div>
+            <div class="editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Entry text">${M.caption(e.contentJson, { headingTag: 'h3' })}</div>
+          </div>
+          <div class="col">
+            <div class="attach" role="group" aria-label="Photos">${imgs.map((m) => html`<img src="${M.src(m)}" alt="${m.alt}" width="72" height="72" decoding="async">`)}<button class="add" type="button">${ic('plus')}Add</button></div>
+            ${vns.map(voice)}
+            <div class="chips">${e.tags.map((t) => html`<span class="chip">${t.name}</span>`)}<button class="chip" type="button">${ic('plus', 16)}Tag</button></div>
+            ${sound(e.soundtrack, 'Change')}
+            <fieldset class="seal-inline"><legend>${starIcon(18)}Seal as Loot Drop</legend>
+              <p class="t-small muted">Nobody, including you, can open it until the day you pick.</p>${quick('seal-inline')}</fieldset>
+          </div>
+        </div>
+        <div class="tools" role="toolbar" aria-label="Add to this entry">
+          <button type="button">${ic('image', 24)}Photo</button><button type="button">${ic('mic', 24)}Voice</button>
+          <button type="button">${ic('tag', 24)}Tag</button><button type="button">${ic('music', 24)}Song</button>
+          <a class="seal" href="#write-seal" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:var(--text-meta);line-height:1.5;color:var(--accent);font-weight:600">${starIcon(24)}Seal</a>
+        </div>
+        ${sealOpen ? html`<a class="scrim" href="#write" aria-label="Close"></a>
+        <div class="panel" role="dialog" aria-labelledby="seal-h">
+          <h2 id="seal-h" class="t-title">Seal as Loot Drop</h2>
+          <p class="t-small muted">Nobody, including you, can open it until the day you pick. You can make the wait longer later, never shorter.</p>
+          ${quick('seal')}
+          <p class="seal-summary"><span class="t-small muted">Opens</span><span class="strong">${keepAmPm(pick.opens.replace(/^Opens /, ''))}</span></p>
+          <button class="btn primary block" type="button">${starIcon(20)}Seal it</button>
+        </div>` : ''}
+      </form></div>`;
+  }
+
+  // ---------- Photo dump (F-19, D-34) ----------
+  function dumpSheet() {
+    const total = DUMP.reduce((n, g) => n + g.files.length, 0);
+    return html`<div class="layer" role="dialog" aria-modal="true" aria-labelledby="dump-h"><div class="sheet">
+      <div class="sheet-bar"><a class="btn quiet" href="#feed">Cancel</a>
+        <div class="mid"><h1 id="dump-h" class="t-small strong">Photo dump</h1><p class="t-meta">${total} photos</p></div>
+        <button class="btn primary" type="button">File them</button></div>
+      <div class="sheet-body">
+        <p class="muted">One entry for each day the photos were taken. Add words to them later.</p>
+        ${DUMP.map((g) => html`<section class="day-group" aria-label="${g.day ? M.date(g.day, 'dayLong') : 'Date unknown'}">
+          <div class="head"><span class="strong">${g.day ? M.date(g.day, 'dayLong') : 'Date unknown'}</span><span class="t-small muted">${plural(g.files.length, 'photo')}</span></div>
+          ${g.day ? '' : html`<div class="head"><span class="t-small muted">Filed under today until you change its date.</span><button class="btn secondary" type="button">Change date</button></div>`}
+          <div class="grid3">${g.files.map((f) => html`<img src="../../shared/photos/${f}.jpg" alt="" width="120" height="120" loading="lazy" decoding="async">`)}</div>
+        </section>`)}
+      </div></div></div>`;
+  }
+
+  // ---------- Templates (F-11, D-06) ----------
+  function templatesBody() {
+    const mine = ['tpl-trips', 'tpl-night-out'].map(M.template);
+    const gallery = ['tpl-spiralling', 'tpl-letter', 'tpl-week'].map(M.template);
+    return html`<div class="narrow"><div class="page-head"><div class="row"><h1 class="t-heading">Templates</h1><button class="btn secondary" type="button">${ic('plus')}New</button></div></div>
+      <section class="section" aria-labelledby="mine-h"><h2 id="mine-h">Yours</h2><div class="rows">
+        ${mine.map((t) => html`<a class="row-link" href="#templates"><span class="txt"><span class="strong">${t.name}</span><span class="t-small muted">${t.prompts.join(' · ')}</span></span><span class="chev">${ic('chevronRight')}</span></a>`)}</div></section>
+      <section class="section" aria-labelledby="gal-h"><h2 id="gal-h">Starter gallery</h2><p class="t-small muted">Add a copy, then change it however you like.</p><div class="rows">
+        ${gallery.map((t) => html`<div class="row-link"><span class="txt"><span class="strong">${t.name}</span><span class="t-small muted">${t.prompts.join(' · ')}</span></span><button class="btn secondary" type="button" aria-label="${'Add ' + t.name}">Add</button></div>`)}</div></section></div>`;
+  }
+
+  // ---------- You: settings (F-13) ----------
+  function youBody() {
+    const row = (href, label, value) => html`<a class="row-link" href="${href}"><span class="txt"><span>${label}</span></span><span class="val t-small">${value}</span><span class="chev">${ic('chevronRight')}</span></a>`;
+    const mode = document.documentElement.dataset.mode;
+    const follows = !/[?&]mode=(light|dark)/.test(location.search);
+    const opt = (value, label) => html`<label><input type="radio" name="appearance" value="${value}" ${(follows ? value === 'device' : value === mode) ? raw('checked') : ''}>${label}</label>`;
+    return html`<div class="narrow"><div class="page-head"><h1 class="t-heading">${D.user.displayName}</h1></div>
+      <section class="section" aria-labelledby="me-h"><h2 id="me-h">About you</h2><div class="rows">
+        ${row('#you', 'Display name', D.user.displayName)}${row('#you', 'Timezone', 'Melbourne')}${row('#you', 'Birthday', M.date(D.user.birthday, 'dayMonthLong'))}</div></section>
+      <section class="section" aria-labelledby="ap-h"><h2 id="ap-h">Appearance</h2>
+        <div class="segmented" role="radiogroup" aria-labelledby="ap-h">${opt('device', 'Match phone')}${opt('light', 'Light')}${opt('dark', 'Dark')}</div></section>
+      <section class="section" aria-labelledby="jr-h"><h2 id="jr-h">Your journal</h2><div class="rows">
+        ${row('#timeline', 'Tags', String(D.tags.length))}${row('#templates', 'Templates', '2')}${row('#deleted', 'Recently deleted', String(DELETED.length))}</div></section></div>`;
+  }
+
+  // ---------- Recently deleted (F-18, D-30) ----------
+  function deletedBody() {
+    return html`<div class="narrow"><div class="page-head"><h1 class="t-heading">Recently deleted</h1><p class="muted">Entries wait here for 30 days, then they are erased with their photos.</p></div>
+      <div class="section"><div class="rows">${DELETED.map((x) => x.sealed
+        ? html`<div class="del-row"><div class="top"><span class="ph gold">${starIcon(20)}</span><span class="txt"><span class="strong">Loot Drop, ${M.date(x.entryDate, 'medium')}</span><span class="t-small muted">Opens ${M.date(x.unlock, 'medium')}. Erased unopened on ${M.date(x.erases, 'dayMonth').replace(' ', ' ')}</span></span></div>
+            <div class="acts"><button class="btn secondary" type="button">Restore, still sealed</button></div></div>`
+        : html`<div class="del-row"><div class="top">${x.photo ? html`<img src="../../shared/photos/${x.photo}.jpg" alt="" width="48" height="48" loading="lazy" decoding="async">` : html`<span class="ph">${ic('page')}</span>`}<span class="txt"><span class="strong">${x.title}</span><span class="t-small muted">${M.date(x.entryDate, 'medium')}. Erased on ${M.date(x.erases, 'dayMonth')}</span></span></div>
+            <div class="acts"><button class="btn secondary" type="button">Restore</button><button class="btn quiet" type="button">Erase now</button></div></div>`)}
+      </div></div></div>`;
+  }
+
+  // ---------- First run (D-33) and errors (F-14) ----------
+  function emptyBody() {
+    const inAYear = M.sealSuggestions().find((s) => s.key === 'year');
+    return html`<div class="narrow"><div class="empty">
+      <div class="art">${starDrawing(0.5)}</div>
+      <h2 class="t-heading">Your journal starts here</h2>
+      <p class="muted">Write about today, or bring in the photos from a day you want to keep. Each week files itself.</p>
+      <div class="acts"><a class="btn primary" href="#write">${ic('plus')}Write your first entry</a><a class="btn secondary" href="#dump">${ic('photos')}Photo dump</a></div>
+    </div>
+    <section class="letter" aria-labelledby="letter-h"><h2 id="letter-h" class="t-title">A letter to open in a year</h2>
+      <p class="muted">Write to the person you will be on ${M.date(inAYear.day, 'plain')}. It stays sealed until then, even from you.</p>
+      <a class="btn secondary" href="#write">${starIcon(20)}Write the letter</a></section></div>`;
+  }
+  function errorBody() {
+    return html`<div class="narrow"><div class="empty">
+      <span class="muted">${ic('cloudOff', 24)}</span>
+      <h2 class="t-title">Can't reach memoirist</h2>
+      <p class="muted">Check your connection, then try again. Anything you were writing is still here.</p>
+      <div class="acts"><button class="btn secondary" type="button">${ic('refresh')}Try again</button></div>
+    </div></div>`;
+  }
+
+  // ---------- Render ----------
+  const SCREENS = ['feed', 'feed-opened', 'entry', 'era', 'eras', 'week', 'timeline', 'loot', 'opened', 'write', 'write-seal', 'dump', 'templates', 'you', 'deleted', 'empty', 'error'];
+  const current = () => (SCREENS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'feed');
+  const edit = html`<button class="btn quiet" type="button">Edit</button>`;
+  function render(screen) {
+    swipeN = 0; wm = 0;
+    const fw = M.weekOf(D.featured.entryId);
+    let out;
+    switch (screen) {
+      case 'feed-opened': out = shell('feed', topHome(), feedBody({ opened: true })); break;
+      case 'entry': out = shell('feed', topBack('#feed', M.weekLabel(fw), edit), entryBody()); break;
+      case 'era': out = shell('eras', topBack('#eras', 'Eras', edit), eraBody()); break;
+      case 'eras': out = shell('eras', topHome(), erasBody()); break;
+      case 'week': out = shell('feed', topBack('#feed', 'Journal', edit), weekBody()); break;
+      case 'timeline': out = shell('timeline', topHome(), timelineBody()); break;
+      case 'loot': out = shell('feed', topBack('#feed', M.weekLabel(M.weekOf(D.featured.lootDropId))), lootBody()); break;
+      case 'opened': out = shell('feed', topBack('#feed', 'Journal'), openedBody()); break;
+      case 'write': case 'write-seal': out = html`<div inert aria-hidden="true">${shell('feed', topHome(), feedBody())}</div>${writeSheet({ sealOpen: screen === 'write-seal' })}`; break;
+      case 'dump': out = html`<div inert aria-hidden="true">${shell('feed', topHome(), feedBody())}</div>${dumpSheet()}`; break;
+      case 'templates': out = shell('templates', topBack('#you', 'You'), templatesBody()); break;
+      case 'you': out = shell('you', topHome(), youBody()); break;
+      case 'deleted': out = shell('deleted', topBack('#you', 'You'), deletedBody()); break;
+      case 'empty': out = shell('feed', topHome(), emptyBody()); break;
+      case 'error': out = shell('feed', topHome(), errorBody()); break;
+      default: out = shell('feed', topHome(), feedBody());
+    }
+    app.innerHTML = String(out);
+
+    // The dots follow the swipe; on a laptop the arrows move it.
+    document.querySelectorAll('.swipe').forEach((s) => {
+      const dots = document.querySelector(`[data-dots="${s.id}"]`);
+      if (!dots) return;
+      s.addEventListener('scroll', () => {
+        const i = slideIndex(s.scrollLeft, s.clientWidth, s.children.length);
+        dots.querySelectorAll('i').forEach((d, k) => d.classList.toggle('on', k === i));
+      }, { passive: true });
+    });
+    document.querySelectorAll('.otd-row').forEach((b) => b.addEventListener('click', () => {
+      const open = b.getAttribute('aria-expanded') !== 'true';
+      b.setAttribute('aria-expanded', String(open));
+      document.getElementById(b.getAttribute('aria-controls')).hidden = !open;
+    }));
+    document.querySelectorAll('.swipe-nav').forEach((b) => b.addEventListener('click', () => {
+      const s = document.getElementById(b.dataset.for);
+      s.scrollBy({ left: Number(b.dataset.step) * s.clientWidth, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }));
+  }
+
+  M.applyTheme();
+  const go = () => { const s = current(); document.documentElement.dataset.screen = s; render(s); window.scrollTo(0, 0); };
+  window.addEventListener('hashchange', go);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+})();
+</script>
+</body>
+</html>

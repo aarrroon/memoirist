@@ -14,6 +14,7 @@ Six ways memoirist could look, built before any real frontend so people can reac
 | `FEEDBACK.md` | What people said about each round, the choices made from it, and the agreed colour palettes |
 | `round-<n>/` | Later rounds, each planned from FEEDBACK.md and built overnight with [design-round.md](../../prompts/design-round.md) |
 | `round-2/` | Five designs, 7–11 (Afterglow, Starlight, Nightstand, Folio, Keepsake), refined from 4, 3 and 2 plus a wildcard, each in two of five palettes, light and dark, with a Write screen and a waiting-object Loot Drop. [PLAN](round-2/PLAN.md), [REPORT](round-2/REPORT.md), boards in `round-2/screenshots/boards/` |
+| `round-3/` | Design 12, Starlight refined: the round 2 winner drawn phone first in Black, white and gold, light and dark, with Folio's type and Era page, inside D-40, and the 17 screens Phase 1 needs. [PLAN](round-3/PLAN.md), [REPORT](round-3/REPORT.md), boards in `round-3/screenshots/boards/` |
 | `round-2/AUDIT.md` | The design and front-end audit of round 2 (2026-11-14): the ten things that make the mockups look cheap, with measurements. Its fixes are rules for the real frontend (`.claude/rules/design.md`, D-40) |
 | `tools/shoot.mjs` | Takes the screenshots and exports the boards through Chrome; needs Node 22 or later and nothing installed |
 | `tools/audit.mjs` | Checks a page against the design rule at phone and laptop width: spacing, text sizes, colours, contrast, tap targets, images and load speed. `--self-test` proves each check can fail. Needs Node 22 or later and Chrome |
