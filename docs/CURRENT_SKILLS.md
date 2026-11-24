@@ -15,6 +15,7 @@ Everything set up for working on memoirist with Claude Code, and when to use eac
 | Change the database | `/new-migration` |
 | Add or change an endpoint | `/new-endpoint` |
 | Get an independent review of your changes | `spec-reviewer` subagent |
+| Check a screen against the design rules at phone and laptop width | `node docs/design/explorations/tools/audit.mjs <url>` (D-40) |
 | Make sure the docs still match the code | `/sync-docs` |
 | Bring the docs in line after editing the README | `/sync-readme` |
 | Split the roadmap into features | [prompts/split-into-features.md](prompts/split-into-features.md) |
@@ -22,6 +23,7 @@ Everything set up for working on memoirist with Claude Code, and when to use eac
 | Get quizzed on a change before committing | `/review-with-me` |
 | Learn a topic properly, with a small exercise | `/teach` |
 | Record what you learned | `/log-learning` |
+| Get any answer in plain, short sentences, framed for learning | `/ste` |
 | Change how much Claude teaches as it works | Output style (see [LEARNING.md](LEARNING.md)) |
 
 ---
@@ -42,6 +44,7 @@ Type `/name` to run one. Skills marked **You only** run only when you type them;
 | `/review-with-me [scope]` | Tours the change file by file in reviewing order, then asks you 3–5 review questions (edge cases, design choices, spot-the-bug, what's missing) and grades each answer. Ends with a score, one strength and one thing to practise | After a task, before committing | No | **You only** |
 | `/teach [topic]` | A 15-minute lesson: the idea, how it works underneath, where it shows up in memoirist, a 5–10 minute exercise, and feedback | When something in the code or specs confuses you | No | **You only** |
 | `/log-learning [notes]` | Adds an entry to [LEARNING_LOG.md](LEARNING_LOG.md) from the session (or your notes) and updates the skills tracker (Seen → Tried → Can do) | End of a task, review or lesson; the other learning skills offer it | Yes (the log) | You or Claude |
+| `/ste [question \| rewrite text \| 90 question]` | Writes or rewrites an answer in "STE-80": about 80% of ASD-STE100 Simplified Technical English (short active sentences, one word per meaning, steps as commands), with listed exceptions for exact technical terms and trade-off reasoning. Frames it for learning: answer, why, syntax to recall, design view, review view, self-test with answers at the end | Any question or text where you want it short, clear and useful for learning; with no argument it rewrites Claude's last answer | No | You or Claude |
 | `ui-ux-pro-max` | Design intelligence: styles, palettes, fonts, UX checks (you installed it yourself) | Design work and UI reviews | Depends on the request | You or Claude |
 
 ## Subagents
@@ -49,7 +52,7 @@ A subagent starts fresh, without your conversation, so it gives a more independe
 
 | Subagent | What it checks | How to ask | Changes files? |
 |---|---|---|---|
-| `spec-reviewer` | Your changes against the README, API_CONTRACT, DATABASE_SCHEMA, DECISIONS, USER_FLOWS, all four rule files (with a checklist for sealed-entry leaks) and the task's "Done when". Verdict: Pass / Pass with notes / Changes needed | "Use the spec-reviewer subagent to review my uncommitted changes for task 3.5" | No (a hook keeps it read-only) |
+| `spec-reviewer` | Your changes against the README, API_CONTRACT, DATABASE_SCHEMA, DECISIONS, USER_FLOWS, the five code rule files (security, api, backend, frontend, design; with a checklist for sealed-entry leaks) and the task's "Done when". Verdict: Pass / Pass with notes / Changes needed | "Use the spec-reviewer subagent to review my uncommitted changes for task 3.5" | No (a hook keeps it read-only) |
 
 ## Hooks
 Hooks run automatically; you don't start them. They're configured in [.claude/settings.json](../.claude/settings.json).
@@ -70,6 +73,7 @@ Path-scoped instructions in [.claude/rules/](../.claude/rules/). Claude reads ea
 | `api.md` | Backend Java and API_CONTRACT.md | Paths, status codes, errors, pagination, uploads, OpenAPI, private input |
 | `security.md` | Backend and frontend source | Ownership (deleted entries count as missing), the dev header, Loot Drop redaction (counts and filters too), content safety, secrets, emails and metrics without content |
 | `frontend.md` | `frontend/**` | Structure, data fetching, time, editor, capture, styling, tests |
+| `design.md` | `frontend/**`, `docs/design/DESIGN.md` | The one design system (D-40), with the values of the chosen look (D-41, DESIGN.md): tokens, the spacing scale, text sizes, one accent, corners, tap targets, loading targets, the check to run after every fix, and which task fixes which problem from the round 2 audit |
 | `docs.md` | `docs/**`, `README.md` | Which doc wins, changing every mention together, IDs, README edits only with approval, house style |
 | `claude-config.md` | `.claude/**`, `CLAUDE.md`, `.mcp.json` | Keeping CLAUDE.md short, where instructions belong, writing and testing hooks, keeping this file current |
 
@@ -99,6 +103,7 @@ Paste these into a new session. They live in [prompts/](prompts/).
 |---|---|---|
 | [split-into-features.md](prompts/split-into-features.md) | Checks the phases are in a buildable order, proposes features (`Pn-xx`), then writes the feature index and Phase 1 briefs after you approve | Plan mode |
 | [overnight-phase-1.md](prompts/overnight-phase-1.md) | Builds Sprints 1–3 unattended as a workflow (one fresh agent per task), one stacked PR per sprint, never stopping: it uses documented defaults and reports assumptions and problems at the end. Checklist in [WORKFLOW.md §5](WORKFLOW.md#5-overnight-runs) | Auto mode, `learn-later` style |
+| [design-round.md](prompts/design-round.md) | Runs one round of design explorations unattended as a workflow: plans 4–5 designs from the newest feedback in `design/explorations/FEEDBACK.md`, builds each in two colour themes, light and dark, at phone and laptop width, holds every design to D-40's limits with `tools/audit.mjs --mockup`, and makes screenshot boards to message friends. Commits nothing | Auto mode, `learn-later` style |
 
 ## Output styles
 How much Claude teaches as it works. Switch with `/output-style <name>`; the values are explained in [LEARNING.md](LEARNING.md).
@@ -149,6 +154,9 @@ One ready-to-copy example for each tool. Swap in your own task, feature or quest
 | | `/teach` *(no topic: suggests three for the next sprint)* |
 | `/log-learning` | `/log-learning` *(after a review or lesson)* |
 | | `/log-learning finally understood why the service, not the controller, checks ownership` |
+| `/ste` | `/ste why does the service, not the controller, check ownership?` |
+| | `/ste` *(no argument: rewrites the last answer)* |
+| | `/ste 90 explain @Transactional` *(stricter: about 1 rule break in 10 sentences)* |
 | `ui-ux-pro-max` | `Use ui-ux-pro-max to propose 3 clearly different design directions for a private journaling PWA: one scrapbook, one editorial, one dark "time capsule". Give a palette, font pairing and card style for each.` |
 
 ### Subagent

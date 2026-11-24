@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>memoirist, design 12: Starlight, refined</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+<style>
+/* Boards to message to friends: each board is exported as one image (1600 px wide). */
+:root { --ground: #EDEDEB; --paper: #FFFFFF; --ink: #111111; --ink-2: #5B5B5B; --line: #DDDDDA; --gold: #8F6614; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); font: 400 16px/1.5 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, p, figure, ol { margin: 0; }
+.board { width: 1600px; margin: 0 auto 64px; padding: 64px; background: var(--paper); display: flex; flex-direction: column; gap: 32px; }
+.head { display: flex; flex-direction: column; gap: 8px; }
+.head h2, .head h1 { font: 500 48px/1.1 'Newsreader', Georgia, serif; letter-spacing: -.02em; display: flex; align-items: center; gap: 16px; }
+.num { display: inline-flex; align-items: center; justify-content: center; min-width: 56px; height: 48px; padding: 0 16px; border-radius: 999px; background: var(--ink); color: #FFFFFF; font: 600 24px/1 'Instrument Sans', sans-serif; letter-spacing: 0; }
+.lede { font-size: 20px; color: var(--ink-2); max-width: 70ch; }
+.row { display: grid; gap: 24px; align-items: start; }
+.row.p4 { grid-template-columns: repeat(4, 1fr); }
+.row.p5 { grid-template-columns: repeat(5, 1fr); }
+.row.l2 { grid-template-columns: repeat(2, 1fr); }
+figure { display: flex; flex-direction: column; gap: 12px; }
+figure img { width: 100%; height: auto; display: block; border-radius: 24px; border: 1px solid var(--line); }
+figure.laptop img { border-radius: 12px; }
+figcaption { font-size: 16px; font-weight: 600; color: var(--ink-2); line-height: 1.35; }
+figcaption small { display: block; font-weight: 400; }
+.notes { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; padding-top: 8px; }
+.notes h3 { font: 600 18px/1.3 'Instrument Sans', sans-serif; margin-bottom: 8px; }
+.notes ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 17px; }
+.asks { padding: 24px 32px; border-radius: 24px; background: var(--ground); }
+.asks h3 { font: 600 20px/1.3 'Instrument Sans', sans-serif; }
+.asks ol { margin-top: 12px; padding-left: 24px; display: flex; flex-direction: column; gap: 4px; font-size: 18px; }
+.credits { border-top: 1px solid var(--line); padding-top: 16px; columns: 3; column-gap: 32px; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+.credits p { break-inside: avoid; margin-bottom: 4px; }
+.credits b { color: var(--ink); font-weight: 600; }
+.gold { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<section class="board" id="board-overview">
+  <div class="head">
+    <h1><span class="num">12</span>Starlight, refined</h1>
+    <p class="lede">The journal that won the last round, redrawn for the phone: photos edge to edge that you swipe, a clear line between entries, black, white and gold, and a Loot Drop that is a star whose light is still on its way to you.</p>
+  </div>
+  <div class="row p5">
+    <figure><img src="screenshots/light/feed-375.jpg" alt=""><figcaption>Your journal<small>Light</small></figcaption></figure>
+    <figure><img src="screenshots/dark/feed-375.jpg" alt=""><figcaption>Your journal<small>Dark</small></figcaption></figure>
+    <figure><img src="screenshots/light/feed-sealed-375.jpg" alt=""><figcaption>A sealed Loot Drop in the feed</figcaption></figure>
+    <figure><img src="screenshots/dark/loot-375.jpg" alt=""><figcaption>The Loot Drop<small>Dark</small></figcaption></figure>
+    <figure><img src="screenshots/light/write-375.jpg" alt=""><figcaption>Writing an entry</figcaption></figure>
+  </div>
+  <div class="asks">
+    <h3>Four quick questions</h3>
+    <ol>
+      <li>Would you open this at 11pm to write about your day?</li>
+      <li>Does the star make you want to seal something for next year?</li>
+      <li>Light or dark?</li>
+      <li>What would you change?</li>
+    </ol>
+  </div>
+  <div class="credits" data-credits></div>
+</section>
+
+<section class="board" id="board-journal">
+  <div class="head"><h2><span class="num">12</span>Reading your journal</h2>
+    <p class="lede">The feed, one entry, a week, every entry at once, an Era and its weeks, and a Loot Drop before and after it opens.</p></div>
+  <div class="row p5">
+    <figure><img src="screenshots/light/feed-375.jpg" alt=""><figcaption>Journal</figcaption></figure>
+    <figure><img src="screenshots/light/entry-375.jpg" alt=""><figcaption>An entry, photos whole</figcaption></figure>
+    <figure><img src="screenshots/light/week-375.jpg" alt=""><figcaption>A week</figcaption></figure>
+    <figure><img src="screenshots/light/timeline-375.jpg" alt=""><figcaption>Timeline</figcaption></figure>
+    <figure><img src="screenshots/light/era-375.jpg" alt=""><figcaption>An Era</figcaption></figure>
+    <figure><img src="screenshots/light/eras-375.jpg" alt=""><figcaption>Eras</figcaption></figure>
+    <figure><img src="screenshots/light/loot-375.jpg" alt=""><figcaption>A sealed Loot Drop</figcaption></figure>
+    <figure><img src="screenshots/light/feed-opened-375.jpg" alt=""><figcaption>The day one opens</figcaption></figure>
+    <figure><img src="screenshots/light/opened-375.jpg" alt=""><figcaption>Opened, with a reply</figcaption></figure>
+    <figure><img src="screenshots/light/feed-sealed-375.jpg" alt=""><figcaption>Further down the feed</figcaption></figure>
+  </div>
+  <div class="notes">
+    <div><h3>Good</h3><ul>
+      <li>Photos fill the phone and swipe, with a hairline and space between entries.</li>
+      <li>The first photo starts a quarter of the way down: the moon line, On this day and one line for the Era and the week sit above it.</li>
+      <li>The star shows how much of the wait has passed, and the date is said once.</li>
+    </ul></div>
+    <div><h3>Watch out</h3><ul>
+      <li>A wait that has just started barely lights the trail: the countdown does the talking for the first weeks.</li>
+      <li>The Era's black title band is the heaviest thing in the app. It might want to be a grey.</li>
+      <li>Long Era and week names share one line and wrap to two.</li>
+    </ul></div>
+  </div>
+  <div class="credits" data-credits></div>
+</section>
+
+<section class="board" id="board-writing">
+  <div class="head"><h2><span class="num">12</span>Writing, and the rest</h2>
+    <p class="lede">Writing an entry and sealing it, a photo dump, templates, settings, Recently deleted, the very first screen, and what you see when the app can't connect.</p></div>
+  <div class="row p4">
+    <figure><img src="screenshots/light/write-375.jpg" alt=""><figcaption>Writing an entry<small>Seal is always in the bar at the bottom</small></figcaption></figure>
+    <figure><img src="screenshots/light/write-seal-375.jpg" alt=""><figcaption>Seal as Loot Drop</figcaption></figure>
+    <figure><img src="screenshots/light/dump-375.jpg" alt=""><figcaption>Photo dump</figcaption></figure>
+    <figure><img src="screenshots/light/templates-375.jpg" alt=""><figcaption>Templates</figcaption></figure>
+    <figure><img src="screenshots/light/you-375.jpg" alt=""><figcaption>You</figcaption></figure>
+    <figure><img src="screenshots/light/deleted-375.jpg" alt=""><figcaption>Recently deleted</figcaption></figure>
+    <figure><img src="screenshots/light/empty-375.jpg" alt=""><figcaption>The first time you open it</figcaption></figure>
+    <figure><img src="screenshots/light/error-375.jpg" alt=""><figcaption>When it can't connect</figcaption></figure>
+  </div>
+  <div class="credits" data-credits></div>
+</section>
+
+<section class="board" id="board-dark">
+  <div class="head"><h2><span class="num">12</span>At night</h2>
+    <p class="lede">Dark mode is designed on its own: charcoal rather than black, off-white text and a softer gold. It follows your phone's setting unless you choose.</p></div>
+  <div class="row p4">
+    <figure><img src="screenshots/dark/feed-375.jpg" alt=""><figcaption>Journal</figcaption></figure>
+    <figure><img src="screenshots/dark/entry-375.jpg" alt=""><figcaption>An entry</figcaption></figure>
+    <figure><img src="screenshots/dark/era-375.jpg" alt=""><figcaption>An Era</figcaption></figure>
+    <figure><img src="screenshots/dark/timeline-375.jpg" alt=""><figcaption>Timeline</figcaption></figure>
+    <figure><img src="screenshots/dark/loot-375.jpg" alt=""><figcaption>A sealed Loot Drop</figcaption></figure>
+    <figure><img src="screenshots/dark/opened-375.jpg" alt=""><figcaption>Opened</figcaption></figure>
+    <figure><img src="screenshots/dark/write-seal-375.jpg" alt=""><figcaption>Sealing an entry</figcaption></figure>
+    <figure><img src="screenshots/dark/feed-sealed-375.jpg" alt=""><figcaption>Further down the feed</figcaption></figure>
+  </div>
+  <div class="credits" data-credits></div>
+</section>
+
+<section class="board" id="board-laptop">
+  <div class="head"><h2><span class="num">12</span>On a laptop</h2>
+    <p class="lede">The same journal with room to spare: the dates sit in the margin, On this day moves to the right, and writing opens as a window over your journal.</p></div>
+  <div class="row l2">
+    <figure class="laptop"><img src="screenshots/light/feed-1440.jpg" alt=""><figcaption>Journal</figcaption></figure>
+    <figure class="laptop"><img src="screenshots/dark/era-1440.jpg" alt=""><figcaption>An Era, dark</figcaption></figure>
+    <figure class="laptop"><img src="screenshots/light/entry-1440.jpg" alt=""><figcaption>An entry</figcaption></figure>
+    <figure class="laptop"><img src="screenshots/dark/write-1440.jpg" alt=""><figcaption>Writing, dark</figcaption></figure>
+  </div>
+  <div class="credits" data-credits></div>
+</section>
+
+<script>
+// Photo credits on every board (CC BY-SA asks for them wherever the photos appear).
+fetch('../shared/photos/credits.json').then((r) => r.json()).then((list) => {
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const lines = list.map((c) => `<p><b>${esc(c.title)}</b>, ${esc(c.creator || 'unknown')}, ${esc(c.license)}, via ${esc(c.via)}</p>`).join('');
+  document.querySelectorAll('[data-credits]').forEach((el) => { el.innerHTML = `<p><b>Photos</b></p>${lines}`; });
+});
+</script>
+</body>
+</html>

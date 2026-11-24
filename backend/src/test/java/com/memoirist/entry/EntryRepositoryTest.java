@@ -18,12 +18,14 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * The entry finders (task 2.4): they only find the current user's entries, they leave out entries in Recently deleted
- * (D-30), and Recently deleted stays reachable through its own two queries.
+ * (D-30), and Recently deleted stays reachable through its own queries.
  *
  * <p>Every test runs in a transaction that is rolled back at the end. {@code em.flush()} writes pending changes to
  * Postgres and {@code em.clear()} empties the persistence context, so the next query reads the database, not memory.
@@ -150,7 +152,7 @@ class EntryRepositoryTest {
         em.flush();
         em.clear();
 
-        assertThat(entries.findDeletedByUserIdOrderByDeletedAtDesc(alice.getId()))
+        assertThat(entries.findDeletedPageByUserId(alice.getId(), PageRequest.of(0, 10)))
                 .extracting(Entry::getId)
                 .as("Alice's list: both of hers, latest deletion first, not the live one and not Bob's")
                 .containsExactly(second.getId(), first.getId());
@@ -277,6 +279,119 @@ class EntryRepositoryTest {
                         .orElseThrow()
                         .getTags())
                 .as("the entry stays; ON DELETE CASCADE removed only the link row")
+                .isEmpty();
+    }
+
+    // Recently deleted: the queries behind the page, the lock and the sweep (task 3.11, D-30)
+
+    @Test
+    void theDeletedPageHasATotalOrderAndCountsOnlyTheUsersDeletedEntries() {
+        Entry live = entries.save(Fixtures.entry(alice.getId(), aliceWeek));
+        List<Entry> sameInstant = List.of(
+                entries.save(Fixtures.entry(alice.getId(), aliceWeek)),
+                entries.save(Fixtures.entry(alice.getId(), aliceWeek)),
+                entries.save(Fixtures.entry(alice.getId(), aliceWeek)));
+        Entry older = entries.save(Fixtures.entry(alice.getId(), aliceWeek));
+        Entry bobsDeleted = entries.save(Fixtures.entry(bob.getId(), bobWeek));
+        sameInstant.forEach(entry -> entry.setDeletedAt(DELETED_SECOND));
+        older.setDeletedAt(DELETED_FIRST);
+        bobsDeleted.setDeletedAt(DELETED_SECOND);
+        em.flush();
+        em.clear();
+
+        Page<Entry> firstPage = entries.findDeletedPageByUserId(alice.getId(), PageRequest.of(0, 2));
+        Page<Entry> secondPage = entries.findDeletedPageByUserId(alice.getId(), PageRequest.of(1, 2));
+
+        assertThat(firstPage.getTotalElements())
+                .as("Alice's four, not the live one and not Bob's")
+                .isEqualTo(4);
+        assertThat(firstPage.getTotalPages()).isEqualTo(2);
+        // Postgres orders a uuid by its bytes, unsigned. Java's UUID.compareTo reads the two halves as signed numbers,
+        // so
+        // it puts an id that starts with 8 to f first; the lower-case text of the id sorts the way Postgres does.
+        List<UUID> tied = sameInstant.stream()
+                .map(Entry::getId)
+                .sorted(java.util.Comparator.comparing(UUID::toString).reversed())
+                .toList();
+        assertThat(firstPage.getContent())
+                .extracting(Entry::getId)
+                .as("the same instant: the id decides, newest id first")
+                .containsExactly(tied.get(0), tied.get(1));
+        assertThat(secondPage.getContent()).extracting(Entry::getId).containsExactly(tied.get(2), older.getId());
+        assertThat(firstPage.getContent()).extracting(Entry::getId).doesNotContain(live.getId());
+    }
+
+    @Test
+    void theLockedFinderFindsOnlyTheUsersOwnDeletedEntry() {
+        Entry deleted = entries.save(Fixtures.entry(alice.getId(), aliceWeek));
+        Entry live = entries.save(Fixtures.entry(alice.getId(), aliceWeek));
+        deleted.setDeletedAt(DELETED_FIRST);
+        em.flush();
+        em.clear();
+
+        assertThat(entries.findDeletedForUpdateByIdAndUserId(deleted.getId(), alice.getId()))
+                .as("Alice, her deleted entry")
+                .isPresent();
+        assertThat(entries.findDeletedForUpdateByIdAndUserId(deleted.getId(), bob.getId()))
+                .as("Bob, Alice's deleted entry")
+                .isEmpty();
+        assertThat(entries.findDeletedForUpdateByIdAndUserId(live.getId(), alice.getId()))
+                .as("Alice, a live entry of hers")
+                .isEmpty();
+    }
+
+    @Test
+    void theSweepListIsStrictlyBeforeTheCutoffAcrossUsersOldestFirst() {
+        Entry aliceOld = entries.save(Fixtures.entry(alice.getId(), aliceWeek));
+        Entry bobOlder = entries.save(Fixtures.entry(bob.getId(), bobWeek));
+        Entry onTheLine = entries.save(Fixtures.entry(alice.getId(), aliceWeek));
+        Entry young = entries.save(Fixtures.entry(alice.getId(), aliceWeek));
+        Entry live = entries.save(Fixtures.entry(alice.getId(), aliceWeek));
+        Instant cutoff = Instant.parse("2026-10-22T00:00:00Z");
+        bobOlder.setDeletedAt(cutoff.minusSeconds(3600));
+        aliceOld.setDeletedAt(cutoff.minusSeconds(1));
+        onTheLine.setDeletedAt(cutoff);
+        young.setDeletedAt(cutoff.plusSeconds(1));
+        em.flush();
+        em.clear();
+
+        assertThat(entries.findDeletedIdsBefore(cutoff))
+                .as("both users, the one that waited longest first, and not the one exactly on the line")
+                .containsExactly(bobOlder.getId(), aliceOld.getId());
+        assertThat(entries.findDeletedIdsBefore(cutoff.plusSeconds(1)))
+                .as("a second later, the entry on the line is due too")
+                .containsExactly(bobOlder.getId(), aliceOld.getId(), onTheLine.getId());
+        assertThat(live.getDeletedAt()).isNull();
+    }
+
+    @Test
+    void theSweepFinderFindsAnEntryOnlyWhileItIsStillDue() {
+        Entry due = entries.save(Fixtures.entry(alice.getId(), aliceWeek));
+        Entry restored = entries.save(Fixtures.entry(alice.getId(), aliceWeek));
+        Entry young = entries.save(Fixtures.entry(alice.getId(), aliceWeek));
+        Instant cutoff = Instant.parse("2026-10-22T00:00:00Z");
+        due.setDeletedAt(cutoff.minusSeconds(1));
+        restored.setDeletedAt(cutoff.minusSeconds(1));
+        young.setDeletedAt(cutoff.plusSeconds(1));
+        em.flush();
+        em.clear();
+        restored = entries.findDeletedByIdAndUserId(restored.getId(), alice.getId())
+                .orElseThrow();
+        restored.setDeletedAt(null);
+        em.flush();
+        em.clear();
+
+        assertThat(entries.findDeletedForSweep(due.getId(), cutoff))
+                .as("still due")
+                .isPresent();
+        assertThat(entries.findDeletedForSweep(restored.getId(), cutoff))
+                .as("restored since the list was read")
+                .isEmpty();
+        assertThat(entries.findDeletedForSweep(young.getId(), cutoff))
+                .as("not 30 days yet")
+                .isEmpty();
+        assertThat(entries.findDeletedForSweep(UUID.randomUUID(), cutoff))
+                .as("gone")
                 .isEmpty();
     }
 }

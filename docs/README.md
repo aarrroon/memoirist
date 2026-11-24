@@ -17,7 +17,8 @@ Where everything lives. For what the app is, see the [project README](../README.
 |---|---|
 | [PRD.md](PRD.md) | Vision, personas, glossary, phased roadmap |
 | [USER_FLOWS.md](USER_FLOWS.md) | Step-by-step flows (F-xx) with edge cases |
-| [design/](design/) | Design directions now; mockups and DESIGN.md later |
+| [design/](design/) | [DESIGN.md](design/DESIGN.md), the chosen look (D-41), and the directions and rounds of explorations, with friends' feedback, that led to it |
+| [marketing/PITCH.md](marketing/PITCH.md) | A short, persuasive version of the README for people who haven't heard of memoirist. Follows the README (D-27) |
 | [product/COMPETITOR_NOTES.md](product/COMPETITOR_NOTES.md) | Competitors and positioning (not needed for coding) |
 | [product/FEATURE_REVIEW.md](product/FEATURE_REVIEW.md) | Review of every feature: scores, gaps, proposed changes (R-xx) and new ideas, each with a status (not needed for coding) |
 

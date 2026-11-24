@@ -7,7 +7,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.ActiveProfiles;
@@ -21,6 +23,11 @@ import org.springframework.test.context.ActiveProfiles;
  * It earns that cost by checking the real app, which would catch a second place that creates the provider (a stray
  * {@code @Bean} method, say) that a one-class test can't see. It doesn't use {@code @IntegrationTest}, which fixes the
  * {@code test} profile, and it supplies the storage settings that {@code application-test.yml} would have.
+ *
+ * <p>Since task 3.2 the app has a {@code UserService} that needs a {@link CurrentUserProvider}, so under {@code prod}
+ * it would not start at all (that is the point: nothing may run without a way to say who the user is, see {@code
+ * CurrentUserProfileTest#anAppThatNeedsAProviderDoesNotStartWithoutOne}). This test therefore stands in for Phase 2's
+ * JWT provider with {@link PhaseTwoStandIn}, and checks that the dev provider is not the one that fills the gap.
  */
 @SpringBootTest(
         properties = {
@@ -34,8 +41,20 @@ import org.springframework.test.context.ActiveProfiles;
             "storage.presign-ttl=PT60M",
         })
 @ActiveProfiles("prod")
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, DevProviderAbsentInProdTest.PhaseTwoStandIn.class})
 class DevProviderAbsentInProdTest {
+
+    /** What Phase 2's JWT provider will be: some implementation that is not the dev one. It answers nobody. */
+    @TestConfiguration(proxyBeanMethods = false)
+    static class PhaseTwoStandIn {
+
+        @Bean
+        CurrentUserProvider standInProvider() {
+            return () -> {
+                throw new UnsupportedOperationException("Phase 2 has not built the JWT provider yet");
+            };
+        }
+    }
 
     private static final UUID DEV_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
@@ -46,12 +65,12 @@ class DevProviderAbsentInProdTest {
     JdbcClient jdbc;
 
     @Test
-    void theApplicationStartsWithoutAnyCurrentUserProvider() {
+    void theDevProviderIsNotTheOneThatAnswersInProd() {
         assertThat(context.getEnvironment().getActiveProfiles()).containsExactly("prod");
         assertThat(context.getBeanNamesForType(DevHeaderCurrentUserProvider.class))
                 .isEmpty();
-        // Phase 2 adds the JWT provider. Until then nothing in prod can say who the user is.
-        assertThat(context.getBeanNamesForType(CurrentUserProvider.class)).isEmpty();
+        // Phase 2 adds the JWT provider. Until then the only provider here is the stand-in above, never the dev one.
+        assertThat(context.getBeanNamesForType(CurrentUserProvider.class)).containsExactly("standInProvider");
     }
 
     @Test

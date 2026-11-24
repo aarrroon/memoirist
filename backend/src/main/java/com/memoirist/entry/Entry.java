@@ -36,17 +36,27 @@ import tools.jackson.databind.JsonNode;
  *
  * <p><b>Recently deleted (D-30).</b> {@code @SQLRestriction} adds {@code deleted_at IS NULL} to every query and load of
  * this entity, so a deleted entry is invisible by default and a new finder can't forget to leave it out. The only
- * reads of deleted entries are the two native queries in {@code EntryRepository}, which Hibernate does not rewrite.
+ * reads of deleted entries are the native queries in {@code EntryRepository} for Recently deleted, which Hibernate does
+ * not rewrite.
  *
  * <p><b>Foreign keys are plain ids</b> ({@code userId}, {@code weeklyLogId}, {@code templateId},
  * {@code replyToEntryId}), not associations, because nothing walks them: services compare ids and look the other
- * side up through its own user-scoped repository. The two real associations are the ones read together with the
- * entry, {@link #getMedia()} and {@link #getTags()}.
+ * side up through its own user-scoped repository. The real associations are the ones read together with the
+ * entry: {@link #getMedia()}, {@link #getTags()} and (read-only) {@link #getReplies()}.
  */
 @Entity
 @Table(name = "entries")
 @SQLRestriction("deleted_at IS NULL")
 public class Entry extends TimestampedEntity {
+
+    /** The longest title, in characters (D-24). The request records check it; the column is {@code VARCHAR(150)}. */
+    public static final int MAX_TITLE_LENGTH = 150;
+
+    /** The most tags one entry can carry (D-26). The request records check it. */
+    public static final int MAX_TAGS = 20;
+
+    /** The earliest memory date (D-09), the same day as the {@code chk_entries_entry_date_min} constraint. */
+    public static final LocalDate EARLIEST_ENTRY_DATE = LocalDate.of(1900, 1, 1);
 
     @Column(name = "user_id", nullable = false, updatable = false)
     private UUID userId;
@@ -58,7 +68,7 @@ public class Entry extends TimestampedEntity {
     @Column(name = "template_id")
     private UUID templateId;
 
-    @Column(name = "title", length = 150)
+    @Column(name = "title", length = MAX_TITLE_LENGTH)
     private String title;
 
     /** The memory date: when it happened, not when it was written. */
@@ -142,6 +152,22 @@ public class Entry extends TimestampedEntity {
             inverseJoinColumns = @JoinColumn(name = "tag_id"))
     @BatchSize(size = 50)
     private Set<Tag> tags = new HashSet<>();
+
+    /**
+     * The entries that answer this one (D-33): those whose {@code reply_to_entry_id} is this entry's id, oldest first.
+     * Read-only from here ({@code insertable = false, updatable = false}): a reply is linked by setting its own
+     * {@link #setReplyToEntryId}, and this list only reads the same column the other way round.
+     *
+     * <p>{@code @SQLRestriction} on this class applies to the collection too, so a reply in Recently deleted is
+     * left out (and is back once it is restored). The list holds every reply, sealed ones included; the mapper decides
+     * which to show (D-10). One query loads the replies of up to 50 entries at once, and only when an opened Loot Drop
+     * asks: {@code EntryMapper} doesn't touch it for an entry that was never sealed.
+     */
+    @OneToMany(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reply_to_entry_id", insertable = false, updatable = false)
+    @OrderBy("createdAt ASC, id ASC")
+    @BatchSize(size = 50)
+    private List<Entry> replies = new ArrayList<>();
 
     protected Entry() {}
 
@@ -275,6 +301,14 @@ public class Entry extends TimestampedEntity {
     /** The entry's media in carousel order. Loads them on first use, so call it inside the service's transaction. */
     public List<Media> getMedia() {
         return Collections.unmodifiableList(media);
+    }
+
+    /**
+     * The entries that reply to this one, oldest first, sealed ones included. Loads them on first use, so call it
+     * inside the service's transaction. Only {@code EntryMapper} reads it, and it decides which to show.
+     */
+    public List<Entry> getReplies() {
+        return Collections.unmodifiableList(replies);
     }
 
     /** The entry's tags. Loads them on first use, so call it inside the service's transaction. */

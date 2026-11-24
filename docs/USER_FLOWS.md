@@ -190,7 +190,7 @@ flowchart TD
 
 **Happy path**
 1. The vault card shows in its week like any other entry, with a live countdown in the user's timezone.
-2. When the unlock time passes, the entry appears in an *Opened* strip at the top of the feed until the user opens or dismisses it (`GET /entries/opened`, `POST /entries/{id}/mark-seen`, D-10). Its card in its own week shows the full entry again. How the opening looks is a design choice for DESIGN.md.
+2. When the unlock time passes, the entry appears in an *Opened* strip at the top of the feed until the user opens or dismisses it (`GET /entries/opened`, `POST /entries/{id}/mark-seen`, D-10). Its card in its own week shows the full entry again. How the opening looks is in `docs/design/DESIGN.md` (D-41): the Opened row takes On this day's place at the top of the feed until it is dismissed.
 3. Once it has opened, the user can choose *reply to past you*: a new entry linked to the Loot Drop (`replyToEntryId`, D-33). Each shows a link to the other.
 
 **What the user can and can't do while it is sealed**
@@ -318,6 +318,7 @@ flowchart TD
 **Happy path**
 1. The user edits their display name, picks a timezone from a searchable list, or sets a birthday, which powers the *next birthday* unlock suggestion (`PATCH /users/me`, D-33).
 2. Every time and countdown in the app updates to the new zone, and "today" follows it.
+3. Under *Appearance* the user picks *Match phone* (the default), *Light* or *Dark* (D-41). It is kept on the device, not sent to the server, and changes the screen at once.
 
 **Edge cases**
 | Situation | What the user sees |
@@ -354,7 +355,7 @@ flowchart TD
 **Edge cases**
 | Situation | What the user sees |
 |---|---|
-| A sealed entry in the week | Its bar shows only a lock, the day and the unlock date |
+| A sealed entry in the week | Its bar shows only the Loot Drop's star (never a padlock, D-41), the day and the unlock date |
 | Every entry in the week deleted | The week disappears until one is restored (F-18); the user is returned to the feed |
 
 ---
@@ -372,7 +373,7 @@ flowchart TD
 **Edge cases**
 | Situation | What the user sees |
 |---|---|
-| A sealed entry | A row with a lock, its memory date and unlock date; no title or tags. It is left out while a tag filter is on (D-10) |
+| A sealed entry | A row with the Loot Drop's star, its memory date and unlock date; no title or tags. It is left out while a tag filter is on (D-10) |
 | No entries match a tag | *No entries with this tag yet* and a way to clear the filter |
 
 ---

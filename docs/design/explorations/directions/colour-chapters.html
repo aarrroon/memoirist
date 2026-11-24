@@ -98,35 +98,14 @@ h1, h2, h3 { text-wrap: balance; }
 .ch-head h2 { font-size: 64px; }
 .ch-head p { font-weight: 600; font-size: 15px; }
 .ch-cover { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; margin-top: 8px; }
-.also { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
-.also i { width: 14px; height: 14px; background: var(--brunswick); border: 2px solid var(--on); }
 @media (min-width: 1100px) {
   .chapter { padding: 40px 40px 56px; }
   .ch-head { grid-template-columns: minmax(0, 1fr) 380px; column-gap: 32px; align-items: end; padding-bottom: 28px; }
   .ch-head h2 { font-size: 112px; }
   .ch-head .ch-cover { grid-column: 2; grid-row: 1 / span 3; margin: 0; }
   .ch-body { display: grid; grid-template-columns: minmax(0, 560px) 320px; gap: 48px; align-items: start; }
-  .ch-body .week-sum { grid-column: 2; grid-row: 1 / span 20; position: sticky; top: 84px; }
 }
 
-.week-sum { display: grid; gap: 14px; padding: 18px 0 8px; border-top: 3px solid var(--on); }
-.week-sum h3 { font-size: 34px; }
-.week-sum .range { font-size: 14px; font-weight: 600; }
-.figs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.figs div { display: grid; }
-.figs b { font-stretch: 62%; font-weight: 900; font-size: 52px; line-height: .9; }
-.figs small { font-size: 13px; font-weight: 600; }
-.daystrip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
-.daystrip span { display: grid; place-items: center; height: 34px; font-size: 12px; font-weight: 700; border: 2px solid currentColor; }
-.daystrip span.on { background: var(--on); color: var(--band); border-color: var(--on); }
-.wk-list { list-style: none; margin: 0; padding: 0; }
-.wk-list a { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 44px; border-bottom: 2px solid rgba(0, 0, 0, .14); font-size: 15px; font-weight: 550; }
-.band--brunswick .wk-list a, .band--uni .wk-list a { border-bottom-color: rgba(255, 255, 255, .22); }
-.wk-list a:hover .wt { text-decoration: underline; }
-.wk-list .wd { font-size: 12px; font-weight: 800; }
-.wk-list .wt { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.wk-list .wi { display: flex; gap: 4px; }
-.wk-list .sealed .wt { display: flex; gap: 6px; align-items: center; font-weight: 750; }
 
 .post { display: grid; gap: 12px; padding: 26px 0 6px; }
 .post .meta { font-size: 13px; font-weight: 700; }
@@ -374,19 +353,6 @@ main { padding-bottom: 96px; }
   }
   const sound = (st) => html`<button class="sound">${icon('spotify', { size: 18 })}<span>${st.title}, ${st.artist}</span></button>`;
   const tags = (ts) => html`<div class="tags">${ts.map((t) => html`<a class="tag" href="#feed">${t.name}</a>`)}</div>`;
-
-  function weekSum(w) {
-    const s = M.weekStats(w);
-    return html`<section class="week-sum" aria-label="Summary of ${M.weekLabel(w)}">
-      <h3 class="poster">${M.weekLabel(w)}</h3><p class="range">${range(w.startDate, w.endDate)}</p>
-      <div class="figs"><div><b>${s.entryCount}</b><small>${s.entryCount === 1 ? 'entry' : 'entries'}</small></div><div><b>${s.photoCount}</b><small>photos</small></div><div><b>${s.voiceNoteCount}</b><small>${s.voiceNoteCount === 1 ? 'voice note' : 'voice notes'}</small></div></div>
-      <div class="daystrip" aria-label="Days written">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => html`<span class="${s.days[i] ? 'on' : ''}">${d}</span>`)}</div>
-      <ul class="wk-list">${w.entries.map((e) => M.isSealed(e)
-        ? html`<li><a class="sealed" href="#loot"><span class="wd">${date(e.entryDate, 'weekdayShort')}</span><span class="wt">${icon('lock', { size: 15, stroke: 2.2 })}Sealed until ${shortDate(e.unlockDate)}</span><span></span></a></li>`
-        : html`<li><a href="#entry"><span class="wd">${date(e.entryDate, 'weekdayShort')}</span><span class="wt">${M.displayTitle(e)}</span><span class="wi">${M.images(e).length ? icon(M.images(e)[0].kind === 'PAGE_SCAN' ? 'page' : 'image', { size: 16 }) : ''}${M.voiceNotes(e).length ? icon('mic', { size: 16 }) : ''}</span></a></li>`)}</ul>
-      ${w.eras.length > 1 ? html`<p class="also"><i></i>Also in ${w.eras.slice(1).map((er) => er.title)}</p>` : ''}
-    </section>`;
-  }
 
   function post(e) {
     if (M.isSealed(e)) {

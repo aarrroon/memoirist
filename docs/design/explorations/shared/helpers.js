@@ -146,8 +146,6 @@
   // The week summary's facts (D-25). Sealed entries never count (D-10); they appear only as locked bars.
   function weekStats(w) {
     const open = w.entries.filter((e) => !isSealed(e));
-    const days = Array(7).fill(false);
-    open.forEach((e) => { days[weekdayIndex(e.entryDate)] = true; });
     const tagCounts = new Map();
     open.flatMap((e) => e.tags).forEach((t) => tagCounts.set(t.name, (tagCounts.get(t.name) || 0) + 1));
     return {
@@ -155,8 +153,6 @@
       photoCount: open.reduce((n, e) => n + images(e).length, 0), // diary pages count as photos (API_CONTRACT)
       pageCount: open.reduce((n, e) => n + e.media.filter((m) => m.kind === 'PAGE_SCAN').length, 0),
       voiceNoteCount: open.reduce((n, e) => n + voiceNotes(e).length, 0),
-      sealedCount: w.entries.length - open.length,
-      days,
       tags: [...tagCounts].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
       thumbs: open.flatMap(images),
     };
@@ -188,9 +184,9 @@
       const inside = { ...w, entries: w.entries.filter((x) => inEra(e, x.entryDate)) };
       const s = weekStats(inside);
       return { id: w.id, title: weekLabel(w), startDate: w.startDate, endDate: w.endDate, entryCount: s.entryCount,
-        photoCount: s.photoCount, voiceNoteCount: s.voiceNoteCount, sealedCount: s.sealedCount, thumbs: s.thumbs, isCurrent: isCurrentWeek(w) };
+        photoCount: s.photoCount, voiceNoteCount: s.voiceNoteCount, thumbs: s.thumbs, isCurrent: isCurrentWeek(w) };
     });
-    const older = page.olderWeeks.map((w) => ({ ...w, title: w.title || range(w.startDate, w.endDate), thumbs: [], sealedCount: 0, isCurrent: false }));
+    const older = page.olderWeeks.map((w) => ({ ...w, title: w.title || range(w.startDate, w.endDate), thumbs: [], isCurrent: false }));
     const rows = [...recent, ...older];
     const rest = page.notListed || { weekCount: 0, entryCount: 0, photoCount: 0, voiceNoteCount: 0 };
     const sum = (k) => rows.reduce((n, r) => n + r[k], 0) + rest[k];
@@ -347,10 +343,141 @@
 
   // Figures that must agree wherever they appear (the screenshot tool reports failed asserts).
   const trip = weekStats(C.weeks[1]);
-  console.assert(trip.entryCount === 5 && trip.photoCount === 10 && trip.voiceNoteCount === 1 && trip.sealedCount === 1, 'Grampians Trip Week counts', trip);
+  console.assert(trip.entryCount === 5 && trip.photoCount === 10 && trip.voiceNoteCount === 1 && !('sealedCount' in trip), 'Grampians Trip Week counts, sealed entry left out', trip);
   const brunswick = eraPage('era-brunswick');
   console.assert(brunswick.totals.entryCount === brunswick.rows.reduce((n, r) => n + r.entryCount, 0) + C.eraPages['era-brunswick'].notListed.entryCount, 'Era totals add up');
   console.assert(today() === '2026-10-28', 'mock today is Wednesday 28 October 2026');
   const series = eraSeries('era-brunswick');
   console.assert(series.length === brunswick.totals.weekCount && series.reduce((n, w) => n + w.entryCount, 0) === brunswick.totals.entryCount, 'Era series matches the Era totals');
+
+  // ======================================================================================================
+  // Round 2 additions. Round 1's directions never call these, so they render exactly as before.
+  // ======================================================================================================
+
+  // ---------- Theme and mode ----------
+  // Round 2 URLs: ?theme=a|b&mode=light|dark#screen. With no parameters, theme a in the device's light or
+  // dark setting.
+  // TODO(human) PRACTICE: write themeFrom(search, prefersDark): read `theme` and `mode` from a query string such as
+  // '?theme=b&mode=dark', and return { theme, mode, followsDevice }. Anything missing or unknown falls back to
+  // theme 'a' and to the device's preference; followsDevice says whether the mode came from the device.
+  // Hint: URLSearchParams parses the string for you. Validate against an allow-list rather than trusting the URL,
+  // the same habit as validating a request parameter on the server. The console.assert lines below check it.
+  function themeFrom(search, prefersDark) {
+    // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+    const params = new URLSearchParams(search);
+    const theme = ['a', 'b'].includes(params.get('theme')) ? params.get('theme') : 'a';
+    const asked = params.get('mode');
+    const followsDevice = asked !== 'light' && asked !== 'dark';
+    const mode = followsDevice ? (prefersDark ? 'dark' : 'light') : asked;
+    return { theme, mode, followsDevice };
+    // └── END ANSWER ▲ ──
+  }
+  console.assert(JSON.stringify(themeFrom('?theme=b&mode=dark', false)) === '{"theme":"b","mode":"dark","followsDevice":false}', 'themeFrom reads both parameters');
+  console.assert(JSON.stringify(themeFrom('', true)) === '{"theme":"a","mode":"dark","followsDevice":true}', 'themeFrom falls back to theme a and the device');
+  console.assert(JSON.stringify(themeFrom('?theme=z&mode=dim', false)) === '{"theme":"a","mode":"light","followsDevice":true}', 'themeFrom ignores unknown values');
+
+  const darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  // Sets data-theme and data-mode on <html>, and follows the device while the URL doesn't fix the mode.
+  function applyTheme() {
+    const set = () => {
+      const t = themeFrom(location.search, !!darkQuery?.matches);
+      document.documentElement.dataset.theme = t.theme;
+      document.documentElement.dataset.mode = t.mode;
+      return t;
+    };
+    const t = set();
+    if (t.followsDevice && darkQuery && !applyTheme.listening) { darkQuery.addEventListener('change', set); applyTheme.listening = true; }
+    return t;
+  }
+
+  // ---------- Contrast (WCAG 2.x) ----------
+  // TODO(human) PRACTICE: write contrast(a, b) for two '#RRGGBB' colours: the WCAG contrast ratio, from 1 to 21.
+  // Text needs 4.5:1, large text and meaningful graphics 3:1. The palette checks below use it.
+  // Hint: convert each channel from sRGB to linear light (the 0.04045 threshold), weight R, G and B by
+  // 0.2126, 0.7152 and 0.0722 for relative luminance, then (lighter + 0.05) / (darker + 0.05).
+  function contrast(a, b) {
+    // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+    const luminance = (hex) => {
+      const n = parseInt(hex.slice(1), 16);
+      const [r, g, bl] = [n >> 16, (n >> 8) & 255, n & 255]
+        .map((v) => v / 255)
+        .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+    };
+    const [lighter, darker] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (lighter + 0.05) / (darker + 0.05);
+    // └── END ANSWER ▲ ──
+  }
+  console.assert(Math.abs(contrast('#000000', '#FFFFFF') - 21) < 0.01 && Math.abs(contrast('#FFFFFF', '#FFFFFF') - 1) < 0.01, 'contrast: black on white is 21:1, white on white 1:1');
+  // Every round 2 palette passes AA in both modes: text 4.5:1, accent and Loot Drop marks 3:1.
+  for (const [id, p] of Object.entries(C.palettes || {})) {
+    for (const mode of ['light', 'dark']) {
+      const c = p[mode];
+      const checks = [['ink on page', c.ink, c.page, 4.5], ['ink 2 on page', c.ink2, c.page, 4.5], ['ink 2 on surface', c.ink2, c.surface, 4.5],
+        ['accent on surface', c.accent, c.surface, 3], ['on accent', c.onAccent, c.accent, 4.5], ['Loot Drop on surface', c.loot, c.surface, 3]];
+      for (const [what, fg, bg, min] of checks) console.assert(contrast(fg, bg) >= min, `${id} ${mode}: ${what} is ${contrast(fg, bg).toFixed(2)}:1, needs ${min}`);
+    }
+  }
+
+  // ---------- Sealing (F-06) ----------
+  // 9:00 am on a calendar day in the user's timezone, as a UTC instant (D-23). One correction step is enough
+  // away from a daylight-saving changeover hour.
+  function nineAm(day) {
+    const guess = Date.parse(`${day}T09:00:00Z`);
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+      .formatToParts(new Date(guess)).map((x) => [x.type, x.value]));
+    const offset = Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:00Z`) - guess;
+    return new Date(guess - offset).toISOString();
+  }
+  // The same day next month, or the month's last day when it is shorter (31 Jan → 28 Feb).
+  function addMonths(day, n) {
+    const [y, m, d] = day.split('-').map(Number);
+    const last = new Date(Date.UTC(y, m - 1 + n + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(y, m - 1 + n, Math.min(d, last))).toISOString().slice(0, 10);
+  }
+  function nextBirthday(birthday) {
+    if (!birthday) return null;
+    const t = today();
+    const thisYear = `${t.slice(0, 4)}${birthday.slice(4)}`;
+    return thisYear > t ? thisYear : `${Number(t.slice(0, 4)) + 1}${birthday.slice(4)}`;
+  }
+  // The quick dates under "Seal as Loot Drop" (D-33): in a month, in a year, on my next birthday (hidden with no
+  // birthday). Each has the words the confirmation repeats.
+  function sealSuggestions() {
+    const t = today();
+    const birthday = nextBirthday(C.user.birthday);
+    return [
+      { key: 'month', label: 'In a month', day: addMonths(t, 1) },
+      { key: 'year', label: 'In a year', day: addMonths(t, 12) },
+      birthday && { key: 'birthday', label: 'On my birthday', day: birthday },
+    ].filter(Boolean).map((s) => { const unlockAt = nineAm(s.day); return { ...s, unlockAt, ...describeUnlock(unlockAt, NOW, TZ) }; });
+  }
+  // Everything a sealed card or page may show, and nothing else (D-10): the memory date, the opening day and
+  // instant, and the countdown. Build sealed cards from this, never from the entry itself.
+  function sealedView(e) {
+    if (!isSealed(e)) return null;
+    const unlockDay = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(e.unlockDate));
+    return { id: e.id, memoryDate: e.entryDate, unlockAt: e.unlockDate, unlockDay, ...opening(e) };
+  }
+  console.assert(Date.parse(nineAm('2027-10-25')) === Date.parse('2027-10-24T22:00:00Z'), '9:00 am in Melbourne on 25 Oct 2027 is 22:00 UTC the day before');
+  console.assert(sealSuggestions().map((s) => s.day).join() === '2026-11-28,2027-10-28,2027-08-12', 'quick dates: a month, a year, the next birthday');
+  console.assert(sealedView(entry(C.featured.lootDropId)).countdown === 'in 362 days' && Object.keys(sealedView(entry(C.featured.lootDropId))).join() === 'id,memoryDate,unlockAt,unlockDay,opens,countdown', 'the sealed view says in 362 days and carries nothing private');
+
+  // ---------- Screens, with Write ----------
+  const APP_SCREENS = ['feed', 'entry', 'era', 'loot', 'write'];
+  const appScreen = () => (APP_SCREENS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'feed');
+  // Like mount(), plus the #write screen and the theme and mode from the URL.
+  function mountApp(render) {
+    applyTheme();
+    const go = () => { document.documentElement.dataset.screen = appScreen(); render(appScreen()); window.scrollTo(0, 0); };
+    window.addEventListener('hashchange', go);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+  }
+
+  Object.assign(window.M, {
+    themeFrom, applyTheme, contrast, sealSuggestions, sealedView, appScreen, mountApp,
+    palettes: C.palettes, templates: C.templates,
+    template: (id) => (C.templates || []).find((t) => t.id === id),
+    draft: () => C.draft,
+  });
 })();

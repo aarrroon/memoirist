@@ -82,3 +82,9 @@ storage:
   secret-key: ${STORAGE_SECRET_KEY:}
   path-style: ${STORAGE_PATH_STYLE:}
   presign-ttl: ${STORAGE_PRESIGN_TTL:}
+
+# Spotify search for soundtracks (D-35), bound to SpotifyProperties. Both are optional: left empty, the app starts, a pasted
+# Spotify link still works, and POST /api/v1/music/search answers 503 music-search-unavailable.
+spotify:
+  client-id: ${SPOTIFY_CLIENT_ID:}
+  client-secret: ${SPOTIFY_CLIENT_SECRET:}

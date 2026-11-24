@@ -10,21 +10,21 @@ Settled choices for memoirist, and the questions still open.
 |---|---|---|---|
 | D-01 | Project name is **memoirist** | 2026-10-25 | |
 | D-02 | Spring Boot 4.x on Java 25 | 2026-10-25 | 2026-10-28 |
-| D-03 | SeaweedFS locally, Cloudflare R2 in production | 2026-10-25 | 2026-10-29 |
+| D-03 | SeaweedFS locally, Cloudflare R2 in production | 2026-10-25 | 2026-10-31 |
 | D-04 | PostgreSQL 17 everywhere | 2026-10-25 | 2026-10-28 |
 | D-05 | Entry content is TipTap JSON plus derived plain text | 2026-10-25 | 2026-10-28 |
 | D-06 | Templates attach to entries, not weeks; starter templates | 2026-10-25 | 2026-10-28 |
 | D-07 | Store UTC; each user has a timezone (default Melbourne) | 2026-10-25 | |
 | D-08 | Weeks are created automatically (Monday–Sunday) | 2026-10-25 | 2026-10-28 |
 | D-09 | Entries have a memory date: backdated, never future, not before 1900 | 2026-10-25 | 2026-10-27 |
-| D-10 | Loot Drops use a strict seal, and opening one is surfaced | 2026-10-25 | 2026-10-28 |
-| D-11 | Ownership checks and local-only dev user | 2026-10-25 | |
+| D-10 | Loot Drops use a strict seal, and opening one is surfaced | 2026-10-25 | 2026-11-24 |
+| D-11 | Ownership checks and local-only dev user | 2026-10-25 | 2026-10-31 |
 | D-12 | Clients may generate entity UUIDs | 2026-10-25 | 2026-10-29 |
 | D-13 | Frontend library set | 2026-10-25 | 2026-10-28 |
 | D-14 | Testing and CI approach | 2026-10-25 | 2026-10-30 |
 | D-15 | Backend code style | 2026-10-25 | |
 | D-16 | Flyway migration rules | 2026-10-25 | |
-| D-17 | Media types and limits | 2026-10-25 | 2026-10-28 |
+| D-17 | Media types and limits; photos store their size | 2026-10-25 | 2026-11-24 |
 | D-18 | AI providers are chosen at Phase 4 | 2026-10-25 | 2026-10-28 |
 | D-19 | Groups are contribution-based; entries stay personal | 2026-10-26 | 2026-10-28 |
 | D-20 | Paper diaries: pages are marked media; reading them is on tap | 2026-10-26 | 2026-10-28 |
@@ -39,7 +39,7 @@ Settled choices for memoirist, and the questions still open.
 | D-29 | Search by word and by feeling | 2026-10-27 | 2026-10-28 |
 | D-30 | Deleted entries wait 30 days in Recently deleted | 2026-10-27 | |
 | D-31 | Build order: groups before the AI biographer; installing at launch | 2026-10-28 | |
-| D-32 | Bringing people back: On this day, a yearly letter and a weekly email | 2026-10-28 | |
+| D-32 | Bringing people back: On this day, a yearly letter and a weekly email | 2026-10-28 | 2026-11-24 |
 | D-33 | Loot Drop extras: suggested dates, a reply to past you and a first letter | 2026-10-28 | |
 | D-34 | Photo dump: photos filed by the day they were taken | 2026-10-28 | 2026-10-29 |
 | D-35 | Soundtracks: Spotify links, and search through our server | 2026-10-28 | |
@@ -47,6 +47,8 @@ Settled choices for memoirist, and the questions still open.
 | D-37 | App lock | 2026-10-28 | |
 | D-38 | Product metrics: counts only, never content | 2026-10-28 | |
 | D-39 | Hard topics and the AI | 2026-10-28 | |
+| D-40 | One design system for the frontend: one spacing scale, two typefaces at most, one accent colour | 2026-11-14 | 2026-11-24 |
+| D-41 | The design: Starlight refined, phone first, in black, white and gold | 2026-11-24 | |
 
 ---
 
@@ -76,7 +78,7 @@ Settled choices for memoirist, and the questions still open.
 **Local credentials:** SeaweedFS's S3 gateway reads its one identity from environment variables. Compose maps `STORAGE_ACCESS_KEY` and `STORAGE_SECRET_KEY` from `.env` to `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. No identity file is committed, and nothing passes `-s3.config` or stores identities in the filer. SeaweedFS's wiki says either would make it ignore the environment variables, but the pinned 4.48 merges them instead, so an identity file would add keys rather than replace the `.env` ones.
 - **Why:** the keys have one home (`.env`), as Postgres's do, and the backend sees the same variables locally and on R2. A config file only pays off with several identities.
 - **Watch out:** when no credentials load, SeaweedFS allows every request unsigned. Compose refuses to start unless both keys are set (`${VAR:?}`), and task 1.3 checked that an unsigned request gets `403`.
-- **Version:** the image is pinned to `chrislusf/seaweedfs:4.48` (task 1.3). 4.50 and 4.51 hold the first write on a fresh server for about 15 seconds ([seaweedfs#12145](https://github.com/seaweedfs/seaweedfs/issues/12145)), which every Testcontainers run would pay, and 4.49 has no plain image. This bullet is the tag's one home: Compose and the Testcontainers SeaweedFS (task 3.1) both use it. Move to a later release once one fixes that, and check the `403` again.
+- **Version:** the image is pinned to `chrislusf/seaweedfs:4.48` (task 1.3). 4.50 and 4.51 hold the first write on a fresh server for about 15 seconds ([seaweedfs#12145](https://github.com/seaweedfs/seaweedfs/issues/12145)), which every Testcontainers run would pay, and 4.49 has no plain image. This bullet is the tag's one home: Compose and the Testcontainers SeaweedFS (`SeaweedFsTestConfiguration`, task 3.1) both use it. Java can't read this page, so the tag is written in `docker-compose.yml` and in the test configuration's `SEAWEEDFS_IMAGE`, and `SeaweedFsComposeTest` fails if the two (or the `server -s3 ...` command) differ. To move to a later release once one fixes that, change those two files and this bullet together, and check the `403` again.
 
 ## D-04 PostgreSQL 17 everywhere
 Locally the image is `pgvector/pgvector:pg17`; production is Neon on Postgres 17. One major version in both places avoids surprises. pgvector is installed in the image but only enabled in Phase 4.
@@ -124,6 +126,8 @@ An entry is **sealed** while `unlock_date > now`. While sealed:
 - it can't be analysed by AI and is left out of AI summaries
 - the unlock date can only move later; the entry can always be deleted, and it stays sealed in Recently deleted (D-30)
 
+**What a sealed entry shows:** its memory date, its opening date and a countdown, and nothing else, on a card of one fixed size. Where a day heading just above it already names the memory date (the feed), the card leaves the date out and shows only the opening date and the countdown, so no fact is repeated on the screen (D-41). Rows in a week, the timeline and Recently deleted keep the memory date.
+
 Seal last: create the entry, upload media, then call `POST /entries/{id}/seal`. The UI asks the user to confirm the unlock date before sealing. Share links follow the same rules.
 
 **Opening:** a Loot Drop stays in the week of its memory date, which may be far down the feed by the time it opens. So an **Opened** strip at the top of the feed lists Loot Drops that have unlocked and that the user hasn't opened or dismissed yet. `entries.unlock_seen_at` records that (cleared whenever the entry is sealed), with `GET /entries/opened` and `POST /entries/{id}/mark-seen`. Phase 2 adds an email when a Loot Drop opens, and Phase 5 a push notification. `unlock_notified` stays the background job's own flag. Suggested unlock dates and a reply to past you are in D-33.
@@ -132,8 +136,11 @@ Seal last: create the entry, upload media, then call `POST /entries/{id}/seal`. 
 - Controllers never receive a user ID from the request body, query or path. The current user comes from `CurrentUserProvider`.
 - Every lookup by ID is scoped to the current user. Another user's resource returns `404` (not `403`), so its existence isn't revealed.
 - Phase 1 resolves the user from the `X-Dev-User-Id` header, defaulting to `00000000-0000-0000-0000-000000000001`. That provider exists only in the `local` and `test` profiles.
+- **A well-formed id that names nobody is `404 not-found`.** The provider only reads the id; it doesn't check the database. The code that needs the user does: `GET` and `PATCH /users/me` load it, and every service that creates a row starts with `UserService.currentUser()`, so a create never reaches the foreign key (which would be a `500`). A list for such a user is simply empty.
 - The dev user is seeded from `db/seed-local`, a Flyway location only those profiles load, so it never reaches production.
 - Phase 2 adds a JWT-based provider with no controller changes.
+
+**Why (the unknown user, task 3.2):** a header naming nobody is a client mistake, so it answers `4xx` like any resource that isn't found, never `500`. Most creates load the user anyway, for the time zone that decides "today" and the week (D-07, D-08), so the lookup costs nothing extra. Checking inside the provider or a filter would run a query on every request and turn a seam into a service; mapping the foreign-key error to `404` would also label other foreign-key failures (a template deleted a moment ago) as "user not found".
 
 ## D-12 Client-generated UUIDs
 Create requests for eras, templates and entries may include an `id` (UUID v4). If the `id` already exists for the same user, the server returns the existing resource with `200` (a safe retry). If it exists for someone else, the server returns `409`. An `id` that belongs to one of the user's entries in Recently deleted also returns `409`; the user restores that entry instead (D-30). Without an `id`, the server generates one.
@@ -206,6 +213,7 @@ These were chosen during setup as sensible defaults. Change them freely, but rec
 - At most 25 MB per file and 20 media items per entry, so a busy day fits in one post.
 - No video in Phases 1–4.
 - HEIC is not accepted. iOS converts photos to JPEG when the file picker's `accept` list excludes HEIC; verify this in Sprint 4.
+- **Photos store their size.** On upload the server reads an image's width and height from its header, without decoding the whole picture, and stores them on `media` (`width`, `height`). The API returns them, so a screen reserves a photo's own shape before it loads: the feed keeps each photo's shape between 4:5 and 1.91:1 (D-41), and the entry view doesn't jump. Voice notes, and an image whose header can't be read, have no size (`null`), and the screen falls back to a 4:5 frame. The browser shrinks and re-encodes photos before upload (D-13), which applies their rotation, so the stored size is the size as seen. The user chose this on 2026-11-24 (it answers Q30).
 
 ## D-18 AI providers are chosen at Phase 4
 The chat model, the embedding provider and therefore the `vector(N)` dimension are decided when Phase 4 starts (Q6). Nothing in Phases 1–3 depends on them. Model names in the original drafts are outdated.
@@ -399,7 +407,7 @@ The phases run in this order. The README Timeline is the source of truth for it 
 **Consequences:** sprints and tasks were renumbered to follow the phases (groups 6.x, the AI 7.x, phones 8.x), which is allowed before a sprint starts.
 
 ## D-32 Bringing people back: On this day, the yearly letter and the weekly email
-- **On this day (Phase 1):** a strip at the top of the feed, beside the Opened strip, shows entries from the same day and month in earlier years (`GET /entries/on-this-day`). Sealed entries never appear (D-10), nor do deleted ones (D-30). In a year that isn't a leap year, entries from 29 February show on 28 February.
+- **On this day (Phase 1):** a row at the top of the feed (below the first entry while an Opened row shows, D-41) shows entries from the same day and month in earlier years (`GET /entries/on-this-day`). Sealed entries never appear (D-10), nor do deleted ones (D-30). In a year that isn't a leap year, entries from 29 February show on 28 February.
 - **The yearly letter (Phase 2):** the user picks a yearly date, their birthday by default (`users.birthday`, D-33). At 09:00 on that day, in their timezone, an email and a card in the app invite them to write to next year's self. The letter is sealed as a Loot Drop until 09:00 on the same date next year.
 - **The weekly email (Phase 4):** at 09:00 on Monday, after a week that has entries, an email points to that week: *read its story* if it's closed, or *wrap it up* if it's still open (D-28). It's on by default, has its own switch, and never follows an empty week.
 - **No email contains entry content.** Every memoirist email (unlock, yearly letter, weekly) carries dates, counts and a link, never titles, captions, photos or summary text, because inboxes are often shared or owned by an employer.
@@ -469,6 +477,51 @@ This applies to every AI feature from Phase 4 on: summaries, profiles, Help me t
 
 **Why:** templates like *Spiralling* invite people to write at their lowest, and an AI that reads entries must handle that with care (R-24). The user chose to settle this now, before the AI phase, on 2026-10-28.
 
+## D-40 One design system for the frontend
+The frontend has one design system. Three limits hold whatever the look turns out to be:
+- **One spacing scale:** 4, 8, 12, 16, 24, 32, 48 and 64 px, for every padding, margin and gap.
+- **Two typefaces at most:** one for text and the interface, and at most one more for titles.
+- **One accent colour** in each theme. Everything else is neutral, and photos carry the colour. A Loot Drop uses the accent, not a second colour.
+
+How it works:
+- **Tokens:** every colour, font, text size, weight, radius and shadow is a token in `@theme` in `frontend/src/index.css`. Components use tokens only: no hex values, font names or one-off sizes.
+- **Rules:** `.claude/rules/design.md` holds the checkable rules, the default token values and the limits that follow from these three (seven text sizes, two corner radii, 44 px tap targets, loading targets). It loads whenever a file in `frontend/` is touched, and `spec-reviewer` checks it.
+- **The look:** [`docs/design/DESIGN.md`](design/DESIGN.md) holds the chosen typefaces, accent and final values (D-41). It stays inside these limits.
+- **Checking:** after each fix to a screen, the page is checked at phone width (375×812) and laptop width (1440×900) with `docs/design/explorations/tools/audit.mjs`, and the user is told what was created, what was changed and why.
+
+**Why:** the round 2 audit ([AUDIT.md](design/explorations/round-2/AUDIT.md), 2026-11-14) measured the five mockups. Each used 23 to 27 different paddings and gaps, 14 to 19 text sizes and 3 to 8 corner radii, and two of the five used two accent colours. Those differences, more than any one colour or font, are what made them look cheap. The user set the three limits on 2026-11-14.
+
+**Consequences:**
+- A palette whose Loot Drop colour differs from its accent is reworked so that one colour does both: Dusk blue's dark mode (a gold Loot Drop on a blue accent) and Black, white and gold (ink actions, a gold Loot Drop). The user chose the answers on 2026-11-15: Dusk blue's Loot Drop takes the blue accent, and gold becomes the accent of Black, white and gold. The values are in `docs/design/explorations/FEEDBACK.md`.
+- Design rounds keep the same limits (`docs/prompts/design-round.md`), so the direction that wins can be built as drawn. The user agreed this on 2026-11-15.
+- Spotify's brand rules allow its mark in green, black or white. memoirist uses black or white, so the accent stays the only colour.
+- shadcn/ui components (D-13) are rewritten to these tokens when they are copied in.
+- Two things the audit found were left as open questions: smaller copies of photos (Q29, still open) and stored photo sizes (settled in D-17).
+
+## D-41 The design: Starlight refined
+memoirist's look is design 12, *Starlight refined* ([`docs/design/explorations/round-3/`](design/explorations/round-3/)), chosen by the user on 2026-11-24 after three rounds of mockups. [`docs/design/DESIGN.md`](design/DESIGN.md) holds every value; this entry says what was chosen.
+- **Phone first.** Most use will be on phones, so every screen is designed at 375 px first and the laptop follows it.
+- **Colour:** Black, white and gold, with gold as the one accent (D-40): actions, focus, the selected item and Loot Drops. Dark mode is charcoal, not black, with off-white text and a softer gold. Light or dark follows the phone's setting, and *You* (settings) has a switch: match phone, light or dark. The choice is kept on the device.
+- **Type:** Newsreader for titles only (entry, screen and Era titles, and the countdown), Instrument Sans for everything else, entry text included.
+- **The feed:**
+  - Photos run edge to edge and swipe left and right, with dots below. The first photo keeps its own shape between 4:5 and 1.91:1, and the rest of the swipe are cropped to it (D-17 stores the sizes). The entry view shows every photo whole.
+  - A full-width hairline, with 24 px of space each side, separates entries.
+  - Each entry: the day (on the first entry of a day only), the photos, the title, three lines of text, then its voice note, soundtrack and tags.
+  - The top of the feed: a moon date line in place of the wordmark ("Wednesday at dusk"), *On this day* as one row, and one sticky line for the Era and the week ("The Brunswick Years · This week · 3 entries"). While a Loot Drop has just opened, its *Opened* row takes On this day's place, and On this day moves below the first entry until the row is dismissed.
+- **Eras:** an Era page opens like a book's title page (a solid band, black in light mode and grey in dark, with the Era's name in the largest size). Below it, the Era's weeks are drawn as a constellation (a picture only) and listed as a contents page, which is how a week is found.
+- **Loot Drops:** the one approved drawing (D-39, `.claude/rules/design.md` §5) is the *travelling star*: a star, a trail to "you", the part of the wait already travelled lit in gold, and a point where its light has got to. A sealed row in a week, the timeline or Recently deleted shows a small star, never a padlock. What a sealed card shows is in D-10.
+- **Laptop:** a side nav, a 600 px feed with each day's date in the margin, and On this day in a right rail. Write opens as a dialog with *Seal as Loot Drop* and its quick dates on its first screen.
+- **No location** on an entry's top line: entries don't store one, and Phase 1 adds none.
+
+**Why:** the user ranked round 2's designs Starlight, Folio, Nightstand, Afterglow, with Keepsake out, and asked for Starlight on the phone with Folio's modern, sleek type, photos that fill the screen, and more space between entries. Round 3 drew it inside D-40's limits and passed the design check on all 17 screens, light and dark, at both widths (round-3/REPORT.md). The feedback and every answer are in `docs/design/explorations/FEEDBACK.md`.
+
+**Consequences:**
+- `docs/design/DESIGN.md` is written, and `.claude/rules/design.md` takes its values. Never copy the mockup's code into `frontend/`: build from DESIGN.md.
+- The README promises light and dark in Phase 1 (user approval, 2026-11-24). The settings screen (task 4.9) gains the appearance switch.
+- Photos store their width and height (D-17), built in task 4.5.
+- USER_FLOWS F-15 and F-16 show a star on sealed rows instead of a lock.
+- Dusk blue and Sunset rose stay candidates for a palette picker in a later phase; nothing promises one yet.
+
 ---
 
 ## Open questions
@@ -501,3 +554,4 @@ Decide each one before the sprint that needs it, then record it with `/record-de
 | Q25 | Writing time and mood: patterns such as "flat on Sunday evenings" need when an entry was really written (`created_at` is wrong for backdated and offline entries) and a mood for each entry | Sprint 8 (mood: Sprint 9) | Offline entries send a client `capturedAt`; Phase 6 adds a per-entry mood as derived AI data, with the usual seal and staleness rules |
 | Q26 | Group Loot Drop dates: if the owner moves the date later, entries added earlier still unlock on the old date; an entry already sealed for longer opens later; and withdrawing doesn't unseal | Sprint 6 | Group views hide content until the later of the entry's and the group's dates; the withdraw dialog says the entry stays sealed |
 | Q28 | Era summaries and partly covered weeks: an Era shows only the entries inside its dates (D-22), but a weekly summary covers the whole week. For a short Era, such as a weekend trip, should the Era summary read the entries inside its dates instead of whole-week summaries? | Sprint 7 | A week the Era covers only partly is read from its entries inside the Era's dates; a week it covers fully uses its weekly summary |
+| Q29 | Smaller copies of photos: the API serves each photo as it was uploaded (about 2 to 3 MB after the browser shrinks it, D-13), even for a 40 px thumbnail. A feed of those can't meet the PRD's 2-second goal on a phone: the round 2 audit measured 10 seconds to the first photo on a slow connection, with photos a fifth of that size (D-40). Make a screen-size copy and a thumbnail at upload (in the browser or on the server), or keep serving the original? | Sprint 5 | Phase 1 serves the original, which is fast on one machine. The frontend loads photos lazily and reserves their space. Decide before going online |

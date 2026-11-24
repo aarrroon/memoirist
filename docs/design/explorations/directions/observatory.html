@@ -72,9 +72,8 @@ h1, h2, h3 { text-wrap: balance; }
   .main { display: grid; grid-template-columns: minmax(0, 640px) 300px; gap: 56px; justify-content: center; padding: 36px 40px 96px; }
   .feed { grid-column: 1; grid-row: 1; }
   .log { grid-column: 2; grid-row: 1; position: sticky; top: 36px; align-content: start; }
-  .feed .week-log--lead { display: none; }
 }
-@media (max-width: 1099px) { .log .week-log { display: none; } .log { margin-top: 18px; } }
+@media (max-width: 1099px) { .log { margin-top: 18px; } }
 
 .sky-now { display: flex; align-items: center; gap: 14px; padding: 20px 0 6px; }
 .sky-now h1 { font-family: var(--display); font-size: 30px; line-height: 1.1; }
@@ -103,24 +102,6 @@ h1, h2, h3 { text-wrap: balance; }
 .week-head { display: flex; align-items: center; gap: 14px; margin-top: 28px; }
 .week-head h3 { font-family: var(--display); font-size: 26px; line-height: 1.1; }
 .week-head p { font-size: 13px; color: var(--dust); margin-top: 2px; }
-.week-log { margin-top: 14px; padding: 16px; border-radius: 12px; background: var(--surface); display: grid; gap: 14px; }
-.days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; font-size: 11.5px; color: var(--dust); }
-.days span { display: grid; justify-items: center; gap: 6px; }
-.days i { width: 9px; height: 9px; border-radius: 50%; background: var(--surface-2); outline: 1px solid var(--line); }
-.days i.on { background: var(--moon); outline: 0; }
-.counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.counts div { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
-.counts b { display: block; font-size: 20px; font-weight: 600; line-height: 1.1; }
-.counts small { font-size: 12px; color: var(--dust); }
-.bars { list-style: none; margin: 0; padding: 0; display: grid; }
-.bars a { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 44px; border-top: 1px solid var(--line); font-size: 14px; }
-.bars a:hover .bt { text-decoration: underline; }
-.bars .bd { font-size: 12px; color: var(--dust); }
-.bars .bt { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.bars .bi { display: flex; gap: 4px; color: var(--dust); }
-.bars .sealed .bt { color: var(--moon); display: flex; gap: 6px; align-items: center; }
-.log-foot { font-size: 13px; color: var(--dust); }
-.log-foot a { color: var(--star); text-decoration: underline; text-underline-offset: 3px; }
 
 /* Posts */
 .post { margin-top: 28px; display: grid; gap: 12px; }
@@ -360,18 +341,6 @@ h1, h2, h3 { text-wrap: balance; }
   }
   const sound = (st) => html`<button class="sound"><span class="spot">${icon('spotify', { size: 18 })}</span><span><i>${st.title}</i>, ${st.artist}</span></button>`;
   const tags = (ts) => html`<div class="tags">${ts.map((t) => html`<a class="tag" href="#feed">${t.name}</a>`)}</div>`;
-
-  function weekLog(w, { lead = false } = {}) {
-    const s = M.weekStats(w);
-    return html`<section class="week-log ${lead ? 'week-log--lead' : ''}" aria-label="Log of ${M.weekLabel(w)}">
-      <div class="days" aria-label="Days written">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => html`<span><i class="${s.days[i] ? 'on' : ''}"></i>${d}</span>`)}</div>
-      <div class="counts"><div><b>${s.entryCount}</b><small>${s.entryCount === 1 ? 'entry' : 'entries'}</small></div><div><b>${s.photoCount}</b><small>photos</small></div><div><b>${s.voiceNoteCount}</b><small>${s.voiceNoteCount === 1 ? 'voice note' : 'voice notes'}</small></div></div>
-      <ul class="bars">${w.entries.map((e) => M.isSealed(e)
-        ? html`<li><a class="sealed" href="#loot"><span class="bd">${date(e.entryDate, 'weekdayShort')}</span><span class="bt">${icon('lock', { size: 15 })}Sealed until ${M.instant(e.unlockDate, { day: 'numeric', month: 'short', year: 'numeric' })}</span><span></span></a></li>`
-        : html`<li><a href="#entry"><span class="bd">${date(e.entryDate, 'weekdayShort')}</span><span class="bt">${M.displayTitle(e)}</span><span class="bi">${M.images(e).length ? icon(M.images(e)[0].kind === 'PAGE_SCAN' ? 'page' : 'image', { size: 16 }) : ''}${M.voiceNotes(e).length ? icon('mic', { size: 16 }) : ''}</span></a></li>`)}</ul>
-      ${w.eras.length > 1 ? html`<p class="log-foot">Also in ${w.eras.slice(1).map((er) => html`<a href="#era">${er.title}</a>`)}</p>` : ''}
-    </section>`;
-  }
 
   function post(e) {
     if (M.isSealed(e)) {

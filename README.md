@@ -83,7 +83,7 @@ Memoirist is being built in phases, in this order. Each one builds on the one be
 - A Recently deleted list, so you can bring an entry back within 30 days
 - Loot Drops, with quick unlock dates, a heads-up when one opens, and a reply to past you
 - A first letter to future you when you start
-- A scrollable feed and your settings
+- A scrollable feed and your settings, in light or dark to match your phone
 
 ### Phase 2: Online, with accounts
 
