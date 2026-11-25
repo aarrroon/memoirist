@@ -37,6 +37,7 @@
 | 4.5 Entry card | done | Sprint 4.5: Store photo sizes and build the swipe and caption | `V2__media_dimensions.sql` and a header reader (`ImageSize`: JPEG, PNG, WebP) give photos their width and height (D-17); the feed entry gets an Embla swipe framed from the first photo (4:5 to 1.91:1), a caption drawn from TipTap JSON with links checked again, and a voice note row (1621 backend tests, 195 frontend) | [4.5](build-journal/sprint-4/4.5-entry-card.md) |
 | 4.6 Capture modal | done | Sprint 4.6: Build capture: the write sheet, uploads and the draft | Write opens capture (a lazy Vaul sheet on phones, a dialog on laptops): title, TipTap editor, templates, memory date, tags made inline, a tray of photos with reorder, retry, remove and diary-page marks, a zod-checked draft, and create (client id) → upload → order, with `409 entry-stale` and field errors handled (243 frontend tests) | [4.6](build-journal/sprint-4/4.6-capture-modal.md) |
 | 4.7 Voice notes | done | Sprint 4.7: Record voice notes in capture and play them back | Voice in capture records with `MediaRecorder` (Opus in WebM, or AAC in MP4) with live loudness bars and F-03 messages; voice notes go after the pictures in the media order (D-24); the feed and capture share a keyboard-operable player that finds the length of Chrome's WebM; checked in real Chromium with a fake microphone (upload 201, playback 3.66 s) (273 frontend tests) | [4.7](build-journal/sprint-4/4.7-voice-notes.md) |
+| 4.8 Loot Drops in the UI | done | Sprint 4.8: Build Loot Drops: the seal, the star and the Opened row | The travelling star as one SVG, a seal panel and confirmation opening at 09:00 in the user's zone (from capture, and Extend on the Loot Drop page), a 112 px sealed card with a live countdown, the Loot Drop page at `/entries/:entryId` with Delete, a kind `409`, and the Opened row with an optimistic dismiss; the full test run made reliable at close-out (311 frontend tests) | [4.8](build-journal/sprint-4/4.8-loot-drops-ui.md) |
 
 ### S4 Usage
 | Time (Melbourne) | 5-hour used | Weekly used | Decision |
@@ -51,6 +52,8 @@
 | 2026-11-25 04:15 | 53% | 62% | 4.5 cost 47% (largest; it had backend work). Weekly under 90%: start 4.6 (the user's rule) |
 | 2026-11-25 08:39 | 0% | 68% | The 4.6 run stopped with the app session (limit reached). The window reset: resume 4.6 from cache (`wf_901003cf-f88`); safety-net check-in recreated |
 | 2026-11-25 08:53 | 16% | 70% | 4.6 done (the resumed close-out cost 16%). Start 4.7 |
+| 2026-11-25 09:56 | 50% | 75% | 4.7 cost 34% and 5% weekly. Start 4.8 |
+| 2026-11-25 16:20 | 8% | 78% | The 4.8 builder hit the limit; after the reset the workflow retried it by itself (a new builder at 16:19, carrying on from the tree). Nothing to do |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
@@ -107,6 +110,13 @@
 | 50 | 4.7 | USER_FLOWS F-03 (no copy given) | Refused: *memoirist can't use the microphone. Allow it for this site in your browser's settings, then try again. Photos still work.*; no microphone: *No microphone was found…*; other: *This browser couldn't record a voice note. Photos still work.* Voice is hidden when neither format can be recorded |
 | 51 | 4.7 | DESIGN.md §4 Write (no record control drawn for laptops) | The laptop dialog has a secondary *Record a voice note* button with a mic icon under the photos; phones have Voice in the add bar's second column |
 | 52 | 4.7 | No doc covers it | Focus moves to Stop while recording and back to the button that started it after Stop, Discard or Close; a recording in progress counts as unsaved, so closing asks Keep editing / Discard |
+| 53 | 4.8 | SPRINT_PLAN 4.8 vs 4.16 | The seal panel offers only *pick a day*; the quick dates and *Reply to past you* are left to 4.16, and the form leaves room for their radio rows above the day chip |
+| 54 | 4.8 | DESIGN.md §4 (no laptop Extend drawn); design.md §10 | On a laptop, Extend is a centred dialog at most 440 px wide over a full scrim; on a phone it is DESIGN.md's bottom panel |
+| 55 | 4.8 | No Sprint 4 task builds the entry view; DESIGN.md §4 Swipe | `/entries/:entryId` shows the Loot Drop page while sealed; otherwise the entry plainly (title, the feed's cropped swipe, caption, voice), no Edit. Whole (`contain`) photos are left to the task that builds the entry view |
+| 56 | 4.8 | design.md §6 (late things have their space reserved) | The feed waits for `GET /entries/opened` before its first paint, and a failure counts as nothing to show, so the Opened row never pushes the feed down |
+| 57 | 4.8 | No doc covers it | Focus returns to the button that opened a state-opened dialog: Extend, Delete, capture's Seal, or Seal it/Extend after Go back |
+| 58 | 4.8 | USER_FLOWS F-07 | A card opens itself with one timer one second after the soonest unlock instant, re-armed each minute while the server still says sealed; the server's clock decides |
+| 59 | 4.8 | No doc gives the copy | Delete: *Delete this Loot Drop? It moves to Recently deleted, still sealed. You can restore it there for 30 days.* Seal errors: *Not sealed. Try again.* and *The seal didn't change. Try again.* The confirmation ends *…never shorter, and you can still delete it* (F-06 step 1) |
 
 ### S4 Needs attention
 - **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
@@ -144,6 +154,12 @@
 - **4.7:** the fake microphone plays a steady tone, so the bars in the screenshots are nearly flat; a real voice gives uneven bars.
 - **4.7:** `test/setup.ts` now stubs `HTMLMediaElement.load()` to fire `loadedmetadata`, because Play reads the length first; 4.5's FeedEntry keyboard test needed it.
 - **4.7:** the design audit wasn't rerun after the review fixes (pictures-first order, one message, and the phone Voice button's name changed to its visible word "Voice"); no layout changed.
+- **4.8, D-41 first screen (known overrun):** with the sample data at 375 px, the feed's first photo starts at 905 px (111%; limit 284 px). The sample's newest week opens with text and voice entries (4.7 measured 809 px), and the Opened row adds about 64 px. Task 4.14 must re-measure with the Opened row showing, and keep On this day out while it shows.
+- **4.8, the flaky tests are fixed:** the full run had failed on FeedPage "loading… the shapes only after 300 ms" and VoiceRecorder "records with Opus in WebM…" (the same flakiness as 4.6 and 4.7). The loading test now holds its fake answer until it has seen the skeleton, and the capture, voice and Loot Drop tests import their lazy modules in a `beforeAll`. Four full runs in a row then gave `Tests  311 passed (311)`. No config change.
+- **4.8, follow-up:** the opened entry at `/entries/:entryId` shows photos in the feed's cropped swipe, not whole as DESIGN.md §4 asks for the entry view (review 1 minor, left to the task that builds the entry view).
+- **4.8, follow-up:** `SealedCard`'s `showMemoryDate` has a test but no caller yet; 4.10 (week) and 4.11 (timeline) should pass it.
+- **4.8:** audit.mjs wasn't rerun after the fix pass or the close-out: they changed confirmation copy shown after a tap, the cache after a seal, and tests only.
+- **4.8, not checked:** `<use href="file.svg#id">` with `?no-inline` was checked in Chromium only, not Safari.
 
 ### S4 Questions for the morning
 

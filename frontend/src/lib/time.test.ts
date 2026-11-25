@@ -16,6 +16,14 @@ import {
   fromPickerDate,
   toPickerDate,
   weekOf,
+  addDays,
+  daysBetween,
+  dayIn,
+  latestSealDay,
+  openedLabel,
+  openingParts,
+  sealProgress,
+  unlockInstant,
 } from './time';
 
 // Plain unit tests with fixed instants (frontend.md: plain Vitest for lib/). Every instant is written in UTC, so
@@ -235,5 +243,84 @@ describe('capture (task 4.6)', () => {
     for (const day of ['2026-11-24', '1900-01-01', '2026-10-04', '2024-02-29']) {
       expect(fromPickerDate(toPickerDate(day))).toBe(day);
     }
+  });
+});
+
+describe('Loot Drops (task 4.8, D-23)', () => {
+  test('a Loot Drop opens at 9:00 am on its day in the user’s zone, in both of Melbourne’s seasons', () => {
+    // October is daylight time (+11), June standard time (+10): one fixed offset gets one of them wrong.
+    expect(unlockInstant('2027-10-28', MELBOURNE)).toBe('2027-10-27T22:00:00.000Z');
+    expect(unlockInstant('2027-06-28', MELBOURNE)).toBe('2027-06-27T23:00:00.000Z');
+  });
+
+  test('on the day Melbourne’s clocks go forward, 9:00 am is already daylight time', () => {
+    // 4 October 2026: 2:00 am became 3:00 am, so 9:00 am that day is 22:00 UTC the day before.
+    expect(unlockInstant('2026-10-04', MELBOURNE)).toBe('2026-10-03T22:00:00.000Z');
+  });
+
+  test('another zone opens at its own 9:00 am, not Melbourne’s and not the browser’s', () => {
+    expect(unlockInstant('2027-07-01', 'Europe/London')).toBe('2027-07-01T08:00:00.000Z');
+    expect(unlockInstant('2027-07-01', KOLKATA)).toBe('2027-07-01T03:30:00.000Z');
+    expect(unlockInstant('2027-01-15', NEW_YORK)).toBe('2027-01-15T14:00:00.000Z');
+  });
+
+  test('the opening day and moment are read back in the user’s zone', () => {
+    const opens = '2027-10-24T22:00:00Z'; // 9:00 am on Monday 25 October 2027 in Melbourne
+    expect(dayIn(opens, MELBOURNE)).toBe('2027-10-25');
+    expect(dayIn(opens, NEW_YORK)).toBe('2027-10-24');
+    expect(openingParts(opens, MELBOURNE)).toEqual({
+      day: 'Monday 25 October 2027',
+      time: '9:00 am',
+    });
+  });
+
+  test('calendar arithmetic crosses months, leap days and daylight-saving changes', () => {
+    expect(addDays('2026-11-30', 1)).toBe('2026-12-01');
+    expect(addDays('2028-02-28', 1)).toBe('2028-02-29');
+    expect(addDays('2026-10-05', -2)).toBe('2026-10-03');
+    expect(daysBetween('2026-10-25', '2027-10-25')).toBe(365);
+    expect(daysBetween('2026-04-04', '2026-04-06')).toBe(2);
+  });
+
+  test('a seal can open at most the day before its 100th anniversary', () => {
+    expect(latestSealDay(MELBOURNE, utc('2026-11-24T12:47:00Z'))).toBe('2126-11-23');
+    // 23:30 on 24 November in New York: Melbourne's today is the 25th.
+    expect(latestSealDay(MELBOURNE, utc('2026-11-25T04:30:00Z'))).toBe('2126-11-24');
+  });
+
+  test('the star’s lit part is the days travelled over the days of the whole wait', () => {
+    // Written Sunday 25 October 2026, opens 9:00 am Monday 25 October 2027 in Melbourne: 365 days.
+    const opens = '2027-10-24T22:00:00Z';
+    expect(sealProgress('2026-10-25', opens, MELBOURNE, utc('2026-10-28T01:00:00Z'))).toEqual({
+      travelled: 3,
+      total: 365,
+      fraction: 3 / 365,
+    });
+    // At 1 am on 28 October in Melbourne it is still the 27th in UTC: the zone decides, not UTC.
+    expect(
+      sealProgress('2026-10-25', opens, MELBOURNE, utc('2026-10-27T14:00:00Z')).travelled,
+    ).toBe(3);
+    // Before the memory date (a Loot Drop dated ahead is impossible, but the clock may be off) and after opening.
+    expect(sealProgress('2026-10-25', opens, MELBOURNE, utc('2026-10-01T00:00:00Z')).fraction).toBe(
+      0,
+    );
+    expect(sealProgress('2026-10-25', opens, MELBOURNE, utc('2028-01-01T00:00:00Z')).fraction).toBe(
+      1,
+    );
+    // Sealed today to open tomorrow: 0 of 1, then 1 of 1.
+    expect(
+      sealProgress('2026-11-24', '2026-11-24T22:00:00Z', MELBOURNE, utc('2026-11-24T05:00:00Z')),
+    ).toEqual({
+      travelled: 0,
+      total: 1,
+      fraction: 0,
+    });
+  });
+
+  test('"Opened" names today, yesterday or the day in the user’s zone', () => {
+    const now = utc('2026-11-24T12:47:00Z'); // 11:47 pm on Tuesday 24 November in Melbourne
+    expect(openedLabel('2026-11-23T22:00:00Z', MELBOURNE, now)).toBe('Opened today');
+    expect(openedLabel('2026-11-22T22:00:00Z', MELBOURNE, now)).toBe('Opened yesterday');
+    expect(openedLabel('2026-11-02T22:00:00Z', MELBOURNE, now)).toBe('Opened 3 Nov 2026');
   });
 });

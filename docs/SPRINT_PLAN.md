@@ -307,7 +307,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:** a `MediaRecorder` recorder that picks `audio/webm;codecs=opus` or `audio/mp4`.
   - **Done when:** a recording uploads and plays back in Chrome. Note whether Safari or iOS could be tested.
 
-- [ ] **4.8 Loot Drops in the UI**
+- [x] **4.8 Loot Drops in the UI**
   - **Read:** D-10, D-41, DESIGN.md §4 (Loot Drops) and §5 (the travelling star).
   - **Do:** a seal dialog (pick a day; it opens at 09:00 in the user's timezone, D-23; then a confirmation repeating the date and time), the travelling star as one SVG in `src/assets/`, a sealed card with a live countdown, the Loot Drop page, a `409` that surfaces as a friendly message, and an *Opened* row that takes On this day's place at the top of the feed (D-10, D-41).
   - **Done when:** sealing an entry turns it into a sealed card; under a day heading the card shows only the opening date and the countdown, and elsewhere the memory date too; the countdown is correct in the user's zone; the star's lit part matches the days travelled; once the unlock time passes, the entry shows in the Opened row until it is opened or dismissed.

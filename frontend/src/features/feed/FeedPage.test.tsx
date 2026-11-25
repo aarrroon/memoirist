@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { delay, http, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { useUiStore } from '../../stores/ui';
 import {
@@ -151,7 +151,11 @@ describe('a sealed Loot Drop (D-10)', () => {
     expect(within(card).getByText('in 62 days')).toBeInTheDocument();
     expect(within(card).getByText('Thursday 19 November')).toBeInTheDocument();
     expect(within(card).queryByRole('img')).not.toBeInTheDocument();
-    expect(within(card).queryByRole('link')).not.toBeInTheDocument();
+    // Task 4.8: the card is one link to the Loot Drop page, named with what it shows and nothing more. The day
+    // line above already names the memory date, so the link leaves it out (D-10, D-41).
+    const link = within(card).getByRole('link');
+    expect(link).toHaveAccessibleName('Sealed Loot Drop. Opens Mon 25 Jan 2027, in 62 days.');
+    expect(link).toHaveAttribute('href', '/entries/entry-sealed');
   });
 
   test('is never counted: its week says 2 entries, not 3', async () => {
@@ -223,24 +227,36 @@ describe('states', () => {
     expect(useUiStore.getState().capture).toBe('dump');
   });
 
-  test('loading: a status for screen readers at once, and the shapes only after 300 ms', async () => {
-    server.use(
-      http.get('*/api/v1/feed', async () => {
-        // Long enough that the 300 ms timer fires first even on a busy machine: with the whole suite running in
-        // parallel (task 4.6 added the heavy capture tests), a 1 s answer sometimes beat the timer.
-        await delay(3000);
-        return HttpResponse.json(page(sampleWeeks));
-      }),
-    );
-    renderApp('/');
+  // The answer waits until the test lets it go. A fixed delay raced the 300 ms timer: with the whole suite running
+  // in parallel (tasks 4.6 to 4.8 added heavy lazy-panel tests), a 3 s answer plus the waits outran the test's own
+  // limit or beat a starved timer (task 4.8 close-out). Holding the answer leaves nothing to race.
+  test(
+    'loading: a status for screen readers at once, and the shapes only after 300 ms',
+    { timeout: 20_000 },
+    async () => {
+      let release: () => void = () => undefined;
+      const answered = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      server.use(
+        http.get('*/api/v1/feed', async () => {
+          await answered;
+          return HttpResponse.json(page(sampleWeeks));
+        }),
+      );
+      renderApp('/');
 
-    expect(screen.getByRole('status')).toHaveTextContent('Opening your journal…');
-    expect(screen.queryByTestId('feed-skeleton')).not.toBeInTheDocument();
-    expect(await screen.findByTestId('feed-skeleton', {}, { timeout: 2500 })).toBeInTheDocument();
-    expect(
-      await screen.findByRole('heading', { name: 'Quiet day' }, { timeout: 6000 }),
-    ).toBeInTheDocument();
-  });
+      expect(screen.getByRole('status')).toHaveTextContent('Opening your journal…');
+      expect(screen.queryByTestId('feed-skeleton')).not.toBeInTheDocument();
+      expect(
+        await screen.findByTestId('feed-skeleton', {}, { timeout: 10_000 }),
+      ).toBeInTheDocument();
+      release();
+      expect(
+        await screen.findByRole('heading', { name: 'Quiet day' }, { timeout: 8000 }),
+      ).toBeInTheDocument();
+    },
+  );
 
   test('an error: Can’t reach memoirist with a friendly sentence, never the server’s detail; Try again works', async () => {
     let calls = 0;

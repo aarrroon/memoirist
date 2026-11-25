@@ -172,3 +172,88 @@ export function fromPickerDate(date: Date): IsoDate {
 
 /** The earliest memory date the API accepts (D-09). */
 export const EARLIEST_DAY: IsoDate = '1900-01-01';
+
+// ---------- Loot Drops (task 4.8, D-10, D-23) ----------
+
+/** The calendar day `days` after (or before, when negative) an ISO day. Calendar days have no zone. */
+export function addDays(day: IsoDate, days: number): IsoDate {
+  return format(new TZDate(calendarDay(day).getTime() + days * 86_400_000, 'UTC'), 'yyyy-MM-dd');
+}
+
+/** Whole calendar days from `from` to `to` (negative when `to` comes first). */
+export function daysBetween(from: IsoDate, to: IsoDate): number {
+  return Math.round((calendarDay(to).getTime() - calendarDay(from).getTime()) / 86_400_000);
+}
+
+/** The calendar day an instant falls on in the user's zone: a Loot Drop's opening day. */
+export function dayIn(instant: string | Date, zone: string): IsoDate {
+  return format(new TZDate(new Date(instant), zone), 'yyyy-MM-dd');
+}
+
+// TODO(human) PRACTICE: Write unlockInstant(day, zone): the instant a Loot Drop picked for `day` opens, which is
+// 09:00 on that day in the user's timezone (D-23), as the ISO string POST /entries/{id}/seal takes ("...Z").
+// Hint: the browser's zone is the wrong one (non-negotiable 2), and so is a fixed offset: Melbourne is +11 in
+// October and +10 in June, and 4 October 2026 is the very day its clocks go forward. TZDate takes the parts of a
+// wall-clock time and a zone; getTime() is the instant. time.test.ts has Melbourne in both seasons, the change-over
+// day and London, and every one of them fails if the hour is set with new Date(...) or setUTCHours.
+// ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+export function unlockInstant(day: IsoDate, zone: string): string {
+  const date = calendarDay(day);
+  const nineAm = new TZDate(date.getFullYear(), date.getMonth(), date.getDate(), 9, 0, 0, zone);
+  return new Date(nineAm.getTime()).toISOString();
+}
+// └── END ANSWER ▲ ──
+
+/**
+ * The last day a seal can open: the API takes an unlock date at most 100 years ahead (API_CONTRACT §Entries), so
+ * the picker stops the day before that anniversary, which keeps 09:00 safely inside the limit.
+ */
+export function latestSealDay(zone: string, now: Date = new Date()): IsoDate {
+  const today = calendarDay(todayIn(zone, now));
+  const anniversary = new TZDate(
+    today.getFullYear() + 100,
+    today.getMonth(),
+    today.getDate(),
+    'UTC',
+  );
+  return addDays(format(anniversary, 'yyyy-MM-dd'), -1);
+}
+
+/**
+ * How far the travelling star's light has come (DESIGN.md §5): `travelled` is the days from the memory date to
+ * today, `total` the days from the memory date to the opening day, both in the user's zone. `fraction` is
+ * travelled ÷ total, kept between 0 and 1; a Loot Drop sealed on its own memory date to open the next morning, or
+ * one already open, is 1 once its day has come.
+ */
+export function sealProgress(
+  entryDate: IsoDate,
+  unlockDate: string,
+  zone: string,
+  now: Date = new Date(),
+): { travelled: number; total: number; fraction: number } {
+  const total = Math.max(daysBetween(entryDate, dayIn(unlockDate, zone)), 0);
+  const travelled = Math.min(Math.max(daysBetween(entryDate, todayIn(zone, now)), 0), total);
+  return { travelled, total, fraction: total === 0 ? 1 : travelled / total };
+}
+
+/** "25 Oct 2026": the dates beside the star on a Loot Drop page ("Written 25 Oct 2026", DESIGN.md §4). */
+export function formatShortDay(day: IsoDate): string {
+  return format(calendarDay(day), 'd MMM yyyy');
+}
+
+/**
+ * A Loot Drop's opening moment in two parts, so the page can keep "9:00 am" on one line (DESIGN.md §4):
+ * `{ day: 'Monday 25 October 2027', time: '9:00 am' }`.
+ */
+export function openingParts(instant: string | Date, zone: string): { day: string; time: string } {
+  const at = new TZDate(new Date(instant), zone);
+  return { day: format(at, 'EEEE d MMMM yyyy'), time: format(at, 'h:mm aaa') };
+}
+
+/** "Opened today", "Opened yesterday" or "Opened 3 Nov 2026", in the user's zone (DESIGN.md §4, Opened Loot Drop). */
+export function openedLabel(instant: string | Date, zone: string, now: Date = new Date()): string {
+  const ago = daysBetween(dayIn(instant, zone), todayIn(zone, now));
+  if (ago <= 0) return 'Opened today';
+  if (ago === 1) return 'Opened yesterday';
+  return `Opened ${formatShortDay(dayIn(instant, zone))}`;
+}

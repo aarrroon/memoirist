@@ -21,5 +21,8 @@ export const queryKeys = {
   tags: () => [...all, 'tags'] as const,
   templates: () => [...all, 'templates'] as const,
   entry: (id: string) => [...all, 'entries', id] as const,
+  // Task 4.8. The Opened strip (GET /entries/opened, D-10). Not under 'entries', so a family invalidation of one
+  // entry never refetches it by accident, and it can be invalidated on its own when a Loot Drop is dismissed.
+  opened: () => [...all, 'opened'] as const,
 };
 // └── END ANSWER ▲ ──

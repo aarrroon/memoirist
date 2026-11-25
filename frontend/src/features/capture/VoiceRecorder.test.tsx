@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { useUiStore } from '../../stores/ui';
 import { fakeBackend } from '../../test/msw/capture';
 import { server } from '../../test/msw/server';
@@ -46,6 +46,12 @@ const fakeStream = () =>
   ({
     getTracks: () => [{ stop: () => stopped.push('track') }],
   }) as unknown as MediaStream;
+
+// Capture is React.lazy. Importing it here first means the lazy import finds it already loaded, so no test races
+// its first import under a full parallel run (task 4.8 close-out: this test timed out at about 10.7 s).
+beforeAll(async () => {
+  await import('./CaptureView');
+}, 60_000);
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });

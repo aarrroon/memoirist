@@ -34,6 +34,8 @@ export interface FakeBackend {
   tags: Tag[];
   /** Upload numbers (1-based, in the order they arrive) that answer 503 storage-unavailable. */
   failUploads: Set<number>;
+  /** When true, POST …/seal answers 503, as if the network or the server failed (F-06). */
+  failSeal: boolean;
 }
 
 const problem = (status: number, suffix: string, fieldErrors?: Record<string, string>) =>
@@ -84,6 +86,7 @@ export function fakeBackend() {
     calls: [],
     tags: [...sampleTags],
     failUploads: new Set(),
+    failSeal: false,
   };
   let uploads = 0;
   let mediaCount = 0;
@@ -120,6 +123,24 @@ export function fakeBackend() {
       });
       state.entries.set(id, created);
       return HttpResponse.json(created, { status: 201 });
+    }),
+    // Before entries/:id, which would otherwise take "opened" for an id (task 4.8).
+    http.get('*/api/v1/entries/opened', () => HttpResponse.json([])),
+    http.post('*/api/v1/entries/:id/seal', async ({ params, request }) => {
+      const body = (await request.json()) as { unlockDate: string };
+      state.calls.push({ method: 'POST', path: `/entries/${String(params.id)}/seal`, body });
+      if (state.failSeal) return problem(503, 'storage-unavailable');
+      const found = state.entries.get(params.id as string);
+      if (!found) return problem(404, 'not-found');
+      // As the server's EntryMapper does: nothing private comes back while it is sealed (D-10).
+      const sealed = {
+        ...entry(found.id, found.entryDate, { weeklyLogId: found.weeklyLogId }),
+        unlockDate: body.unlockDate,
+        isLocked: true,
+        version: found.version + 1,
+      };
+      state.entries.set(found.id, sealed);
+      return HttpResponse.json(sealed);
     }),
     http.get('*/api/v1/entries/:id', ({ params }) => {
       const found = state.entries.get(params.id as string);

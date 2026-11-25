@@ -1,5 +1,6 @@
 import { CloudOff, Images, Plus, RefreshCw } from 'lucide-react';
 import { problemMessage, type ApiProblem } from '../../api/problem';
+import { TravellingStar } from '../../components/TravellingStar';
 import { Button } from '../../components/ui/button';
 import { useDelayed } from '../../lib/useDelayed';
 import { useUiStore } from '../../stores/ui';
@@ -35,12 +36,13 @@ export function FeedLoading() {
 /**
  * First run (F-01, DESIGN.md §6 `#empty`): an invitation, not an apology, with the action that fills it. Both
  * buttons open capture through the UI store, like the Write menu; the sheet that reads it is task 4.6. The star
- * drawing above the heading (task 4.8) and the first letter (task 4.16) join it later.
+ * drawing above the heading is task 4.8's, as decoration, halfway along; the first letter (task 4.16) joins later.
  */
 export function FeedEmpty() {
   const openCapture = useUiStore((s) => s.openCapture);
   return (
     <div className="flex flex-col items-start gap-4 pt-8">
+      <TravellingStar fraction={0.5} className="w-40" />
       <h2 className="font-display text-heading">Your journal starts here</h2>
       <p className="text-body text-ink-2">
         Write about today, or bring in the photos from a day you want to keep. Each week files

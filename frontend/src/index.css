@@ -100,6 +100,18 @@
   --default-transition-duration: 200ms;
   --default-transition-timing-function: ease-out;
 
+  /* The travelling star's twinkle (DESIGN.md §5): 100% to 86% and back every 3.2 s. Used through `.twinkle` below. */
+  --animate-twinkle: twinkle 3.2s ease-in-out infinite;
+  @keyframes twinkle {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(0.86);
+    }
+  }
+
   /* Instrument Sans for text and the interface, entry text included; Newsreader for titles only (DESIGN.md §2).
      The system faces after them only show while the files load (font-display: swap). */
   --font-text: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
@@ -184,6 +196,14 @@
    component holds an arbitrary grid value (design.md Tokens, D-40). Use it as `lg:feed-grid`. */
 @utility feed-grid {
   grid-template-columns: 6rem minmax(0, 1fr);
+}
+
+/* The star twinkles about its own centre (task 4.8): a <use> in an SVG scales from the drawing's corner unless its
+   box is its own shape. The reduced-motion rule below stops it. */
+@utility twinkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: var(--animate-twinkle);
 }
 
 /* prefers-reduced-motion stops motion everywhere, whatever a component asks for. */

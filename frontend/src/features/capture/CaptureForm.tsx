@@ -5,20 +5,36 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { getEntry, type Entry } from '../../api/entries';
+import { afterSeal, sealEntry } from '../../api/lootDrops';
 import { ApiProblem, problemMessage } from '../../api/problem';
 import { queryKeys } from '../../api/queryKeys';
+import { StarMark } from '../../components/TravellingStar';
 import { Button } from '../../components/ui/button';
 import { fileProblem, isImageType, MAX_FILES, shrinkPhoto } from '../../lib/files';
 import { canRecord } from '../../lib/recording';
 import { captionForSave, insertTemplateHeadings, isBlankDoc } from '../../lib/templateDoc';
-import { formatClock, formatWeekRange, isWithin, todayIn, weekOf } from '../../lib/time';
+import {
+  addDays,
+  chipDay,
+  formatClock,
+  formatWeekRange,
+  isWithin,
+  latestSealDay,
+  todayIn,
+  unlockInstant,
+  weekOf,
+  type IsoDate,
+} from '../../lib/time';
 import type { CaptureKind } from '../../stores/ui';
+import SealPanel from '../lootdrop/SealPanel';
+import { SealForm } from '../lootdrop/SealForm';
+import { sealProblem } from '../lootdrop/sealProblem';
 import { DateChip } from './DateChip';
 import { clearDraft, readDraft, writeDraft, type Draft } from './draft';
 import { EntryEditor } from './Editor';
 import { useEntryEditor } from './editorSetup';
 import { MediaTray } from './MediaTray';
-import { picturesFirst, saveEntry, type TrayItem } from './saveEntry';
+import { picturesFirst, saveEntry, type SaveResult, type TrayItem } from './saveEntry';
 import { TagPicker } from './TagPicker';
 import { TemplateChip } from './TemplateChip';
 import { useRecorder, type Recording } from './useRecorder';
@@ -27,6 +43,17 @@ import { VoiceRecorder } from './VoiceRecorder';
 // Capture: New entry and Diary page (DESIGN.md §4 Write, F-02 to F-05, task 4.6). Everything the user types lives in
 // this component's state, never in Zustand (frontend.md, Data): it is a form, and the server owns the entry once it
 // is saved. A draft of it goes to local storage as it changes (D-23). Photo dump (D-34) is task 4.13.
+
+/** What one Save (or Seal it) did: the save's own result, the entry as saved before any seal, and the seal's fate. */
+type SaveOutcome = SaveResult & {
+  savedEntry: Entry | null;
+  /** The opening day, when the entry is now sealed. */
+  sealed: IsoDate | null;
+  /** Why the seal failed, when it was asked for and the save worked. */
+  sealError: unknown;
+};
+
+const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
 
 /** Which fields the API named in a 400 (API_CONTRACT §Entries), shown beside each one. */
 type FieldMessages = Partial<Record<'title' | 'entryDate' | 'contentJson' | 'tagIds', string>>;
@@ -118,11 +145,17 @@ export function CaptureForm({
   const [fileMessages, setFileMessages] = useState<string[]>([]);
   const [stale, setStale] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
+  // Sealing (task 4.8): the phone's seal panel, and what went wrong with the last seal, shown inside it.
+  const [sealOpen, setSealOpen] = useState(false);
+  const [sealError, setSealError] = useState<string | null>(null);
   const addRef = useRef<HTMLInputElement>(null);
   const titleFieldId = useId();
+  const sealTitleId = useId();
   // Voice (task 4.7): hidden when this browser can't record one of our formats (F-03), decided once.
   const [recordable] = useState(canRecord);
   const voiceTrigger = useRef<HTMLButtonElement | null>(null);
+  // The seal panel opens from state, so Escape hands focus back to the Seal button by hand (task 4.8).
+  const sealTrigger = useRef<HTMLButtonElement>(null);
   const kindOfDraft = restored?.kind ?? kind;
 
   const editor = useEntryEditor(start.content, setContent);
@@ -321,9 +354,12 @@ export function CaptureForm({
       ),
     );
 
+  // Save, and Seal it (task 4.8): a seal is the last step of the same save (D-10, frontend.md: create → upload →
+  // reorder → seal), and only when every file is on the server, so nothing is sealed half-finished. A seal that fails
+  // leaves the entry saved and unsealed, and says so (F-06).
   const save = useMutation({
-    mutationFn: () =>
-      saveEntry(
+    mutationFn: async (sealDay: IsoDate | null): Promise<SaveOutcome> => {
+      const result = await saveEntry(
         {
           clientId,
           saved,
@@ -340,16 +376,51 @@ export function CaptureForm({
           removedMediaIds,
         },
         patchItem,
-      ),
+      );
+      if (!sealDay || !result.entry || result.failed > 0) {
+        return { ...result, savedEntry: result.entry, sealed: null, sealError: null };
+      }
+      try {
+        const sealedEntry = await sealEntry(result.entry.id, unlockInstant(sealDay, zone));
+        return {
+          ...result,
+          savedEntry: result.entry,
+          entry: sealedEntry,
+          sealed: sealDay,
+          sealError: null,
+        };
+      } catch (error) {
+        return { ...result, savedEntry: result.entry, sealed: null, sealError: error };
+      }
+    },
     onMutate: () => {
       setFieldErrors({});
       setMessage(null);
+      setSealError(null);
       setStale(false);
     },
-    onSuccess: async ({ entry, failed }) => {
+    onSuccess: async ({ entry, savedEntry, failed, sealed, sealError }, sealDay) => {
       setRemovedMediaIds([]);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.feed() });
+      // A seal goes through afterSeal, as useSeal's does: it overwrites any whole copy of this entry that capture
+      // read back when it restored the draft, so the Loot Drop page never shows a sealed entry's content (D-10).
+      await (sealed && entry
+        ? afterSeal(queryClient, entry)
+        : queryClient.invalidateQueries({ queryKey: queryKeys.feed() }));
       void queryClient.invalidateQueries({ queryKey: queryKeys.tags() });
+      if (sealed && entry) {
+        clearDraft();
+        setSealOpen(false);
+        announceSaved(entry, sealed);
+        onDone();
+        return;
+      }
+      if (sealError && savedEntry) {
+        // Saved, not sealed: the next Save or Seal it replaces this entry instead of making another (D-12).
+        setSaved({ id: savedEntry.id, version: savedEntry.version });
+        setKept({ soundtrack: savedEntry.soundtrack, replyToEntryId: savedEntry.replyToEntryId });
+        setSealError(`Saved, but ${lowerFirst(sealProblem(sealError))}`);
+        return;
+      }
       if (failed === 0 && entry) {
         clearDraft();
         announceSaved(entry);
@@ -367,13 +438,18 @@ export function CaptureForm({
       }
       setSaved({ id: entry.id, version: entry.version });
       setKept({ soundtrack: entry.soundtrack, replyToEntryId: entry.replyToEntryId });
+      setSealOpen(false);
       setMessage(
-        failed === 1
+        (failed === 1
           ? 'Saved, but 1 photo didn’t upload. Open it to try again or remove it.'
-          : `Saved, but ${failed} photos didn’t upload. Open them to try again or remove them.`,
+          : `Saved, but ${failed} photos didn’t upload. Open them to try again or remove them.`) +
+          // Seal last (D-10): a Loot Drop is never sealed with a photo missing.
+          (sealDay ? ' It isn’t sealed yet: seal it once every photo is saved.' : ''),
       );
     },
     onError: (error) => {
+      // The save itself failed, so the message belongs to the form, which the seal panel would cover.
+      setSealOpen(false);
       if (error instanceof ApiProblem && error.kind === 'entry-stale') {
         // D-23: keep every word typed, and offer the latest version instead of overwriting it.
         setStale(true);
@@ -389,14 +465,28 @@ export function CaptureForm({
     },
   });
 
-  /** After a save: a backdated entry lands outside the week on screen, so a toast names its week (G-04). */
-  const announceSaved = (entry: Entry) => {
+  /**
+   * After a save: a backdated entry lands outside the week on screen, so a toast names its week (G-04). A Loot Drop
+   * always says when it opens (task 4.8), with the same Go there when it is backdated.
+   */
+  const announceSaved = (entry: Entry, sealed: IsoDate | null = null) => {
     const thisWeek = weekOf(todayIn(zone));
-    if (isWithin(entry.entryDate, thisWeek.start, thisWeek.end)) return;
+    const backdated = !isWithin(entry.entryDate, thisWeek.start, thisWeek.end);
     const week = weekOf(entry.entryDate);
-    toast(`Saved in the week of ${formatWeekRange(week.start, week.end)}`, {
-      action: { label: 'Go there', onClick: () => void navigate(`/weeks/${entry.weeklyLogId}`) },
-    });
+    const goThere = backdated
+      ? {
+          action: {
+            label: 'Go there',
+            onClick: () => void navigate(`/weeks/${entry.weeklyLogId}`),
+          },
+        }
+      : {};
+    if (sealed) {
+      toast(`Sealed as a Loot Drop. Opens ${chipDay(sealed, zone)}.`, goThere);
+      return;
+    }
+    if (!backdated) return;
+    toast(`Saved in the week of ${formatWeekRange(week.start, week.end)}`, goThere);
   };
 
   const loadLatest = useMutation({
@@ -474,6 +564,18 @@ export function CaptureForm({
     </div>
   );
 
+  // Seal it saves the entry, then seals it (D-10: seal last). Nothing to save means nothing to seal (D-23), and a
+  // save under way (uploads included) keeps it unavailable (F-06).
+  const sealForm = {
+    zone,
+    earliest: addDays(todayIn(zone), 1),
+    latest: latestSealDay(zone),
+    busy: save.isPending,
+    disabled: !canSave,
+    error: sealError,
+    onSeal: (day: IsoDate) => save.mutate(day),
+  };
+
   const extras = (
     <div className="flex flex-col gap-4">
       <MediaTray
@@ -483,7 +585,7 @@ export function CaptureForm({
         onReorder={setItems}
         onRemove={removeItem}
         onTogglePage={togglePage}
-        onRetry={() => save.mutate()}
+        onRetry={() => save.mutate(null)}
       />
       {fileMessages.length > 0 && (
         <ul role="alert" className="flex flex-col gap-1 text-small text-danger">
@@ -522,6 +624,23 @@ export function CaptureForm({
         onOpenChange={setTagsOpen}
         error={fieldErrors.tagIds}
       />
+      {/* Laptop: the Seal as Loot Drop box on the first screen, in the right column (DESIGN.md §4 Write, D-41). Save
+          stays the one primary button, so Seal it is secondary here. */}
+      {layout === 'dialog' && (
+        <section
+          aria-labelledby={sealTitleId}
+          className="flex flex-col gap-4 rounded-lg bg-surface p-4"
+        >
+          <h3 id={sealTitleId} className="font-display text-title">
+            Seal as Loot Drop
+          </h3>
+          <p className="text-small text-ink-2">
+            Nobody, including you, can open it until the day you pick. You can make the wait longer
+            later, never shorter.
+          </p>
+          <SealForm {...sealForm} primary={false} />
+        </section>
+      )}
     </div>
   );
 
@@ -530,7 +649,7 @@ export function CaptureForm({
       className="flex min-h-0 flex-1 flex-col"
       onSubmit={(event) => {
         event.preventDefault();
-        if (canSave && !save.isPending) save.mutate();
+        if (canSave && !save.isPending) save.mutate(null);
       }}
     >
       {/* The 56 px bar: Cancel, the heading over "Draft saved 7:41 pm", and the one primary button, Save. */}
@@ -594,8 +713,20 @@ export function CaptureForm({
         )}
       </div>
 
+      {/* The seal panel opens from the bottom over the sheet (task 4.8). */}
+      {layout === 'sheet' && (
+        <SealPanel
+          open={sealOpen}
+          onOpenChange={setSealOpen}
+          title="Seal as Loot Drop"
+          returnFocus={sealTrigger}
+          primary
+          {...sealForm}
+        />
+      )}
+
       {/* The add bar (DESIGN.md §4 Write): fixed at the foot of the phone sheet. Voice (4.7) shows when this browser can
-          record; Song (4.15) and Seal (4.8) join when their tasks build them. */}
+          record; Song (4.15) joins when its task builds it. */}
       {layout === 'sheet' && (
         <div className="grid h-16 shrink-0 grid-cols-5 border-t border-line">
           <button
@@ -624,6 +755,18 @@ export function CaptureForm({
           >
             <Tag size={20} aria-hidden className="text-ink" />
             Tag
+          </button>
+          {/* Seal, in the accent with the star mark, so sealing is on the first screen (DESIGN.md §4 Write). It sits
+              in the fifth column whatever is missing before it; Song (4.15) takes the fourth. */}
+          <button
+            type="button"
+            ref={sealTrigger}
+            onClick={() => setSealOpen(true)}
+            disabled={!canSave || save.isPending}
+            className="col-start-5 flex flex-col items-center justify-center gap-1 text-meta text-accent focus-visible:-outline-offset-2 disabled:text-ink-2"
+          >
+            <StarMark size={20} />
+            Seal
           </button>
         </div>
       )}

@@ -5,6 +5,7 @@ import type { ShellHandle } from './components/shell/places';
 import { RecentlyDeletedPage } from './features/deleted/RecentlyDeletedPage';
 import { ErasPage } from './features/eras/ErasPage';
 import { FeedPage } from './features/feed/FeedPage';
+import { EntryPage } from './features/lootdrop/EntryPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { TagsPage } from './features/tags/TagsPage';
 import { TemplatesPage } from './features/templates/TemplatesPage';
@@ -26,6 +27,12 @@ export const routes: RouteObject[] = [
         path: 'entries',
         Component: TimelinePage,
         handle: { place: 'timeline' } satisfies ShellHandle,
+      },
+      {
+        // Task 4.8: a sealed Loot Drop's page, or the entry once it can be read (DESIGN.md §6).
+        path: 'entries/:entryId',
+        Component: EntryPage,
+        handle: { place: 'journal', back: { to: '/', label: 'Journal' } } satisfies ShellHandle,
       },
       {
         path: 'weeks/:weekId',

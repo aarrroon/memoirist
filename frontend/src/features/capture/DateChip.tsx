@@ -1,6 +1,7 @@
 import { CalendarDays } from 'lucide-react';
 import { useState } from 'react';
 import { DayPicker } from 'react-day-picker';
+import { pickerClasses } from '../../components/ui/calendar';
 import { Chip } from '../../components/ui/chip';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import {
@@ -14,34 +15,7 @@ import {
 
 // The memory-date chip (DESIGN.md §4 Write, D-09): today by default, never after today, never before 1900, both in
 // the user's zone. react-day-picker (D-13) draws the month; its own stylesheet isn't loaded, so every part below is
-// given token classes instead (design.md, Tokens).
-
-const pickerClasses = {
-  root: 'text-small text-ink',
-  months: 'flex flex-col gap-2',
-  month: 'flex flex-col gap-2',
-  month_caption: 'flex min-h-11 items-center px-2',
-  dropdowns: 'flex gap-2',
-  dropdown_root: 'relative inline-flex items-center',
-  dropdown: 'absolute inset-0 opacity-0',
-  caption_label: 'inline-flex min-h-11 items-center gap-1 px-2 text-small font-strong',
-  nav: 'absolute top-2 right-2 flex gap-1',
-  button_previous: 'flex size-11 items-center justify-center rounded-full disabled:text-ink-2',
-  button_next: 'flex size-11 items-center justify-center rounded-full disabled:text-ink-2',
-  chevron: 'size-4 fill-current',
-  month_grid: 'border-collapse',
-  weekdays: '',
-  weekday: 'size-11 text-meta font-normal text-ink-2',
-  week: '',
-  day: 'p-0 text-center',
-  day_button:
-    'size-11 rounded-full text-small focus-visible:-outline-offset-2 disabled:text-ink-2 disabled:line-through',
-  selected: '[&>button]:bg-accent [&>button]:text-on-accent [&>button]:font-strong',
-  today: '[&>button]:font-strong',
-  disabled: '',
-  outside: '[&>button]:text-ink-2',
-  hidden: 'invisible',
-};
+// given token classes instead (design.md, Tokens; the classes are in components/ui/calendar.ts).
 
 export function DateChip({
   day,

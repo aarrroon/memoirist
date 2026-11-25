@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { useUiStore } from '../../stores/ui';
 import { fakeBackend } from '../../test/msw/capture';
 import { entry, sealedEntry } from '../../test/msw/feed';
@@ -19,7 +19,16 @@ vi.mock('browser-image-compression', () => ({ default: (file: File) => Promise.r
 // 23:47 on Tuesday 24 November 2026 in Melbourne, as in the feed's tests. Only Date is faked.
 const NOW = new Date('2026-11-24T12:47:00Z');
 
+// The seal panel is loaded with React.lazy (task 4.8): its first import can outlast findBy's 1 s default.
+const LAZY = { timeout: 10_000 };
+
 let backend: ReturnType<typeof fakeBackend>;
+
+// Capture and the seal panel are React.lazy. Importing them here first means each lazy import finds its module
+// already loaded, so no test races a first import under a full parallel run (task 4.8 close-out).
+beforeAll(async () => {
+  await Promise.all([import('./CaptureView'), import('../lootdrop/SealPanel')]);
+}, 60_000);
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -410,6 +419,115 @@ describe('capture', { timeout: 15_000 }, () => {
       await within(sheet).findByText(/IMG_1.heic: This kind of file can’t be added/),
     ).toBeVisible();
     expect(within(sheet).queryByRole('button', { name: /Photo 1 of/ })).not.toBeInTheDocument();
+  });
+});
+
+// Sealing from capture (task 4.8, F-06, D-10, D-23): Seal opens the panel, a day is picked, the opening moment is
+// read back, a confirmation repeats it, then the entry is saved and sealed last.
+describe('sealing from capture', { timeout: 15_000 }, () => {
+  async function sealFor(sheet: HTMLElement, user: ReturnType<typeof userEvent.setup>) {
+    await user.click(within(sheet).getByRole('button', { name: 'Seal' }));
+    const panel = await screen.findByRole('dialog', { name: 'Seal as Loot Drop' }, LAZY);
+    await user.click(within(panel).getByRole('button', { name: 'Pick a date' }));
+    // Today can't be picked: a Loot Drop opens on a later day (F-06).
+    expect(await screen.findByRole('button', { name: /November 24th, 2026/ })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: /November 30th, 2026/ }));
+    expect(within(panel).getByText(/Monday 30 November 2026 at/)).toHaveTextContent(
+      'Monday 30 November 2026 at 9:00 am',
+    );
+    await user.click(within(panel).getByRole('button', { name: 'Seal it' }));
+    const confirm = await screen.findByRole('alertdialog', { name: 'Seal this Loot Drop?' });
+    expect(confirm).toHaveTextContent('Opens Monday 30 November 2026 at 9:00 am, in 6 days.');
+    await user.click(within(confirm).getByRole('button', { name: 'Seal it' }));
+    return panel;
+  }
+
+  test('Seal is unavailable for an empty entry (D-23)', async () => {
+    const { sheet } = await openCapture();
+    expect(within(sheet).getByRole('button', { name: 'Seal' })).toBeDisabled();
+  });
+
+  test('saves the entry, then seals it to open at 9:00 am, and the feed shows only a sealed card', async () => {
+    const { user, sheet } = await openCapture();
+    await user.type(
+      within(sheet).getByRole('textbox', { name: 'Title (optional)' }),
+      'A letter to next week',
+    );
+    await sealFor(sheet, user);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    // Created first, sealed last (D-10), at 9:00 am on 30 November in Melbourne: 22:00 UTC the day before.
+    const writes = backend.state.calls.filter((c) => c.method !== 'GET').map((c) => c.path);
+    expect(writes.at(0)).toBe('/entries');
+    expect(writes.at(-1)).toMatch(/\/seal$/);
+    expect(backend.state.calls.at(-1)?.body).toEqual({ unlockDate: '2026-11-29T22:00:00.000Z' });
+
+    const thisWeek = await screen.findByRole('region', { name: 'This week · 1 entry' });
+    const cards = within(thisWeek).getAllByRole('article', { name: 'Sealed Loot Drop' });
+    expect(cards).toHaveLength(1);
+    expect(within(cards[0] as HTMLElement).getByRole('link')).toHaveAccessibleName(
+      'Sealed Loot Drop. Opens Mon 30 Nov 2026, in 6 days.',
+    );
+    expect(screen.queryByText('A letter to next week')).not.toBeInTheDocument();
+    expect(readDraft()).toBeNull();
+  });
+
+  test('sealing a restored saved entry leaves no whole copy in the cache: its page shows only the Loot Drop (D-10)', async () => {
+    backend.state.entries.set(
+      'entry-saved',
+      entry('entry-saved', '2026-11-24', {
+        title: 'Read back when restored',
+        version: 1,
+        weeklyLogId: 'week-this',
+      }),
+    );
+    writeDraft({
+      ...baseDraft,
+      clientId: 'entry-saved',
+      entryId: 'entry-saved',
+      entryVersion: 1,
+      title: 'Typed before sealing',
+    });
+    const { user, sheet, router } = await openCapture();
+    // Capture reads the saved entry back whole (GET /entries/{id}), which puts it in the entry's cache.
+    await waitFor(() => expect(saveButton(sheet)).toBeEnabled());
+    await sealFor(sheet, user);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(backend.state.entries.get('entry-saved')?.isLocked).toBe(true);
+
+    // Within the cache's lifetime, the entry's page must draw the sealed answer, not the copy read on restore.
+    await router.navigate('/entries/entry-saved');
+    expect(await screen.findByText(/Its light is still on its way to you/)).toBeVisible();
+    expect(screen.queryByText('Read back when restored')).not.toBeInTheDocument();
+    expect(screen.queryByText('Typed before sealing')).not.toBeInTheDocument();
+  });
+
+  test('a seal that fails leaves the entry saved, says it isn’t sealed, and seals it on the next try', async () => {
+    backend.state.failSeal = true;
+    const { user, sheet } = await openCapture();
+    await user.type(within(sheet).getByRole('textbox', { name: 'Title (optional)' }), 'Later');
+    const panel = await sealFor(sheet, user);
+    expect(await within(panel).findByRole('alert')).toHaveTextContent(
+      'Saved, but not sealed. Try again.',
+    );
+    expect(backend.state.entries.size).toBe(1);
+
+    backend.state.failSeal = false;
+    // The day picked is kept, so trying again is one press and the confirmation.
+    expect(
+      within(panel).getByRole('button', { name: 'Opening day: Mon 30 Nov. Change it' }),
+    ).toBeVisible();
+    await user.click(within(panel).getByRole('button', { name: 'Seal it' }));
+    await user.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Seal it' }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    // The retry replaced the saved entry (PUT with its version) instead of making a second one (D-12, D-23).
+    expect(backend.state.entries.size).toBe(1);
+    expect(
+      backend.state.calls.filter((c) => c.method === 'PUT' && c.path.startsWith('/entries/')),
+    ).toHaveLength(1);
+    expect([...backend.state.entries.values()][0]?.isLocked).toBe(true);
   });
 });
 

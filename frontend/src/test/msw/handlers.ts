@@ -18,4 +18,6 @@ export const handlers = [
   http.get('*/api/v1/users/me', () => HttpResponse.json(devUser)),
   // The Journal is the app's home, so most screens' tests load the feed too (task 4.4): one page of the sample.
   http.get('*/api/v1/feed', () => HttpResponse.json(page(sampleWeeks))),
+  // The Opened strip (task 4.8): empty unless a test says a Loot Drop has opened.
+  http.get('*/api/v1/entries/opened', () => HttpResponse.json([])),
 ];

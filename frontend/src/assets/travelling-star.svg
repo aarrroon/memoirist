@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 96">
+  <!-- The travelling star (D-41, DESIGN.md §5, design.md §5): the one approved Loot Drop drawing, on a 240 x 96 grid,
+       one 2 px stroke at every size, no text, nothing rotated. Each part has an id and is drawn by a <use> in
+       components/TravellingStar.tsx, which gives it its token colour through currentColor (fill and stroke follow
+       the <use>), so the drawing follows light and dark mode. Only the travelled part and the light front's place
+       depend on the dates; lib/starPath.ts works them out along the trail below, whose numbers it repeats. -->
+  <defs>
+    <!-- The star: four points, 28 units across, centred on (24, 24) (the mockup's STAR path scaled 1.1667 from a
+         24 grid and moved by 10, 10), with two rays through it, 36 long upright and 32 across. -->
+    <g id="star">
+      <path d="M24 6V42M8 24H40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      <path id="star-shape" transform="translate(10 10) scale(1.1667)" fill="currentColor" d="M12 1.5c.55 5.5 5 9.95 10.5 10.5-5.5.55-9.95 5-10.5 10.5C11.45 16.5 7 12.05 1.5 12 7 11.45 11.45 7 12 1.5z"/>
+    </g>
+    <!-- The trail to you: a cubic curve, dashed 2 on and 6 off. -->
+    <path id="trail" d="M44 30C104 30 150 74 212 74" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="2 6" vector-effect="non-scaling-stroke"/>
+    <!-- The light front: a 3.5-unit dot inside a 7-unit ring, centred on (0, 0) and placed with x and y. -->
+    <g id="front">
+      <circle r="7" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      <circle r="3.5" fill="currentColor"/>
+    </g>
+    <!-- You: a 6-unit ring. Its fill comes from the <use>: the page while it waits, the accent once it has opened. -->
+    <circle id="you" cx="220" cy="78" r="6" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/>
+    <!-- 14 specks of dust, on the Loot Drop page only, placed once by a seeded random so they never move. -->
+    <g id="specks" fill="currentColor">
+      <circle cx="109.6" cy="26.6" r="1"/>
+      <circle cx="61.7" cy="6.4" r="1"/>
+      <circle cx="219.7" cy="24.5" r="1"/>
+      <circle cx="97.2" cy="80.8" r="1"/>
+      <circle cx="92.6" cy="16.4" r="1"/>
+      <circle cx="29.2" cy="55.9" r="1"/>
+      <circle cx="168.9" cy="17.2" r="1"/>
+      <circle cx="87.1" cy="90.0" r="1"/>
+      <circle cx="160.8" cy="69.7" r="1"/>
+      <circle cx="49.9" cy="21.9" r="1"/>
+      <circle cx="97.5" cy="27.5" r="1"/>
+      <circle cx="40.8" cy="61.2" r="1"/>
+      <circle cx="56.8" cy="19.4" r="1"/>
+      <circle cx="127.8" cy="29.8" r="1"/>
+    </g>
+  </defs>
+</svg>
