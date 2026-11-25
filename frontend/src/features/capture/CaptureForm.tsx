@@ -403,9 +403,13 @@ export function CaptureForm({
       setRemovedMediaIds([]);
       // A seal goes through afterSeal, as useSeal's does: it overwrites any whole copy of this entry that capture
       // read back when it restored the draft, so the Loot Drop page never shows a sealed entry's content (D-10).
+      // A save also refreshes the weeks: Go there opens the entry's week, which must show the new entry (task 4.10).
       await (sealed && entry
         ? afterSeal(queryClient, entry)
-        : queryClient.invalidateQueries({ queryKey: queryKeys.feed() }));
+        : Promise.all([
+            queryClient.invalidateQueries({ queryKey: queryKeys.feed() }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.weeks() }),
+          ]));
       void queryClient.invalidateQueries({ queryKey: queryKeys.tags() });
       if (sealed && entry) {
         clearDraft();

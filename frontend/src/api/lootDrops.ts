@@ -61,14 +61,26 @@ export function useSeal(entryId: string) {
  * What every seal does to the cache, from the Loot Drop page or from capture (D-10). The server's redacted answer
  * replaces any whole copy of the entry under queryKeys.entry: capture reads the whole entry back when it restores a
  * saved draft or loads the latest version, and with a 30-minute staleTime that copy would otherwise be shown on the
- * Loot Drop page without a refetch. Then the feed and the Opened strip are read again.
+ * Loot Drop page without a refetch. Then the feed, the weeks (a week page lists the entry's bar) and the Opened
+ * strip are read again.
  */
 export async function afterSeal(queryClient: QueryClient, sealed: Entry): Promise<void> {
   queryClient.setQueryData(queryKeys.entry(sealed.id), sealed);
   await Promise.all([
-    queryClient.invalidateQueries({ queryKey: queryKeys.feed() }),
+    dropAndRefetch(queryClient, queryKeys.feed()),
+    dropAndRefetch(queryClient, queryKeys.weeks()),
     queryClient.invalidateQueries({ queryKey: queryKeys.opened() }),
   ]);
+}
+
+/**
+ * Review fix (task 4.10, D-10): invalidating alone only marks a page that is off screen as stale, and going back to
+ * it draws the cached copy (the entry whole) until the refetch lands. So the copies no page is watching are dropped:
+ * going back shows the loading state, then the server's answer. A page on screen keeps its data and refetches.
+ */
+function dropAndRefetch(queryClient: QueryClient, queryKey: readonly unknown[]): Promise<void> {
+  queryClient.removeQueries({ queryKey, type: 'inactive' });
+  return queryClient.invalidateQueries({ queryKey });
 }
 
 /**
@@ -113,8 +125,11 @@ export function useDeleteEntry(entryId: string) {
       unwrap(await api.DELETE('/api/v1/entries/{entryId}', { params: { path: { entryId } } })),
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: queryKeys.entry(entryId) });
+      // The week page lists the entry too; it leaves for Recently deleted (D-30), so a cached week or feed page is
+      // dropped and read again, never drawn with the deleted entry first.
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.feed() }),
+        dropAndRefetch(queryClient, queryKeys.feed()),
+        dropAndRefetch(queryClient, queryKeys.weeks()),
         queryClient.invalidateQueries({ queryKey: queryKeys.opened() }),
       ]);
     },

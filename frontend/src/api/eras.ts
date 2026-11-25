@@ -63,6 +63,8 @@ function useInvalidateEras() {
     Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.eras() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.feed() }),
+      // A week page names its Eras and links to them (task 4.10).
+      queryClient.invalidateQueries({ queryKey: queryKeys.weeks() }),
     ]);
 }
 

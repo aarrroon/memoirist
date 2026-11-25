@@ -39,7 +39,8 @@
 | 4.7 Voice notes | done | `0358647` Sprint 4.7: Record voice notes in capture and play them back | Voice in capture records with `MediaRecorder` (Opus in WebM, or AAC in MP4) with live loudness bars and F-03 messages; voice notes go after the pictures in the media order (D-24); the feed and capture share a keyboard-operable player that finds the length of Chrome's WebM; checked in real Chromium with a fake microphone (upload 201, playback 3.66 s) (273 frontend tests) | [4.7](build-journal/sprint-4/4.7-voice-notes.md) |
 | 4.8 Loot Drops in the UI | done | `31939b1` Sprint 4.8: Build Loot Drops: the seal, the star and the Opened row | The travelling star as one SVG, a seal panel and confirmation opening at 09:00 in the user's zone (from capture, and Extend on the Loot Drop page), a 112 px sealed card with a live countdown, the Loot Drop page at `/entries/:entryId` with Delete, a kind `409`, and the Opened row with an optimistic dismiss; the full test run made reliable at close-out (311 frontend tests) | [4.8](build-journal/sprint-4/4.8-loot-drops-ui.md) |
 | 4.9 Eras, templates and settings pages | done (2026-11-25, after the run): the user kept the stacked Era cover (D-36, DESIGN.md §4), and the flaky full `npm test` run was fixed (a 5 s `findBy` wait, a 20 s test limit, and a warm-up import of capture in the AppShell test; 6 full runs clean) | `af2aa96` Sprint 4.9: Build the Eras, Templates and You screens [needs-attention] | `GET /eras/{id}` leaves out weeks with no entry to show (D-22); the Eras list with nesting, the Era page (cover, title band, weeks as contents, Eras inside), one Era form with the pin and Delete; Templates with the starter gallery (one tap adds an editable copy); You with name, timezone, birthday and Appearance kept on the device (340 frontend tests) | [4.9](build-journal/sprint-4/4.9-eras-templates-settings.md) |
-| 4.10 to 4.17 | not started | none | The run stopped after 4.9: the weekly usage reached 90%. **Next task: 4.10 (Week summary view)** | |
+| 4.10 Week summary view | needs attention: the design check fails its `images` line in light and dark (the thumbnails are the original photos, 7.3x at 375 px and 7.8x at 1440 px; Q29). Every other check passes; not ticked | Sprint 4.10: Build the week summary with bars, counts and rename [needs-attention] | `/weeks/:weekId` over `GET /weekly-logs/{id}`: name, dates and Eras, a stats row, up to ten thumbnails, tags with counts, one bar per entry in day order (a sealed one shows only the star, the day and the opening date), Rename, Close and Reopen week; display titles computed on the client (D-24); entry writes drop cached weeks so Back never draws a sealed entry (370 frontend tests) | [4.10](build-journal/sprint-4/4.10-week-summary.md) |
+| 4.11 to 4.17 | not started | none | **Next task after 4.10: 4.11 (All-entries timeline and tags UI)** | |
 
 **S4 Overview:** [build-journal/sprint-4/README.md](build-journal/sprint-4/README.md) (tasks 4.1 to 4.9).
 
@@ -64,6 +65,7 @@
 | 2026-11-25 18:55 | 84% | 88% | 4.9 built, in review. Let it finish; no new task after it (weekly will pass 90%): the wrap-up next |
 | 2026-11-25 19:41 | 99% | 90% | 4.9 committed (needs attention). Weekly at 90%: no new task. Wrap-up at 21:15, after the 5-hour reset |
 | 2026-11-25 21:15 | 0% | 91% | Start the sprint wrap-up (draft PR; 4.10 to 4.17 left) |
+| 2026-11-26 01:24 | 16% | 93% | The user asked to continue. The weekly window resets at 06:00, before their workday, so start 4.10; a run the limit stops resumes after the reset |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
@@ -138,6 +140,16 @@
 | 68 | 4.9 | DESIGN.md §6 You | Tags and Templates show counts; Recently deleted shows none until 4.12; the heading stays *You*, so the name isn't repeated |
 | 69 | 4.9 | DESIGN.md §4 Top bar (the shell has no action slot) | Edit is a quiet button on the Era's title band, beside the name |
 | 70 | 4.9 | D-36, D-26 | The Era PUT sends `coverMediaId` only when the cover is visible (until 4.14 an edit clears a hidden cover) and sends the stored soundtrack back; empty `description`, `endDate` and `soundtrack` are left out, not `null`, because the generated type doesn't allow `null` |
+| 71 | 4.10 | DESIGN.md §6 and F-15 step 4 vs SPRINT_PLAN 4.10 Do | Rename week, Close week and Reopen week (F-12) are built, at the foot of the page (the top bar has no action slot, assumption 69); a closed week shows *· Closed* in its dates line |
+| 72 | 4.10 | D-25 vs D-41, F-15, DESIGN.md §4 Sealed row | A sealed bar is the day, the 16 px star mark with *Loot Drop*, and *Opens 25 Oct 2027*, not D-25's lock; D-25 not edited |
+| 73 | 4.10 | No doc; CLAUDE.md (no fact repeated) | The heading is the week's title, else *This week*, else its dates with the year (*16–22 Nov 2026*), and the dates are then left out of the line under it |
+| 74 | 4.10 | DESIGN.md Stats row (no rule for zeros) | The stats row shows entries, and photos and voice notes only when above zero; a week with nothing readable (all sealed) has no stats, thumbnails or tags; diary pages count as photos |
+| 75 | 4.10 | D-25 ("a few thumbnails"); round 3 mockup | At most ten thumbnails, five across, in the week's order; images, not links (the bars open entries); alt *Photo from <display title>* |
+| 76 | 4.10 | D-24 vs API_CONTRACT (the week GET has no `previewLine`) | The display title is computed on the client from `contentJson` and the media, following the backend's `ContentTextExtractor`; an entry with nothing is *Entry* |
+| 77 | 4.10 | No doc gives the copy | A missing week: *This week isn’t in your journal.* with *Go to your journal*; other errors use *Try again* |
+| 78 | 4.10 | D-26; generated `WeeklyLogUpdateRequest` has no null | Clearing a title leaves the field out (read as null); the current soundtrack is always sent back, so a rename never clears it |
+| 79 | 4.10 | Q29 (default: serve originals) vs design.md §6 | The thumbnails are the original photos, not shrunk in the browser, so the audit's `images` line fails until Q29 is decided |
+| 80 | 4.10 | Review 2 (D-10); frontend.md Data | After a seal or a delete, cached feed and week pages that are off screen are dropped, not only marked stale, so Back shows a loading state and never draws a sealed or deleted entry from the cache |
 
 ### S4 Needs attention
 - **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
@@ -188,7 +200,13 @@
 - **4.9:** native date inputs in Chrome move Tab through day, month and year, so each date field takes three Tabs (unlike capture's react-day-picker chip).
 - **4.9:** the local dev database is unchanged: the Playwright script undid the pin, the date change, the timezone change and the added *Night out* template.
 - **4.9, not ticked:** 4.9 is unticked in `docs/SPRINT_PLAN.md`, and CLAUDE.md's Current focus line was not moved on, because the task needs attention. Once the two items above are settled, tick 4.9 and set Current focus to *Next task: 4.10 (Week summary view)*.
-- **Sprint 4 not finished:** the run stopped after 4.9 (weekly usage at 90%). Tasks 4.10 to 4.17 are left; start with `/implement-task 4.10`. The pull request is a draft for that reason and for 4.9.
+- **4.10, decision needed (Q29):** audit.mjs fails `images` on `/weeks/:id` in light and dark: the thumbnails are the originals, 7.3x (phone) and 7.8x (laptop) their drawn size. Every other audit line passes. Options: decide Q29 now (a thumbnail copy made at upload, which also helps 4.9's Era cover and the feed's slow-phone LCP); record an accepted exception until Q29 closes (`/record-decision`); or hide the thumbnails until then, which contradicts D-25 and the task. Then tick 4.10 in `docs/SPRINT_PLAN.md` and move CLAUDE.md's Current focus to 4.11.
+- **4.10, follow-up (bundle):** the feed's first JS is 197.17 kB gzipped against a 200 kB limit (187.28 kB after 4.8); the week page is in the main chunk. Lazy-load `WeekSummaryPage` and the other non-feed routes in `router.tsx` before 4.11 to 4.16 add more.
+- **4.10, follow-up (docs):** D-25 still says "a lock for sealed entries"; D-41, F-15 and DESIGN.md say the star. Reword it with `/record-decision`.
+- **4.10, follow-up:** once `WeeklyLogUpdateRequest` has `@Schema(nullable = true)` and `gen:api` has run, send explicit nulls in the week PUT (shared with 4.9's Era PUT).
+- **4.10, follow-up:** later entry edit, restore and erase tasks must refresh `queryKeys.weeks()` like the seal and delete do (`dropAndRefetch` in `api/lootDrops.ts`).
+- **4.10:** without the review-2 fix, the cache tests go red only when the mock refetch is slower than the first check, so which of the two fails varies by run; with the fix both pass every run (370/370 twice).
+- **Sprint 4 not finished:** tasks 4.11 to 4.17 are left, and 4.10 needs the Q29 decision above. The pull request stays a draft for that reason and for 4.9.
 
 ### S4 Questions for the morning
 

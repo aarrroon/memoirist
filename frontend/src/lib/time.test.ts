@@ -21,6 +21,7 @@ import {
   toPickerDate,
   weekOf,
   addDays,
+  barDay,
   daysBetween,
   dayIn,
   latestSealDay,
@@ -360,5 +361,14 @@ describe('Eras (task 4.9)', () => {
     expect(zoneLabel('America/New_York')).toBe('New York');
     expect(zoneLabel('UTC')).toBe('UTC');
     expect(formatBirthday('1994-08-12')).toBe('12 August');
+  });
+});
+
+describe('week summary (task 4.10)', () => {
+  test('barDay writes the short weekday and the date', () => {
+    expect(barDay('2026-10-19')).toBe('Mon 19');
+    expect(barDay('2026-11-01')).toBe('Sun 1');
+    // The clock-change Sunday in Melbourne is still a Sunday: a calendar day has no zone.
+    expect(barDay('2026-10-04')).toBe('Sun 4');
   });
 });

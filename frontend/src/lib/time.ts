@@ -308,3 +308,10 @@ export function zoneLabel(zone: string): string {
 export function formatBirthday(day: IsoDate): string {
   return format(calendarDay(day), 'd MMMM');
 }
+
+// ---------- Week summary (task 4.10, D-25) ----------
+
+/** A week bar's day (DESIGN.md §4 Controls, Rows): "Mon 19". The week's dates above it give the month. */
+export function barDay(day: IsoDate): string {
+  return format(calendarDay(day), 'EEE d');
+}

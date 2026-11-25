@@ -28,5 +28,11 @@ export const queryKeys = {
   // create, edit or delete refetches the list and every Era page with one prefix.
   eras: () => [...all, 'eras'] as const,
   era: (id: string) => [...all, 'eras', id] as const,
+  // Task 4.10. One week's summary (GET /weekly-logs/{id}) sits under `weeks`. A rename or a close invalidates the
+  // week, the feed (its line shows the title) and the Eras (an Era page lists the week by name). Every entry write
+  // that invalidates the feed (save, seal, delete, an unlock) invalidates `weeks()` too, or a cached week page would
+  // show a sealed entry's title or a deleted entry for up to the 30-minute staleTime (D-10, D-30).
+  weeks: () => [...all, 'weeks'] as const,
+  week: (id: string) => [...all, 'weeks', id] as const,
 };
 // └── END ANSWER ▲ ──

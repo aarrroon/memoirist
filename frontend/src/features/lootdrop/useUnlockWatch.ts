@@ -32,6 +32,8 @@ export function useUnlockWatch(
     const delay = Math.min(Math.max(next.at - Date.now(), 0) + 1000, LONGEST);
     const timer = setTimeout(() => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.feed() });
+      // A week page shows the Loot Drop's bar; once it opens the bar shows its title (task 4.10).
+      void queryClient.invalidateQueries({ queryKey: queryKeys.weeks() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.opened() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.entry(next.id) });
     }, delay);
