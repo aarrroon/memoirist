@@ -7,6 +7,7 @@ import { fakeBackend } from '../../test/msw/capture';
 import { entry, sealedEntry } from '../../test/msw/feed';
 import { server } from '../../test/msw/server';
 import { renderApp } from '../../test/render';
+import { datedPhoto } from '../../test/exif';
 import { readDraft, writeDraft, type Draft } from './draft';
 
 // Capture (task 4.6) against a fake entry API (MSW), driven the way a user would: through the sheet, by keyboard and
@@ -14,7 +15,9 @@ import { readDraft, writeDraft, type Draft } from './draft';
 // phone sheet here (no media query matches); the laptop dialog is checked in the browser (audit.mjs).
 
 // Shrinking needs a canvas, which jsdom lacks: the file goes up as it was picked.
-vi.mock('browser-image-compression', () => ({ default: (file: File) => Promise.resolve(file) }));
+// A spy, so a test can see which setting a photo was shrunk with (task 4.13).
+const compress = vi.hoisted(() => vi.fn((file: File) => Promise.resolve(file)));
+vi.mock('browser-image-compression', () => ({ default: compress }));
 
 // 23:47 on Tuesday 24 November 2026 in Melbourne, as in the feed's tests. Only Date is faked.
 const NOW = new Date('2026-11-24T12:47:00Z');
@@ -193,6 +196,7 @@ describe('capture', { timeout: 15_000 }, () => {
   });
 
   test('opened as Diary page, every photo added is a page', async () => {
+    compress.mockClear();
     const { user, sheet } = await openCapture('/?write=page');
     expect(within(sheet).getByRole('heading', { name: 'Diary page' })).toBeVisible();
     await user.upload(within(sheet).getByLabelText('Add photos'), photoFile('page.jpg'));
@@ -529,6 +533,91 @@ describe('sealing from capture', { timeout: 15_000 }, () => {
       backend.state.calls.filter((c) => c.method === 'PUT' && c.path.startsWith('/entries/')),
     ).toHaveLength(1);
     expect([...backend.state.entries.values()][0]?.isLocked).toBe(true);
+  });
+});
+
+// Task 4.13 (D-34): a photo's own date, read before it is shrunk, offered as the memory date. The photos are real JPEG
+// bytes with an EXIF date (test/exif.ts), read by the real exifr.
+describe('photo dates in capture', { timeout: 15_000 }, () => {
+  test('offers one photo’s own date as the memory date, and uses it when accepted', async () => {
+    const { user, sheet } = await openCapture();
+    await user.upload(within(sheet).getByLabelText('Add photos'), [
+      datedPhoto('beach.jpg', '2026:11:17 10:00:00', '+11:00'),
+    ]);
+    const offer = await within(sheet).findByRole('group', { name: 'Photo date' });
+    expect(within(offer).getByText('Taken Tue 17 Nov')).toBeVisible();
+
+    await user.click(within(offer).getByRole('button', { name: 'Use this date' }));
+    const chip = within(sheet).getByRole('button', { name: 'Memory date: Tue 17 Nov. Change it' });
+    expect(within(sheet).queryByRole('group', { name: 'Photo date' })).not.toBeInTheDocument();
+    await waitFor(() => expect(chip).toHaveFocus());
+
+    await user.click(saveButton(sheet));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(sentEntry()?.body).toMatchObject({ entryDate: '2026-11-17' });
+    expect(sentEntry()?.body).not.toHaveProperty('dateUnknown');
+  });
+
+  test('keeps the memory date when the offer is dismissed', async () => {
+    const { user, sheet } = await openCapture();
+    await user.upload(within(sheet).getByLabelText('Add photos'), [
+      datedPhoto('beach.jpg', '2026:11:17 10:00:00'),
+    ]);
+    const offer = await within(sheet).findByRole('group', { name: 'Photo date' });
+    await user.click(within(offer).getByRole('button', { name: 'Not now' }));
+    expect(within(sheet).queryByRole('group', { name: 'Photo date' })).not.toBeInTheDocument();
+    const chip = within(sheet).getByRole('button', {
+      name: 'Memory date: Today, Tue 24 Nov. Change it',
+    });
+    await waitFor(() => expect(chip).toHaveFocus());
+
+    await user.click(saveButton(sheet));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(sentEntry()?.body).toMatchObject({ entryDate: '2026-11-24' });
+  });
+
+  test('offers the dated photo’s day when an undated photo is picked with it (4.13 review fix)', async () => {
+    const { user, sheet } = await openCapture();
+    await user.upload(within(sheet).getByLabelText('Add photos'), [
+      datedPhoto('beach.jpg', '2026:11:17 10:00:00'),
+      datedPhoto('screenshot.jpg', null),
+    ]);
+    const offer = await within(sheet).findByRole('group', { name: 'Photo date' });
+    expect(within(offer).getByText('Taken Tue 17 Nov')).toBeVisible();
+  });
+
+  test('offers nothing for a photo with no date, one taken today, or photos from two days', async () => {
+    const { user, sheet } = await openCapture();
+    const input = within(sheet).getByLabelText('Add photos');
+    await user.upload(input, [datedPhoto('screenshot.jpg', null)]);
+    await within(sheet).findByRole('button', { name: 'Photo 1 of 1. Options' });
+    await user.upload(input, [datedPhoto('now.jpg', '2026:11:24 21:00:00')]);
+    await within(sheet).findByRole('button', { name: 'Photo 2 of 2. Options' });
+    await user.upload(input, [
+      datedPhoto('a.jpg', '2026:11:17 10:00:00'),
+      datedPhoto('b.jpg', '2026:11:18 10:00:00'),
+    ]);
+    await within(sheet).findByRole('button', { name: 'Photo 4 of 4. Options' });
+    // A camera clock set to the future gives no offer either (D-09).
+    await user.upload(input, [datedPhoto('future.jpg', '2031:01:01 10:00:00')]);
+    await within(sheet).findByRole('button', { name: 'Photo 5 of 5. Options' });
+    expect(within(sheet).queryByRole('group', { name: 'Photo date' })).not.toBeInTheDocument();
+  });
+
+  test('uploads a diary page with the gentler shrink, as a page scan (TECH_STACK §3 Media)', async () => {
+    const { user, sheet } = await openCapture('/?write=page');
+    await user.upload(within(sheet).getByLabelText('Add photos'), [photoFile('page.jpg')]);
+    await within(sheet).findByRole('button', { name: 'Diary page 1 of 1. Options' });
+    await user.click(saveButton(sheet));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    const upload = backend.state.calls.find((c) => c.path.endsWith('/media'));
+    expect(upload?.body).toMatchObject({ purpose: 'PAGE_SCAN', name: 'page.jpg' });
+    // Shrunk once, when it uploaded and its purpose was known, with the page setting.
+    expect(compress).toHaveBeenCalledTimes(1);
+    expect(compress).toHaveBeenLastCalledWith(
+      expect.objectContaining({ name: 'page.jpg' }),
+      expect.objectContaining({ maxWidthOrHeight: 4096 }),
+    );
   });
 });
 

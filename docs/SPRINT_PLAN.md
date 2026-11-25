@@ -331,7 +331,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:** a delete confirmation that says the entry can be restored for 30 days, and a `/recently-deleted` screen over `GET /entries/deleted` with *restore* and *erase now*, reached from settings and the timeline.
   - **Done when:** component tests cover a normal and a sealed entry in the list; restoring puts the entry back in its week in the feed; *erase now* asks for confirmation; and an entry deleted from the feed shows up in the list.
 
-- [ ] **4.13 Photo dump and photo dates** (D-34)
+- [x] **4.13 Photo dump and photo dates** (D-34)
   - **Read:** D-12, D-13, D-17, D-34, USER_FLOWS F-19.
   - **Do:**
     - A *photo dump* action. It reads each photo's own date before shrinking it (with `exifr`, approved on 2026-10-28, D-13) and groups the photos by day in the user's timezone.

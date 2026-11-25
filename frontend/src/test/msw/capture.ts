@@ -117,6 +117,8 @@ export function fakeBackend() {
         title: (body.title as string | undefined) ?? null,
         contentJson: (body.contentJson as Entry['contentJson'] | undefined) ?? null,
         templateId: (body.templateId as string | undefined) ?? null,
+        // A photo dump's undated photos (D-34, task 4.13).
+        dateUnknown: body.dateUnknown === true,
         tags: state.tags
           .filter((t) => tagIds.includes(t.id))
           .map((t) => ({ id: t.id, name: t.name, source: 'USER' })),
@@ -152,10 +154,14 @@ export function fakeBackend() {
       const found = state.entries.get(params.id as string);
       if (!found) return problem(404, 'not-found');
       if (body.version !== found.version) return problem(409, 'entry-stale');
+      const entryDate = body.entryDate as string;
       const updated = {
         ...found,
         title: (body.title as string | undefined) ?? null,
-        entryDate: body.entryDate as string,
+        entryDate,
+        // As the server does (D-34): a new date clears date unknown and moves the entry to that date's week.
+        dateUnknown: entryDate === found.entryDate ? found.dateUnknown : false,
+        weeklyLogId: `week-${weekOf(entryDate).start}`,
         version: found.version + 1,
       };
       state.entries.set(found.id, updated);

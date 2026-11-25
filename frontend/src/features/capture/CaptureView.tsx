@@ -16,6 +16,7 @@ import {
 import { useUiStore, type CaptureKind } from '../../stores/ui';
 import { CaptureForm } from './CaptureForm';
 import { clearDraft } from './draft';
+import { PhotoDump } from './PhotoDump';
 
 // The frame around capture (DESIGN.md §4 Write, task 4.6): a full-screen Vaul sheet on a phone or tablet, and a dialog
 // up to 960 px wide on a laptop (from `lg`, 64rem). Both trap focus and close with Escape (DESIGN.md §8). Closing
@@ -33,11 +34,18 @@ export default function CaptureView({ kind }: { kind: CaptureKind }) {
   const [asking, setAsking] = useState(false);
   const titleId = useId();
 
+  // The photo dump keeps no draft (task 4.13: picked files can't go into local storage), so closing it must leave a
+  // New entry draft alone.
+  const dump = kind === 'dump';
+  const discardDraft = () => {
+    if (!dump) clearDraft();
+  };
+
   const requestClose = (dirty: boolean) => {
     if (dirty) setAsking(true);
     else {
       // Nothing worth keeping: an empty draft shouldn't come back next time.
-      clearDraft();
+      discardDraft();
       close();
     }
   };
@@ -46,7 +54,20 @@ export default function CaptureView({ kind }: { kind: CaptureKind }) {
   // because the answer is only read when closing and needn't re-render anything.
   const dirty = useRef(false);
 
-  const form = me.data ? (
+  const frameProps = {
+    zone: me.data?.timezone ?? '',
+    titleId,
+    layout: isLaptop ? ('dialog' as const) : ('sheet' as const),
+    onRequestClose: requestClose,
+    onDone: close,
+    onDirtyChange: (value: boolean) => {
+      dirty.current = value;
+    },
+  };
+
+  const form = !me.data ? null : dump ? (
+    <PhotoDump {...frameProps} />
+  ) : (
     <CaptureForm
       kind={kind}
       zone={me.data.timezone}
@@ -58,7 +79,8 @@ export default function CaptureView({ kind }: { kind: CaptureKind }) {
         dirty.current = value;
       }}
     />
-  ) : (
+  );
+  const body = form ?? (
     <p className="px-4 py-4 text-body text-ink-2" id={titleId}>
       Opening…
     </p>
@@ -71,9 +93,13 @@ export default function CaptureView({ kind }: { kind: CaptureKind }) {
   const confirm = (
     <AlertDialog open={asking} onOpenChange={setAsking}>
       <AlertDialogContent>
-        <AlertDialogTitle className="font-display text-title">Discard this entry?</AlertDialogTitle>
+        <AlertDialogTitle className="font-display text-title">
+          {dump ? 'Leave these photos out?' : 'Discard this entry?'}
+        </AlertDialogTitle>
         <AlertDialogDescription className="text-body text-ink-2">
-          What you’ve written since the last save will be lost.
+          {dump
+            ? 'Photos not filed yet won’t be added. Any already filed stay in your journal.'
+            : 'What you’ve written since the last save will be lost.'}
         </AlertDialogDescription>
         <div className="flex flex-wrap justify-end gap-2">
           <AlertDialogCancel asChild>
@@ -83,7 +109,7 @@ export default function CaptureView({ kind }: { kind: CaptureKind }) {
             <Button
               className="border-danger text-danger"
               onClick={() => {
-                clearDraft();
+                discardDraft();
                 close();
               }}
             >
@@ -105,7 +131,7 @@ export default function CaptureView({ kind }: { kind: CaptureKind }) {
             className="h-[calc(100dvh-4rem)] max-h-180 w-[calc(100%-4rem)] max-w-240 overflow-hidden"
           >
             <DialogTitle className="sr-only">Write</DialogTitle>
-            {form}
+            {body}
           </DialogContent>
         </Dialog>
         {confirm}
@@ -127,7 +153,7 @@ export default function CaptureView({ kind }: { kind: CaptureKind }) {
             className="fixed inset-x-0 top-0 bottom-0 z-40 flex flex-col bg-page text-ink outline-none md:top-8 md:rounded-t-lg"
           >
             <Drawer.Title className="sr-only">Write</Drawer.Title>
-            {form}
+            {body}
           </Drawer.Content>
         </Drawer.Portal>
       </Drawer.Root>

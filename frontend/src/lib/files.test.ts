@@ -36,6 +36,15 @@ describe('shrinkPhoto', () => {
     );
   });
 
+  test('shrinks a diary page more gently than a photo, so handwriting stays readable (task 4.13)', async () => {
+    compress.mockResolvedValueOnce(new Blob([new Uint8Array(1000)], { type: 'image/jpeg' }));
+    await shrinkPhoto(photo, 'PAGE_SCAN');
+    expect(compress).toHaveBeenLastCalledWith(
+      photo,
+      expect.objectContaining({ maxWidthOrHeight: 4096, maxSizeMB: 6 }),
+    );
+  });
+
   test('keeps the original when shrinking fails or makes it bigger', async () => {
     compress.mockRejectedValueOnce(new Error('no canvas'));
     expect(await shrinkPhoto(photo)).toBe(photo);

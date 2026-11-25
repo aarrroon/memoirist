@@ -8,7 +8,7 @@ export type CaptureKind = 'entry' | 'dump' | 'page';
 
 interface UiState {
   /** The capture view that is open, or null. features/capture/CaptureHost draws the sheet (phone) or dialog (laptop)
-   *  that reads it (task 4.6). 'dump' opens New entry until the photo dump is built (task 4.13). */
+   *  that reads it (task 4.6). 'dump' opens the photo dump (task 4.13, features/capture/PhotoDump.tsx). */
   capture: CaptureKind | null;
   openCapture: (kind: CaptureKind) => void;
   closeCapture: () => void;

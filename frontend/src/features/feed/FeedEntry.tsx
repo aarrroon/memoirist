@@ -7,6 +7,7 @@ import { isPicture as isImage } from '../../lib/media';
 import { hasText } from '../../lib/tiptap';
 import { entryDisplayTitle } from '../../lib/displayTitle';
 import { dayLabel, dayParts, formatDay } from '../../lib/time';
+import { DateUnknownBadge } from './DateUnknownBadge';
 import { EntryMenu } from './EntryMenu';
 import { SealedCard } from './SealedCard';
 
@@ -63,14 +64,22 @@ export function FeedEntry({
         {entry.isLocked ? (
           <SealedCard entry={entry} zone={zone} now={now} />
         ) : (
-          <EntryBody entry={entry} eagerPhotoId={eagerPhotoId} />
+          <EntryBody entry={entry} eagerPhotoId={eagerPhotoId} zone={zone} />
         )}
       </div>
     </article>
   );
 }
 
-function EntryBody({ entry, eagerPhotoId }: { entry: Entry; eagerPhotoId: string | null }) {
+function EntryBody({
+  entry,
+  eagerPhotoId,
+  zone,
+}: {
+  entry: Entry;
+  eagerPhotoId: string | null;
+  zone: string;
+}) {
   const photos = entry.media.filter(isImage);
   const notes = entry.media.filter((media) => !isImage(media));
   const caption = hasText(entry.contentJson);
@@ -82,6 +91,9 @@ function EntryBody({ entry, eagerPhotoId }: { entry: Entry; eagerPhotoId: string
       {/* Task 4.12: the text, with the entry's more-actions menu at its top right (F-09). */}
       <div className="flex items-start gap-2">
         <div className="flex min-w-0 flex-1 flex-col gap-2">
+          {/* A photo dump's undated photos (D-34, task 4.13). Only on an open entry: a sealed card shows its dates
+              and countdown and nothing else (D-10, design.md §5), and its date can't be changed while sealed. */}
+          {entry.dateUnknown && <DateUnknownBadge entry={entry} zone={zone} />}
           {entry.title && <h3 className="font-display text-title">{entry.title}</h3>}
           {/* Drawn from the JSON as React elements, never as HTML (non-negotiable 6). */}
           {caption && <RichText document={entry.contentJson} clamp className="text-body" />}

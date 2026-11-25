@@ -11,7 +11,7 @@ import {
 } from '../../api/entries';
 import { ApiProblem, problemMessage } from '../../api/problem';
 import type { JSONContent } from '@tiptap/react';
-import { isImageType } from '../../lib/files';
+import { fileProblem, isImageType, shrinkPhoto } from '../../lib/files';
 
 // Capture's save, one flow of several requests (frontend.md, Capture and media; D-12, D-23):
 //   create the entry (with the client's own id) or replace it (with the version last read)
@@ -23,7 +23,8 @@ import { isImageType } from '../../lib/files';
 export interface TrayItem {
   /** Local key for React and dnd-kit; not sent anywhere. */
   key: string;
-  /** The file still to upload (already shrunk), or null once it is on the server. */
+  /** The file still to upload, as it was picked, or null once it is on the server. Since task 4.13 a photo is shrunk
+   *  when it uploads, once its purpose is known (a diary page more gently, lib/files.ts), not when it is picked. */
   file: File | null;
   /** An object URL for a local file, or the presigned URL of an uploaded one. */
   previewUrl: string;
@@ -52,6 +53,9 @@ export interface EntryFields {
   /** Capture doesn't edit these yet (tasks 4.15 and 4.16), but a PUT must send them back or they are cleared. */
   soundtrack: string | null;
   replyToEntryId: string | null;
+  /** A photo dump's undated photos (D-34, task 4.13). Sent on create only: the server clears the mark when a PUT
+   *  changes the date, and a client never sends it on a PUT. */
+  dateUnknown?: boolean;
 }
 
 export interface SaveInput {
@@ -84,13 +88,27 @@ export function picturesFirst(items: TrayItem[]): TrayItem[] {
   ];
 }
 
+// A retry shrinks a photo only once: the copy is kept with the picked file, for the purpose it was shrunk for.
+const shrunk = new WeakMap<File, { purpose: MediaPurpose; file: File }>();
+
+/** The picked file as it is sent: a photo shrunk for its purpose (lib/files.ts), anything else as it is. */
+async function preparedFile(file: File, purpose: MediaPurpose): Promise<File> {
+  const kept = shrunk.get(file);
+  if (kept && kept.purpose === purpose) return kept.file;
+  const ready = await shrinkPhoto(file, purpose);
+  shrunk.set(file, { purpose, file: ready });
+  return ready;
+}
+
 /** Updates one tray item while the save runs, so each thumbnail shows its own progress. */
 export type ItemUpdate = (key: string, patch: Partial<TrayItem>) => void;
 
 // TODO(human) PRACTICE: Write saveEntry(input, onItem). Follow the order in the comment at the top of this file:
 // create (POST with `id: input.clientId`) or replace (PUT with the version), delete removed photos, upload every item
 // that isn't uploaded yet (one at a time, in tray order, reporting 'uploading', then 'uploaded' with its mediaId or
-// 'failed' with problemMessage), then PUT the order of every uploaded item when there are two or more. The order must
+// 'failed' with problemMessage; since task 4.13 each file is first shrunk for its purpose with preparedFile, and one
+// still over 25 MB fails on its item without being sent), then PUT the order of every uploaded item when there are two
+// or more. A create also sends `dateUnknown: true` when the fields ask for it (D-34), never a PUT. The order must
 // name exactly the entry's media, so start from the media list in the create or PUT answer, not the tray alone.
 // If the entry holds no media and has no title, caption or tags, delete it and return entry: null. When an upload
 // failed, read the entry again: media changes never touch the version (API_CONTRACT §Media), so the version from the
@@ -113,7 +131,11 @@ export async function saveEntry(input: SaveInput, onItem: ItemUpdate): Promise<S
   };
   let entry = input.saved
     ? await updateEntry(input.saved.id, { ...body, version: input.saved.version })
-    : await createEntry({ ...body, id: input.clientId });
+    : await createEntry({
+        ...body,
+        id: input.clientId,
+        ...(fields.dateUnknown ? { dateUnknown: true } : {}),
+      });
 
   for (const mediaId of input.removedMediaIds) {
     try {
@@ -140,7 +162,15 @@ export async function saveEntry(input: SaveInput, onItem: ItemUpdate): Promise<S
     if (!item.file) continue;
     onItem(item.key, { status: 'uploading', error: null });
     try {
-      const media = await uploadMedia(entry.id, item.file, item.purpose);
+      // Shrunk now that its purpose is known (task 4.13), and checked as it will be sent (D-17).
+      const file = await preparedFile(item.file, item.purpose);
+      const tooBig = fileProblem(file);
+      if (tooBig) {
+        failed++;
+        onItem(item.key, { status: 'failed', error: tooBig });
+        continue;
+      }
+      const media = await uploadMedia(entry.id, file, item.purpose);
       onItem(item.key, { status: 'uploaded', mediaId: media.id, error: null });
       order.push(media.id);
     } catch (error) {

@@ -1,10 +1,14 @@
-import { beforeEach, describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { ApiProblem } from '../../api/problem';
 import { fakeBackend } from '../../test/msw/capture';
 import { server } from '../../test/msw/server';
 import { saveEntry, type EntryFields, type SaveInput, type TrayItem } from './saveEntry';
 
 // The save flow against a fake API (MSW): create with the client's id → upload → reorder (D-12, D-23, G-03).
+
+// Since task 4.13 a photo is shrunk as it uploads. Shrinking needs a canvas, which jsdom lacks (the library would wait
+// on a web worker that never answers), so the file goes up as it was picked.
+vi.mock('browser-image-compression', () => ({ default: (file: File) => Promise.resolve(file) }));
 
 let backend: ReturnType<typeof fakeBackend>;
 beforeEach(() => {
@@ -182,5 +186,34 @@ describe('saveEntry', () => {
     await expect(stale).rejects.toBeInstanceOf(ApiProblem);
     await expect(stale).rejects.toMatchObject({ kind: 'entry-stale' });
     expect(backend.state.calls.some((c) => c.path.endsWith('/media'))).toBe(false);
+  });
+
+  test('a photo still over 25 MB once shrunk fails on its own item and is never sent (D-17, task 4.13)', async () => {
+    const huge: TrayItem = {
+      ...photo('huge'),
+      file: new File([new Uint8Array(25 * 1024 * 1024 + 1)], 'huge.jpg', { type: 'image/jpeg' }),
+    };
+    const updates: [string, Partial<TrayItem>][] = [];
+    const { entry, failed } = await saveEntry(input({ items: [photo('a'), huge] }), (key, patch) =>
+      updates.push([key, patch]),
+    );
+    expect(failed).toBe(1);
+    expect(entry?.id).toBe('client-1');
+    expect(updates).toContainEqual([
+      'huge',
+      { status: 'failed', error: 'This file is over 25 MB.' },
+    ]);
+    expect(backend.state.calls.filter((c) => c.path.endsWith('/media'))).toHaveLength(1);
+  });
+
+  test('sends dateUnknown on a create only when asked (D-34, task 4.13)', async () => {
+    await saveEntry(input({ fields: fields({ dateUnknown: true }), items: [photo('a')] }), noop);
+    expect(backend.state.calls[0]?.body).toMatchObject({ dateUnknown: true });
+    await saveEntry(input({ clientId: 'client-2', items: [photo('b')] }), noop);
+    expect(
+      backend.state.calls.find(
+        (c) => c.method === 'POST' && (c.body as { id: string }).id === 'client-2',
+      )?.body,
+    ).not.toHaveProperty('dateUnknown');
   });
 });

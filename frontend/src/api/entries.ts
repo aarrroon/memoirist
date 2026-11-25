@@ -1,5 +1,7 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
 import { unwrap } from './problem';
+import { queryKeys } from './queryKeys';
 import type { components } from './schema';
 
 // The entry writes capture makes (task 4.6), as plain async functions. Capture's save is one flow of several
@@ -75,4 +77,39 @@ export async function reorderMedia(entryId: string, mediaIds: string[]): Promise
 /** DELETE /media/{id}: a photo the user removed from capture after it had uploaded. */
 export async function deleteMedia(mediaId: string): Promise<void> {
   unwrap(await api.DELETE('/api/v1/media/{mediaId}', { params: { path: { mediaId } } }));
+}
+
+/**
+ * The *date unknown, fix it* badge (D-34, task 4.13): a new memory date for an entry, as PUT /entries/{id}. A PUT is a
+ * full replace (D-26), so every field the entry holds is sent back as it is, with the version last read; the server
+ * clears `dateUnknown` because the date changed, and a client never sends that mark on a PUT. A null field is left out
+ * of the JSON, as in capture's save, which the API reads as null.
+ */
+export function useChangeEntryDate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ entry, entryDate }: { entry: Entry; entryDate: string }) =>
+      updateEntry(entry.id, {
+        version: entry.version,
+        entryDate,
+        templateId: entry.templateId ?? undefined,
+        title: entry.title ?? undefined,
+        contentJson: entry.contentJson,
+        tagIds: entry.tags.map((t) => t.id),
+        soundtrack: entry.soundtrack ?? undefined,
+        replyToEntryId: entry.replyToEntryId ?? undefined,
+      }),
+    onSuccess: async (updated) => {
+      queryClient.setQueryData(queryKeys.entry(updated.id), updated);
+      // The entry may move to another week, so every list that files it by date is read again.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.feed() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.weeks() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.timelines() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.eras() }),
+      ]);
+    },
+    // A 409 entry-stale means the feed's copy is old: read it again, so the next try sends the current version.
+    onError: () => queryClient.invalidateQueries({ queryKey: queryKeys.feed() }),
+  });
 }

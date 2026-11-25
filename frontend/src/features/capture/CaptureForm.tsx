@@ -10,7 +10,8 @@ import { ApiProblem, problemMessage } from '../../api/problem';
 import { queryKeys } from '../../api/queryKeys';
 import { StarMark } from '../../components/TravellingStar';
 import { Button } from '../../components/ui/button';
-import { fileProblem, isImageType, MAX_FILES, shrinkPhoto } from '../../lib/files';
+import { fileProblem, isImageType, MAX_FILES } from '../../lib/files';
+import { readPhotoDay, usableDay } from '../../lib/photoDate';
 import { canRecord } from '../../lib/recording';
 import { captionForSave, insertTemplateHeadings, isBlankDoc } from '../../lib/templateDoc';
 import {
@@ -30,6 +31,7 @@ import SealPanel from '../lootdrop/SealPanel';
 import { SealForm } from '../lootdrop/SealForm';
 import { sealProblem } from '../lootdrop/sealProblem';
 import { DateChip } from './DateChip';
+import { DateSuggestion } from './DateSuggestion';
 import { clearDraft, readDraft, writeDraft, type Draft } from './draft';
 import { EntryEditor } from './Editor';
 import { useEntryEditor } from './editorSetup';
@@ -42,7 +44,7 @@ import { VoiceRecorder } from './VoiceRecorder';
 
 // Capture: New entry and Diary page (DESIGN.md §4 Write, F-02 to F-05, task 4.6). Everything the user types lives in
 // this component's state, never in Zustand (frontend.md, Data): it is a form, and the server owns the entry once it
-// is saved. A draft of it goes to local storage as it changes (D-23). Photo dump (D-34) is task 4.13.
+// is saved. A draft of it goes to local storage as it changes (D-23). Photo dump (D-34) is PhotoDump.tsx (task 4.13).
 
 /** What one Save (or Seal it) did: the save's own result, the entry as saved before any seal, and the seal's fate. */
 type SaveOutcome = SaveResult & {
@@ -143,6 +145,8 @@ export function CaptureForm({
   const [fieldErrors, setFieldErrors] = useState<FieldMessages>({});
   const [message, setMessage] = useState<string | null>(null);
   const [fileMessages, setFileMessages] = useState<string[]>([]);
+  // Task 4.13 (D-34): the day the photos just picked were taken, offered as the memory date until used or dismissed.
+  const [suggestedDay, setSuggestedDay] = useState<IsoDate | null>(null);
   const [stale, setStale] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
   // Sealing (task 4.8): the phone's seal panel, and what went wrong with the last seal, shown inside it.
@@ -156,6 +160,9 @@ export function CaptureForm({
   const voiceTrigger = useRef<HTMLButtonElement | null>(null);
   // The seal panel opens from state, so Escape hands focus back to the Seal button by hand (task 4.8).
   const sealTrigger = useRef<HTMLButtonElement>(null);
+  // The photo-date row (task 4.13) goes once it is answered, so focus moves to the date chip it was about.
+  const dateTrigger = useRef<HTMLButtonElement>(null);
+  const refocusDate = () => requestAnimationFrame(() => dateTrigger.current?.focus());
   const kindOfDraft = restored?.kind ?? kind;
 
   const editor = useEntryEditor(start.content, setContent);
@@ -266,18 +273,21 @@ export function CaptureForm({
       problems.push(
         `An entry holds 20 photos and voice notes at most, so ${files.length - room} weren’t added.`,
       );
+    const days = new Set<IsoDate>();
     for (const picked of files.slice(0, Math.max(room, 0))) {
-      // The type first, so nothing unsupported is shrunk; then the size of what will really be sent (D-17).
-      const typeProblem = fileProblem({ type: picked.type, size: 0 });
-      if (typeProblem) {
-        problems.push(`${picked.name}: ${typeProblem}`);
+      // The type first. A photo's size is checked when it uploads, once it has been shrunk for its purpose (a diary
+      // page more gently, task 4.13), because that is what is sent (D-17); anything else is sent as it is.
+      const image = isImageType(picked.type);
+      const problem = fileProblem(image ? { type: picked.type, size: 0 } : picked);
+      if (problem) {
+        problems.push(`${picked.name}: ${problem}`);
         continue;
       }
-      const file = await shrinkPhoto(picked);
-      const sizeProblem = fileProblem(file);
-      if (sizeProblem) {
-        problems.push(`${picked.name}: ${sizeProblem}`);
-        continue;
+      const file = picked;
+      // Its own date, read now: shrinking drops it (D-34). An undated photo has no say in the offer (4.13 review fix).
+      if (image) {
+        const day = usableDay(await readPhotoDay(file, zone), todayIn(zone));
+        if (day) days.add(day);
       }
       const previewUrl = URL.createObjectURL(file);
       urls.current.add(previewUrl);
@@ -296,6 +306,10 @@ export function CaptureForm({
       setItems((list) => picturesFirst([...list, item]));
     }
     setFileMessages(problems);
+    // Offered when the photos just picked were all taken on one day that isn't the memory date already (D-34): one
+    // photo, usually. Photos from several days give no single answer, so nothing is offered.
+    const [only] = [...days];
+    setSuggestedDay(days.size === 1 && only && only !== entryDate ? only : null);
   };
 
   /** A finished recording joins the tray like a picked file, with its bars and length for its row. */
@@ -548,9 +562,25 @@ export function CaptureForm({
           zone={zone}
           onChange={setEntryDate}
           error={fieldErrors.entryDate}
+          triggerRef={dateTrigger}
         />
         <TemplateChip chosen={templateId} onChoose={chooseTemplate} />
       </div>
+      {suggestedDay && suggestedDay !== entryDate && (
+        <DateSuggestion
+          day={suggestedDay}
+          zone={zone}
+          onUse={() => {
+            setEntryDate(suggestedDay);
+            setSuggestedDay(null);
+            refocusDate();
+          }}
+          onDismiss={() => {
+            setSuggestedDay(null);
+            refocusDate();
+          }}
+        />
+      )}
       <div className="flex flex-col gap-1">
         <label htmlFor={titleFieldId} className="sr-only">
           Title (optional)

@@ -22,7 +22,10 @@ export function DateChip({
   zone,
   onChange,
   error,
+  triggerRef,
 }: {
+  /** Lets capture put focus back on the chip after the photo-date row it offered goes (task 4.13). */
+  triggerRef?: React.Ref<HTMLButtonElement>;
   day: IsoDate;
   zone: string;
   onChange: (day: IsoDate) => void;
@@ -36,7 +39,7 @@ export function DateChip({
     <div className="flex flex-col">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Chip aria-label={`Memory date: ${label}. Change it`}>
+          <Chip ref={triggerRef} aria-label={`Memory date: ${label}. Change it`}>
             <CalendarDays size={16} aria-hidden />
             {label}
           </Chip>

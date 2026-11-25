@@ -42,7 +42,8 @@
 | 4.10 Week summary view | needs attention: the design check fails its `images` line in light and dark (the thumbnails are the original photos, 7.3x at 375 px and 7.8x at 1440 px; Q29). Every other check passes; not ticked | Sprint 4.10: Build the week summary with bars, counts and rename [needs-attention] | `/weeks/:weekId` over `GET /weekly-logs/{id}`: name, dates and Eras, a stats row, up to ten thumbnails, tags with counts, one bar per entry in day order (a sealed one shows only the star, the day and the opening date), Rename, Close and Reopen week; display titles computed on the client (D-24); entry writes drop cached weeks so Back never draws a sealed entry (370 frontend tests) | [4.10](build-journal/sprint-4/4.10-week-summary.md) |
 | 4.11 All-entries timeline and tags UI | done | Sprint 4.11: Build the Timeline with tag filter and the Tags page | `/entries` is the Timeline over `GET /entries` (50 a page, newest first, sticky month headings, tag chips filtering through `?tag=<id>`, a star-only sealed row); `/tags` lists tags with counts and renames or deletes them, refreshing every query that shows a tag name; seals, saves, deletes and openings refresh every Timeline (389 frontend tests) | [4.11](build-journal/sprint-4/4.11-timeline-tags.md) |
 | 4.12 Recently deleted screen | done | Sprint 4.12: Lazy-load inner screens and build Recently deleted | Every screen but the Journal loads on first visit (feed's first JS 199.43 → 190.53 kB gzip); `/recently-deleted` over `GET /entries/deleted` with the erase day, Restore and Erase now (asks first); one delete question from a feed entry's new more-actions menu, an open entry and the Loot Drop page; a 404 on delete refreshes the feed; count on You and a Timeline row (404 frontend tests) | [4.12](build-journal/sprint-4/4.12-recently-deleted.md) |
-| 4.13 to 4.17 | not started | none | **Next task: 4.10 still needs the Q29 decision; after it, 4.13 (Photo dump and photo dates)** | |
+| 4.13 Photo dump and photo dates | done | Sprint 4.13: Build the photo dump and read photo dates | Photo dump reads each photo's EXIF date with exifr before shrinking and files one backdated entry per day (20 photos at most each; a retry reuses the client id, D-12), undated photos into one `dateUnknown` entry with a *Date unknown, fix it* badge on its feed card; capture offers a photo's own date; photos are shrunk at upload, a diary page more gently (433 frontend tests) | [4.13](build-journal/sprint-4/4.13-photo-dump.md) |
+| 4.14 to 4.17 | not started | none | **Next task: 4.10 still needs the Q29 decision; after it, 4.14 (On this day strip and Era covers)** | |
 
 **S4 Overview:** [build-journal/sprint-4/README.md](build-journal/sprint-4/README.md) (tasks 4.1 to 4.9).
 
@@ -70,6 +71,7 @@
 | 2026-11-26 01:24 | 16% | 93% | The user asked to continue. The weekly window resets at 06:00, before their workday, so start 4.10; a run the limit stops resumes after the reset |
 | 2026-11-26 02:31 | 10% | 98% | 4.10 committed (needs attention: thumbnails fail the image check, Q29). Start 4.11; it will likely stop at 100% and resume after 06:00 |
 | 2026-11-26 06:13 | 50% | 3% | 4.11 done (it stopped at the limit and resumed by itself). The weekly window reset. Start 4.12 (with lazy-loaded routes first: the feed chunk is 199.42 of 200 kB) |
+| 2026-11-26 08:08 | 34% | 10% | 4.12 done (7% weekly; the feed's first JS is now 190.53 kB). Start 4.13 |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
@@ -169,6 +171,15 @@
 | 93 | 4.12 | Task ("reached from settings and the timeline") vs the Timeline mockup | The Timeline ends with a *Recently deleted* row link; You's row shows the count from a `size=1` request |
 | 94 | 4.12 | D-42 | 50 rows a page (the endpoint's limit) with a quiet *Show more*, not infinite scroll |
 | 95 | 4.12 | Lazy routes, first visit to an inner screen | On a cold load the shell draws and the column holds a screen-reader-only *Opening…* status; in-app navigations keep the old screen until the new one is ready |
+| 96 | 4.13 | TECH_STACK §3 Media (no numbers) | A diary page is shrunk to at most 4096 px and about 6 MB at quality 0.92; a photo stays at 2560 px, about 2 MB, quality 0.85. Shrinking moved to upload (`saveEntry`'s `preparedFile`), so a photo's 25 MB check happens at upload, on its own item; audio is still checked at pick |
+| 97 | 4.13 | D-34 ("a single photo's own date is offered") | The offer appears when the dated photos of one pick share a single day other than the memory date; undated photos in the pick are ignored (review fix). Photos from several days, or only today, give no offer. *Taken Tue 17 Nov* with *Use this date* (secondary) and *Not now* (quiet); either answer returns focus to the date chip |
+| 98 | 4.13 | D-34 (EXIF date in the user's zone) | With `OffsetTimeOriginal` (or `OffsetTimeDigitized`) the time is an instant moved into the user's zone; without one, the camera clock's day is used. A day after today or before 1900, `0000:00:00` and impossible dates count as undated. Only the date tags are read, never GPS (Q19) |
+| 99 | 4.13 | USER_FLOWS F-19 retry, D-23 | The dump always files with `POST` and the plan key's client id, never `PUT`; an entry whose photos all failed is erased by `saveEntry` and recreated by the retry under the same id. After the first *File them*, *Add more photos* and *Change date* are hidden |
+| 100 | 4.13 | D-34 vs D-10 and design.md §5 | The *Date unknown, fix it* badge shows only on an open entry; a sealed card shows no badge (its date can't change while sealed). D-34 still says the mark stays visible while sealed |
+| 101 | 4.13 | DESIGN.md (no badge look, no toast wording for several weeks) | The badge is the outlined chip with a CalendarDays icon, first in the entry's text column. The toast reads *Filed N entries in the week of X* or *Filed N entries in M weeks, from the week of X*, with *Go there* to the earliest week. Discard asks *Leave these photos out?* |
+| 102 | 4.13 | Round 3 `#dump` (phone only) | Square thumbnails with sm corners: three across on a phone, four from `md`, five in the laptop dialog. A split day says *Filed as N entries, as an entry holds 20 photos at most.* The year shows only for another year |
+| 103 | 4.13 | 4.8 assumption (no edit view yet) | The badge fixes the date in place: a lazy-loaded month (`components/MemoryDayPicker.tsx`), then a full `PUT` through `useChangeEntryDate` that sends every field (D-26) and never `dateUnknown` (D-34) |
+| 104 | 4.13 | `.claude/rules/frontend.md` Time | `photoDay` formats the camera's own day with `toISOString()` on a `Date.UTC`-built value instead of `lib/time.ts`; a comment says why (review minor 4) |
 
 ### S4 Needs attention
 - **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
@@ -239,7 +250,13 @@
 - **4.12, local data:** the sample's *A draft I didn't keep* was restored and deleted again, so it now erases in late December; Sunday reset and the sealed Loot Drop were restored.
 - **4.12, seen, not caused by this task:** within the current week the feed lists Tuesday 24 November before Yesterday (25 November). Worth checking against the intended order within a week.
 - **4.12:** the audit wasn't rerun after the close-out fixes (one sentence of dialog copy and a 404 error path; no layout changed).
-- **Sprint 4 not finished:** tasks 4.13 to 4.17 are left, and 4.10 needs the Q29 decision above. The pull request stays a draft for that reason and for 4.9.
+- **4.13, decision needed (docs):** D-34 says the *date unknown* mark stays visible while an entry is sealed; the build hides the badge on a sealed card, following D-10 and design.md §5 (assumption 100, review minor 1). Confirm, then `/record-decision` to reword D-34 (for example: `dateUnknown` stays in the API while sealed; the badge shows once the entry opens).
+- **4.13, fixed at close-out (review minor 2):** an undated photo picked together with a dated one no longer suppresses capture's date offer; new CaptureView test, seen to fail without the fix (`Unable to find role="group" and name "Photo date"`).
+- **4.13, follow-up:** in the dump's *Change date* month, react-day-picker's autoFocus lands on *Go to the Previous Month* rather than today (inside the Vaul sheet); it works by keyboard but could be polished.
+- **4.13:** no URL loads a filled dump, so audit.mjs checked only the empty dump; the filled dump was checked with Playwright measurements (375 px wide, no target under 44 px) and screenshots. The audit wasn't rerun after the close-out fix (offer logic and a comment; no layout changed).
+- **4.13:** exifr's full ESM bundle (26.04 kB gzip) is in a lazy chunk; its lite build would be smaller but has no TypeScript types for the subpath. The feed's first JS is unchanged at 190.45 kB.
+- **4.13:** the builder's full `npm test` hit the 4.9 load flake once (SettingsPage "shows the name…"); it passed alone and in the next full runs (close-out run: 433/433). The local dev database is unchanged (the test entry was deleted and erased).
+- **Sprint 4 not finished:** tasks 4.14 to 4.17 are left, and 4.10 needs the Q29 decision above. The pull request stays a draft for that reason and for 4.9.
 
 ### S4 Questions for the morning
 
