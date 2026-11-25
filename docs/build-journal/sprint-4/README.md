@@ -219,7 +219,7 @@ Each pair is 375 px, light then dark, against the local backend with its sample 
 
 <img src="screens/4.9-era-form-light.png" width="240" alt="Era form, light"> <img src="screens/4.9-era-form-dark.png" width="240" alt="Era form, dark">
 
-**4.9 Era cover on a laptop (1440 px):** the cover stacked above the band, the unapproved deviation from DESIGN.md §4 (see [Lessons](#what-to-look-at-first-in-review)).
+**4.9 Era cover on a laptop (1440 px):** the cover stacked above the band, made unattended and approved by the user on 2026-11-25 (D-36, DESIGN.md §4; see [Lessons](#what-to-look-at-first-in-review)).
 
 <img src="screens/4.9-era-cover-laptop-light.jpg" width="480" alt="Era cover on a laptop, light"> <img src="screens/4.9-era-cover-laptop-dark.jpg" width="480" alt="Era cover on a laptop, dark">
 
@@ -311,11 +311,11 @@ New in this sprint:
 4. `frontend/src/components/RichText.tsx` and `lib/links.ts`: TipTap JSON rendered as React elements, links checked again.
 5. `frontend/src/lib/time.ts`: every date in the user's zone, `unlockInstant` at 09:00.
 6. Backend: `V2__media_dimensions.sql` and `media/ImageSize.java` (4.5); `EraService.get` and `EraWeeksTest` (4.9).
-7. `frontend/src/features/eras/EraPage.tsx`: the cover stacked above the band on a laptop, a deviation from DESIGN.md §4 made unattended. Keep it, or settle Q29 and restore side by side.
+7. `frontend/src/features/eras/EraPage.tsx`: the cover stacked above the band on a laptop, a deviation from DESIGN.md §4 made unattended. The user kept it on 2026-11-25, and DESIGN.md §4 and D-36 now say so.
 8. `frontend/src/test/setup.ts` and the `beforeAll` lazy imports: why the full run is slow and how it was made to pass.
 
 ## Open items carried into 4.10
-- **4.9 needs your decision:** keep the stacked Era cover or settle Q29 (smaller copies) and restore the side-by-side layout; then tick 4.9 in SPRINT_PLAN and update the Current focus line in CLAUDE.md (still left as the run's rules forbade it).
+- **4.9 still needs attention:** the stacked Era cover was approved on 2026-11-25 (D-36), but the full `npm test` run still times out on 1 to 6 tests under load. Once that is fixed, tick 4.9 in SPRINT_PLAN and move the Current focus line in CLAUDE.md to 4.10.
 - **4.9 needs approval:** a test config change to make the full `npm test` run reliable.
 - **Follow-ups named for later tasks:** `SealedCard`'s `showMemoryDate` for 4.10 and 4.11; the delete offer when the last photo is removed (D-23) and Recently deleted's count for 4.12; a gentler shrink for diary pages and reading EXIF before shrinking for 4.13; Era covers in lists and an initial in place of a missing cover for 4.14; whole (`contain`) photos in the entry view.
 - **Approvals from earlier tasks:** the computed moon (4.3, design.md §5), `src/features/deleted/` in `.claude/rules/frontend.md` (4.3), voice notes fixed after the pictures vs F-03's drag-everything wording (4.7).

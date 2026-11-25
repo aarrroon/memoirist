@@ -43,7 +43,7 @@ Settled choices for memoirist, and the questions still open.
 | D-33 | Loot Drop extras: suggested dates, a reply to past you and a first letter | 2026-10-28 | |
 | D-34 | Photo dump: photos filed by the day they were taken | 2026-10-28 | 2026-11-24 |
 | D-35 | Soundtracks: Spotify links, and search through our server | 2026-10-28 | |
-| D-36 | Era covers | 2026-10-28 | 2026-11-24 |
+| D-36 | Era covers | 2026-10-28 | 2026-11-25 |
 | D-37 | App lock | 2026-10-28 | |
 | D-38 | Product metrics: counts only, never content | 2026-10-28 | |
 | D-39 | Hard topics and the AI | 2026-10-28 | |
@@ -454,6 +454,7 @@ All three are Phase 1.
 - A cover shows only while its entry is neither sealed (D-10) nor in Recently deleted (D-30); otherwise the Era has no cover. Removing the photo clears the cover.
 - Choosing a photo from a sealed entry as the cover is `400`; one from an entry in Recently deleted is `404`, like every other request about that entry (D-30).
 - **Editing an Era never loses a hidden cover.** A `PUT /eras/{id}` that leaves out `coverMediaId` keeps the stored cover while that cover is hidden (its entry sealed or in Recently deleted), because the client can't see its id and must not learn it (D-10). A visible cover that is left out is cleared, as with any full replace. The user chose this on 2026-11-24; built in task 4.14.
+- **On an Era's page the cover sits above the title band at every width**, on a laptop as on a phone (DESIGN.md §4). Side by side, the cover is drawn small while the original photo is served (Q29), which wastes data and fails the image-size check. The user chose this on 2026-11-25, after task 4.9.
 - The cover can be chosen whenever the Era is edited. From Phase 4, closing an Era offers it too (D-28).
 
 **Why:** chapters you can see make the journal feel like a book from day one (R-20, R-48). The user chose covers now and the closing ritual with the AI on 2026-10-28.
