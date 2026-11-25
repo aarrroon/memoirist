@@ -43,6 +43,8 @@
 
 **S4 Overview:** [build-journal/sprint-4/README.md](build-journal/sprint-4/README.md) (tasks 4.1 to 4.9).
 
+**S4 Pull request:** [#4 Sprint 4: The React UI](https://github.com/aarrroon/memoirist/pull/4), open as a **draft** (`phase-1-sprint-4` into `phase-1-sprint-3`, stacked on #3; merge after it). Draft because 4.9 needs attention and 4.10 to 4.17 are left.
+
 ### S4 Usage
 | Time (Melbourne) | 5-hour used | Weekly used | Decision |
 |---|---|---|---|
