@@ -29,3 +29,49 @@ export function useCreateTag() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.tags() }),
   });
 }
+
+/**
+ * A tag's name shows wherever an entry shows its tags: the feed, a week page, an entry, the Opened row and every
+ * Timeline (F-17, "renaming a tag updates everywhere"). A rename or a delete changes no entry on the server (their
+ * version doesn't move, API_CONTRACT §Tags), so nothing here can be patched from the answer: every family that draws
+ * tags is read again. Invalidating keeps what is on screen until the new answer lands, then swaps it.
+ */
+function useAfterTagChange() {
+  const queryClient = useQueryClient();
+  return () =>
+    Promise.all(
+      [
+        queryKeys.tags(),
+        queryKeys.timelines(),
+        queryKeys.feed(),
+        queryKeys.weeks(),
+        queryKeys.entries(),
+        queryKeys.opened(),
+      ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    );
+}
+
+/** PUT /tags/{id}: renames the tag and nothing else. A name another tag has, ignoring case, is 409 conflict. */
+export function useRenameTag() {
+  const after = useAfterTagChange();
+  return useMutation({
+    mutationFn: async ({ tagId, name }: { tagId: string; name: string }) =>
+      unwrap(
+        await api.PUT('/api/v1/tags/{tagId}', {
+          params: { path: { tagId } },
+          body: { name: name.trim() },
+        }),
+      ),
+    onSuccess: after,
+  });
+}
+
+/** DELETE /tags/{id}: the entries that carried it keep everything else (D-26). */
+export function useDeleteTag() {
+  const after = useAfterTagChange();
+  return useMutation({
+    mutationFn: async (tagId: string) =>
+      unwrap(await api.DELETE('/api/v1/tags/{tagId}', { params: { path: { tagId } } })),
+    onSuccess: after,
+  });
+}

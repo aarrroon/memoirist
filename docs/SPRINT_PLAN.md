@@ -321,7 +321,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:** tapping a week in the feed opens `/weeks/:weekId`: title, dates, Eras, counts, a few thumbnails, tags, then one bar per entry (display title, day, media icons, the Loot Drop's star if sealed, D-41). Tapping a bar opens the entry. Leave a slot at the top for the Phase 4 AI summary.
   - **Done when:** component tests cover a mixed week, a week with a sealed entry (its bar shows only the star, the day and the unlock date), and the display-title fallbacks (title → first non-heading line → *Photo* / *Diary page* / *Voice note*).
 
-- [ ] **4.11 All-entries timeline and tags UI**
+- [x] **4.11 All-entries timeline and tags UI**
   - **Read:** D-24, D-25, D-26, USER_FLOWS F-16 and F-17.
   - **Do:** `/entries` lists every entry newest first with infinite scroll over `GET /entries`, one row each (display title, date, icons, tags), filterable by tag; a `/tags` page to rename and delete tags.
   - **Done when:** filtering by a tag shows only its unsealed entries; sealed rows show no title or tags; renaming a tag updates everywhere; component tests pass.

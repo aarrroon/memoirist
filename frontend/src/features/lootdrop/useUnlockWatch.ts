@@ -35,6 +35,8 @@ export function useUnlockWatch(
       // A week page shows the Loot Drop's bar; once it opens the bar shows its title (task 4.10).
       void queryClient.invalidateQueries({ queryKey: queryKeys.weeks() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.opened() });
+      // The Timeline's locked row turns into the entry's row (task 4.11).
+      void queryClient.invalidateQueries({ queryKey: queryKeys.timelines() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.entry(next.id) });
     }, delay);
     return () => clearTimeout(timer);

@@ -40,7 +40,8 @@
 | 4.8 Loot Drops in the UI | done | `31939b1` Sprint 4.8: Build Loot Drops: the seal, the star and the Opened row | The travelling star as one SVG, a seal panel and confirmation opening at 09:00 in the user's zone (from capture, and Extend on the Loot Drop page), a 112 px sealed card with a live countdown, the Loot Drop page at `/entries/:entryId` with Delete, a kind `409`, and the Opened row with an optimistic dismiss; the full test run made reliable at close-out (311 frontend tests) | [4.8](build-journal/sprint-4/4.8-loot-drops-ui.md) |
 | 4.9 Eras, templates and settings pages | done (2026-11-25, after the run): the user kept the stacked Era cover (D-36, DESIGN.md §4), and the flaky full `npm test` run was fixed (a 5 s `findBy` wait, a 20 s test limit, and a warm-up import of capture in the AppShell test; 6 full runs clean) | `af2aa96` Sprint 4.9: Build the Eras, Templates and You screens [needs-attention] | `GET /eras/{id}` leaves out weeks with no entry to show (D-22); the Eras list with nesting, the Era page (cover, title band, weeks as contents, Eras inside), one Era form with the pin and Delete; Templates with the starter gallery (one tap adds an editable copy); You with name, timezone, birthday and Appearance kept on the device (340 frontend tests) | [4.9](build-journal/sprint-4/4.9-eras-templates-settings.md) |
 | 4.10 Week summary view | needs attention: the design check fails its `images` line in light and dark (the thumbnails are the original photos, 7.3x at 375 px and 7.8x at 1440 px; Q29). Every other check passes; not ticked | Sprint 4.10: Build the week summary with bars, counts and rename [needs-attention] | `/weeks/:weekId` over `GET /weekly-logs/{id}`: name, dates and Eras, a stats row, up to ten thumbnails, tags with counts, one bar per entry in day order (a sealed one shows only the star, the day and the opening date), Rename, Close and Reopen week; display titles computed on the client (D-24); entry writes drop cached weeks so Back never draws a sealed entry (370 frontend tests) | [4.10](build-journal/sprint-4/4.10-week-summary.md) |
-| 4.11 to 4.17 | not started | none | **Next task after 4.10: 4.11 (All-entries timeline and tags UI)** | |
+| 4.11 All-entries timeline and tags UI | done | Sprint 4.11: Build the Timeline with tag filter and the Tags page | `/entries` is the Timeline over `GET /entries` (50 a page, newest first, sticky month headings, tag chips filtering through `?tag=<id>`, a star-only sealed row); `/tags` lists tags with counts and renames or deletes them, refreshing every query that shows a tag name; seals, saves, deletes and openings refresh every Timeline (389 frontend tests) | [4.11](build-journal/sprint-4/4.11-timeline-tags.md) |
+| 4.12 to 4.17 | not started | none | **Next task: 4.10 still needs the Q29 decision; after it, 4.12 (Recently deleted screen)** | |
 
 **S4 Overview:** [build-journal/sprint-4/README.md](build-journal/sprint-4/README.md) (tasks 4.1 to 4.9).
 
@@ -66,6 +67,7 @@
 | 2026-11-25 19:41 | 99% | 90% | 4.9 committed (needs attention). Weekly at 90%: no new task. Wrap-up at 21:15, after the 5-hour reset |
 | 2026-11-25 21:15 | 0% | 91% | Start the sprint wrap-up (draft PR; 4.10 to 4.17 left) |
 | 2026-11-26 01:24 | 16% | 93% | The user asked to continue. The weekly window resets at 06:00, before their workday, so start 4.10; a run the limit stops resumes after the reset |
+| 2026-11-26 02:31 | 10% | 98% | 4.10 committed (needs attention: thumbnails fail the image check, Q29). Start 4.11; it will likely stop at 100% and resume after 06:00 |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
@@ -150,6 +152,11 @@
 | 78 | 4.10 | D-26; generated `WeeklyLogUpdateRequest` has no null | Clearing a title leaves the field out (read as null); the current soundtrack is always sent back, so a rename never clears it |
 | 79 | 4.10 | Q29 (default: serve originals) vs design.md §6 | The thumbnails are the original photos, not shrunk in the browser, so the audit's `images` line fails until Q29 is decided |
 | 80 | 4.10 | Review 2 (D-10); frontend.md Data | After a seal or a delete, cached feed and week pages that are off screen are dropped, not only marked stale, so Back shows a loading state and never draws a sealed or deleted entry from the cache |
+| 81 | 4.11 | Task 4.4 tag links; TECH_STACK.md | The Timeline's filter lives in the address as `?tag=<id>`, not in Zustand. A chip replaces the history entry, so Back leaves the Timeline; a tag link from another screen adds one |
+| 82 | 4.11 | DESIGN.md §4 Rows; round 3 mockup; USER_FLOWS F-17 step 3 | Tags in a Timeline row are plain text, not links, because the whole row is one link; the chips filter. F-17 step 3 now says so (review 1 minor) |
+| 83 | 4.11 | USER_FLOWS F-17 edge case; no copy in DESIGN.md | On a rename 409, the message names the clashing tag by finding it, ignoring case, in the tag list already loaded (the server's `detail` never repeats input). The copy for a 404 tag (*This tag isn't in your journal any more.* + *Clear the filter*), the empty Tags page and the rename hint was written here |
+| 84 | 4.11 | D-42; API_CONTRACT §Entries | The Timeline asks for 50 rows a page (the server default, under the limit of 100) |
+| 85 | 4.11 | D-10 | Leaving sealed entries out of a tag filter and its counts is the server's job; the client draws what comes back. MSW stand-in data with a sealed, a deleted and another user's entry shows the screen adds nothing |
 
 ### S4 Needs attention
 - **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
@@ -206,7 +213,11 @@
 - **4.10, follow-up:** once `WeeklyLogUpdateRequest` has `@Schema(nullable = true)` and `gen:api` has run, send explicit nulls in the week PUT (shared with 4.9's Era PUT).
 - **4.10, follow-up:** later entry edit, restore and erase tasks must refresh `queryKeys.weeks()` like the seal and delete do (`dropAndRefetch` in `api/lootDrops.ts`).
 - **4.10:** without the review-2 fix, the cache tests go red only when the mock refetch is slower than the first check, so which of the two fails varies by run; with the fix both pass every run (370/370 twice).
-- **Sprint 4 not finished:** tasks 4.11 to 4.17 are left, and 4.10 needs the Q29 decision above. The pull request stays a draft for that reason and for 4.9.
+- **4.11, follow-up (bundle):** the main JS chunk is 199.42 kB gzipped, 0.58 kB under the 200 kB limit. The next screen will likely cross it: lazy-load the non-feed routes (React Router `lazy`) in `router.tsx` before or with 4.12.
+- **4.11:** the audit, keyboard, reduced-motion and live-rename checks come from the first attempt (stopped by the usage limit after every gate passed); the second attempt re-ran `npm test` (389/389), lint, typecheck and build only. The close-out read the saved audit outputs (each ends "No check failed"). The local dev database's Work tag was renamed to Office and back.
+- **4.11:** the review's three minor findings were fixed in docs only: F-17 step 3 in `docs/USER_FLOWS.md`, and the journal's practice-block row and line links.
+- **4.11:** CLAUDE.md's Current focus still names 4.10 (the first unticked task, waiting on Q29); 4.11 is ticked.
+- **Sprint 4 not finished:** tasks 4.12 to 4.17 are left, and 4.10 needs the Q29 decision above. The pull request stays a draft for that reason and for 4.9.
 
 ### S4 Questions for the morning
 

@@ -21,6 +21,8 @@ export const queryKeys = {
   tags: () => [...all, 'tags'] as const,
   templates: () => [...all, 'templates'] as const,
   entry: (id: string) => [...all, 'entries', id] as const,
+  // Task 4.11: every single entry at once, for a change that shows on all of them (a tag renamed or deleted).
+  entries: () => [...all, 'entries'] as const,
   // Task 4.8. The Opened strip (GET /entries/opened, D-10). Not under 'entries', so a family invalidation of one
   // entry never refetches it by accident, and it can be invalidated on its own when a Loot Drop is dismissed.
   opened: () => [...all, 'opened'] as const,
@@ -34,5 +36,10 @@ export const queryKeys = {
   // show a sealed entry's title or a deleted entry for up to the 30-minute staleTime (D-10, D-30).
   weeks: () => [...all, 'weeks'] as const,
   week: (id: string) => [...all, 'weeks', id] as const,
+  // Task 4.11. The Timeline (GET /entries): one infinite query per filter, all under `timelines`, so a tag rename or
+  // any entry write refetches every filtered copy with one prefix. Not under 'entries': invalidating one entry must
+  // not refetch a 50-row list. `null` is All entries.
+  timelines: () => [...all, 'timeline'] as const,
+  timeline: (tagId: string | null) => [...all, 'timeline', { tagId }] as const,
 };
 // └── END ANSWER ▲ ──

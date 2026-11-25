@@ -22,6 +22,9 @@ import {
   weekOf,
   addDays,
   barDay,
+  formatMonth,
+  monthKey,
+  timelineDay,
   daysBetween,
   dayIn,
   latestSealDay,
@@ -370,5 +373,20 @@ describe('week summary (task 4.10)', () => {
     expect(barDay('2026-11-01')).toBe('Sun 1');
     // The clock-change Sunday in Melbourne is still a Sunday: a calendar day has no zone.
     expect(barDay('2026-10-04')).toBe('Sun 4');
+  });
+});
+
+describe('the Timeline (task 4.11)', () => {
+  test('timelineDay writes the date over the short weekday', () => {
+    expect(timelineDay('2026-10-28')).toEqual({ short: '28 Oct', weekday: 'Wed' });
+    // A calendar day has no zone: the Melbourne clock-change Sunday is still a Sunday.
+    expect(timelineDay('2026-10-04')).toEqual({ short: '4 Oct', weekday: 'Sun' });
+  });
+
+  test('monthKey and formatMonth name the month a day falls in', () => {
+    expect(monthKey('2026-10-31')).toBe('2026-10');
+    expect(monthKey('2026-11-01')).toBe('2026-11');
+    expect(formatMonth('2026-10-31')).toBe('October 2026');
+    expect(formatMonth('2025-01-01')).toBe('January 2025');
   });
 });

@@ -315,3 +315,24 @@ export function formatBirthday(day: IsoDate): string {
 export function barDay(day: IsoDate): string {
   return format(calendarDay(day), 'EEE d');
 }
+
+// ---------- Timeline (task 4.11, D-25) ----------
+
+/**
+ * A Timeline row's date (DESIGN.md §4 Controls, Rows): "28 Oct" in `title` over "Wed" in `meta`. The month heading
+ * above the rows gives the year.
+ */
+export function timelineDay(day: IsoDate): { short: string; weekday: string } {
+  const date = calendarDay(day);
+  return { short: format(date, 'd MMM'), weekday: format(date, 'EEE') };
+}
+
+/** The calendar month an ISO day falls in, as a key that sorts: "2026-10". */
+export function monthKey(day: IsoDate): string {
+  return day.slice(0, 7);
+}
+
+/** A Timeline month heading: "October 2026" (DESIGN.md §6, sticky month headings). */
+export function formatMonth(day: IsoDate): string {
+  return format(calendarDay(day), 'MMMM yyyy');
+}

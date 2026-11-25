@@ -278,17 +278,17 @@ Exact versions are pinned in `backend/build.gradle.kts`, and Gradle's own in `ba
 
 ```
 src/
-├── api/          # schema.d.ts (generated — never hand-edit), client.ts (openapi-fetch), queryKeys.ts, problem.ts, one file of hooks per resource (users.ts, feed.ts: useFeed, an infinite query over GET /feed, task 4.4; tags.ts and templates.ts; entries.ts: the writes capture makes, as plain functions, task 4.6; weeks.ts: useWeek, rename, close and reopen, task 4.10)
+├── api/          # schema.d.ts (generated — never hand-edit), client.ts (openapi-fetch), queryKeys.ts, problem.ts, one file of hooks per resource (users.ts, feed.ts: useFeed, an infinite query over GET /feed, task 4.4; tags.ts and templates.ts; entries.ts: the writes capture makes, as plain functions, task 4.6; weeks.ts: useWeek, rename, close and reopen, task 4.10; timeline.ts: useTimeline, an infinite query over GET /entries with an optional tag, 50 rows a page, and tags.ts: rename and delete, task 4.11)
 ├── features/
 │   ├── capture/  # task 4.6: CaptureHost (in the shell; lazy-loads the rest, `?write=entry|page` opens it), CaptureView (Vaul sheet below `lg`, dialog from `lg`, keep-or-discard question), CaptureForm, editorSetup.ts + Editor (TipTap: StarterKit without underline and codeBlock, plus Link with the http/https/mailto allow-list), DateChip (react-day-picker), TemplateChip, TagPicker (find or make a tag), MediaTray (dnd-kit; a menu moves, marks a diary page, retries, removes), saveEntry.ts (create → upload → reorder, D-12, D-23), draft.ts (the one draft in localStorage, checked with zod), CaptureToaster (Sonner)
 │   ├── feed/     # FeedPage (infinite scroll, task 4.4), grouping.ts (weeks under eras[0], nesting and chips, D-22), WeekSection (the sticky Era and week line), FeedEntry, FeedStates (loading, empty, error), a text-only SealedCard until task 4.8; later covers (D-36), OpenedStrip (D-10), OnThisDayStrip (D-32)
 │   ├── week/     # task 4.10: WeekSummaryPage (name, dates and Eras, stats row, thumbnails, tag counts, one bar per entry, Rename week and Close week; over api/weeks.ts), summary.ts (the counts, never a sealed entry, D-10, D-25). Display titles of full entries: lib/displayTitle.ts (entryDisplayTitle, previewLine, D-24)
-│   ├── timeline/ # TimelinePage: every entry, one row each, tag filter (D-25)
+│   ├── timeline/ # task 4.11: TimelinePage (tag chips, sticky month headings, one row per entry, sealed rows with the star; the filter is `?tag=<id>` in the address), months.ts (groupByMonth) (D-24, D-25, D-26)
 │   ├── entry/    # EntryCard, MediaCarousel, PhotoDump (D-34), SealDialog with suggested dates, SealedCard, reply to past you (D-33), VoiceRecorder, displayTitle()
 │   ├── music/    # SoundtrackPicker (paste or search) and SoundtrackPlayer, which loads Spotify only when tapped (D-35)
 │   ├── eras/     # task 4.9: ErasPage (Eras inside another indented, eraTree.ts), EraPage (title band, contents list of weeks, Eras inside this one), EraForm (new, edit, pin, delete); the cover picker is task 4.14 (D-36)
 │   ├── templates/ # task 4.9: TemplatesPage, TemplateForm (name and up to 20 prompts), starters.ts (the starter gallery, D-06)
-│   ├── tags/     # TagsPage (D-26); capture's tag picker is in capture/
+│   ├── tags/     # task 4.11: TagsPage (rename and delete, with counts that never include a sealed entry, D-10, D-26); capture's tag picker is in capture/
 │   ├── settings/ # task 4.9: SettingsPage: display name, timezone, birthday (D-33) and Appearance (lib/appearance.ts, D-41)
 │   └── deleted/  # RecentlyDeletedPage (D-30)
 ├── components/   # shared UI primitives: Page, Moon, NotFoundPage; FormDialog (a centred form dialog, Field, CheckRow) and LoadState (list loading and Try again), task 4.9
