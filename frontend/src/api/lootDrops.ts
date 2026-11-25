@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { api } from './client';
 import { getEntry, type Entry } from './entries';
-import { unwrap } from './problem';
+import { ApiProblem, unwrap } from './problem';
 import { queryKeys } from './queryKeys';
 import type { components } from './schema';
 
@@ -80,7 +80,10 @@ export async function afterSeal(queryClient: QueryClient, sealed: Entry): Promis
  * it draws the cached copy (the entry whole) until the refetch lands. So the copies no page is watching are dropped:
  * going back shows the loading state, then the server's answer. A page on screen keeps its data and refetches.
  */
-function dropAndRefetch(queryClient: QueryClient, queryKey: readonly unknown[]): Promise<void> {
+export function dropAndRefetch(
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+): Promise<void> {
   queryClient.removeQueries({ queryKey, type: 'inactive' });
   return queryClient.invalidateQueries({ queryKey });
 }
@@ -119,7 +122,10 @@ export function useMarkSeen() {
   });
 }
 
-/** DELETE /entries/{id}: a Loot Drop can always be deleted, and it stays sealed in Recently deleted (D-10, D-30). */
+/**
+ * DELETE /entries/{id}: moves the entry to Recently deleted for 30 days (D-30). A Loot Drop can always be deleted, and
+ * it stays sealed there (D-10). Used by the Loot Drop page (task 4.8), the feed's and the entry's Delete (task 4.12).
+ */
 export function useDeleteEntry(entryId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -134,6 +140,22 @@ export function useDeleteEntry(entryId: string) {
         dropAndRefetch(queryClient, queryKeys.weeks()),
         dropAndRefetch(queryClient, queryKeys.timelines()),
         queryClient.invalidateQueries({ queryKey: queryKeys.opened() }),
+        // Task 4.12: it now waits in Recently deleted (the list and the count on You), and it leaves its tags'
+        // counts and its Era's weeks (D-30).
+        queryClient.invalidateQueries({ queryKey: queryKeys.deleted() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.tags() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.eras() }),
+      ]);
+    },
+    // A 404 means another tab or device deleted or erased it first (F-09 edge case): read the screens again so the
+    // stale card leaves, as restore and erase do for their list (4.12 review).
+    onError: async (error) => {
+      if (!(error instanceof ApiProblem) || error.status !== 404) return;
+      await Promise.all([
+        dropAndRefetch(queryClient, queryKeys.feed()),
+        dropAndRefetch(queryClient, queryKeys.weeks()),
+        dropAndRefetch(queryClient, queryKeys.timelines()),
+        queryClient.invalidateQueries({ queryKey: queryKeys.deleted() }),
       ]);
     },
   });

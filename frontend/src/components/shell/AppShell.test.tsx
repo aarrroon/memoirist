@@ -80,23 +80,26 @@ describe('routes', () => {
 
     await user.click(within(navs().tabBar).getByRole('link', { name: 'Timeline' }));
 
+    // Task 4.12: the Timeline is a lazy route, so the navigation commits once its chunk has loaded.
+    expect(await screen.findByRole('heading', { level: 1, name: 'Timeline' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/entries');
-    expect(screen.getByRole('heading', { level: 1, name: 'Timeline' })).toBeInTheDocument();
     expect(current(navs().tabBar)).toEqual(['Timeline']);
   });
 
   test('the back link names where it goes, and goes there', async () => {
     const user = userEvent.setup();
     const { router } = renderApp('/recently-deleted');
+    await screen.findByRole('heading', { level: 1, name: 'Recently deleted' });
 
     await user.click(within(screen.getByRole('banner')).getByRole('link', { name: 'You' }));
 
-    expect(router.state.location.pathname).toBe('/settings');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/settings'));
   });
 
   test('You leads to Tags, Templates and Recently deleted, the only way there on a phone', async () => {
     const user = userEvent.setup();
     const { router } = renderApp('/settings');
+    await screen.findByRole('heading', { level: 1, name: 'You' });
 
     for (const [name, path] of [
       ['Tags', '/tags'],
@@ -104,8 +107,11 @@ describe('routes', () => {
       ['Recently deleted', '/recently-deleted'],
     ] as const) {
       await act(() => router.navigate('/settings'));
-      await user.click(within(screen.getByRole('main')).getByRole('link', { name }));
-      expect(router.state.location.pathname).toBe(path);
+      // A row's name ends with its count once that has loaded (Recently deleted's since task 4.12).
+      await user.click(
+        within(screen.getByRole('main')).getByRole('link', { name: new RegExp(`^${name}`) }),
+      );
+      await waitFor(() => expect(router.state.location.pathname).toBe(path));
     }
   });
 });
@@ -183,6 +189,7 @@ describe('the Write menu', () => {
   test('the laptop’s Write opens the same three choices', async () => {
     const user = userEvent.setup();
     renderApp('/eras');
+    await screen.findByRole('heading', { level: 1, name: 'Eras' });
 
     await user.click(
       within(screen.getByRole('complementary')).getByRole('button', { name: 'Write' }),
@@ -197,6 +204,7 @@ describe('keyboard', () => {
   test('the first Tab reaches Skip to content, which leads to the screen', async () => {
     const user = userEvent.setup();
     renderApp('/eras');
+    await screen.findByRole('heading', { level: 1, name: 'Eras' });
 
     await user.tab();
     const skip = screen.getByRole('link', { name: 'Skip to content' });

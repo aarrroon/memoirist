@@ -5,7 +5,9 @@ import { Swipe } from '../../components/Swipe';
 import { VoiceNote } from '../../components/VoiceNote';
 import { isPicture as isImage } from '../../lib/media';
 import { hasText } from '../../lib/tiptap';
-import { dayLabel, dayParts } from '../../lib/time';
+import { entryDisplayTitle } from '../../lib/displayTitle';
+import { dayLabel, dayParts, formatDay } from '../../lib/time';
+import { EntryMenu } from './EntryMenu';
 import { SealedCard } from './SealedCard';
 
 // One entry in the feed (tasks 4.4 and 4.5, DESIGN.md §4 Feed, D-41): the day line, the swipe of its photos,
@@ -77,37 +79,44 @@ function EntryBody({ entry, eagerPhotoId }: { entry: Entry; eagerPhotoId: string
     <>
       {photos.length > 0 && <Swipe photos={photos} eagerPhotoId={eagerPhotoId} />}
 
-      <div className="flex flex-col gap-2">
-        {entry.title && <h3 className="font-display text-title">{entry.title}</h3>}
-        {/* Drawn from the JSON as React elements, never as HTML (non-negotiable 6). */}
-        {caption && <RichText document={entry.contentJson} clamp className="text-body" />}
-        {!entry.title && !caption && mediaLabel(entry) && (
-          <p className="text-small text-ink-2">{mediaLabel(entry)}</p>
-        )}
-        {notes.map((note, index) => (
-          <VoiceNote
-            key={note.id}
-            src={note.fileUrl}
-            name={notes.length > 1 ? `voice note ${index + 1} of ${notes.length}` : 'voice note'}
-          />
-        ))}
-        {entry.tags.length > 0 && (
-          // Each tag opens the timeline filtered by it (DESIGN.md §4 Feed; the filter is task 4.11). Every link is
-          // at least 44 × 44 px (design.md §9), so a short tag such as "Trip" keeps a blank tail; that is why they
-          // are spaced rather than joined by commas as in the mockup.
-          <ul aria-label="Tags" className="flex flex-wrap gap-x-4">
-            {entry.tags.map((tag) => (
-              <li key={tag.id} className="text-small text-ink-2">
-                <Link
-                  to={`/entries?tag=${encodeURIComponent(tag.id)}`}
-                  className="inline-flex min-h-11 min-w-11 items-center"
-                >
-                  {tag.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+      {/* Task 4.12: the text, with the entry's more-actions menu at its top right (F-09). */}
+      <div className="flex items-start gap-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          {entry.title && <h3 className="font-display text-title">{entry.title}</h3>}
+          {/* Drawn from the JSON as React elements, never as HTML (non-negotiable 6). */}
+          {caption && <RichText document={entry.contentJson} clamp className="text-body" />}
+          {!entry.title && !caption && mediaLabel(entry) && (
+            <p className="text-small text-ink-2">{mediaLabel(entry)}</p>
+          )}
+          {notes.map((note, index) => (
+            <VoiceNote
+              key={note.id}
+              src={note.fileUrl}
+              name={notes.length > 1 ? `voice note ${index + 1} of ${notes.length}` : 'voice note'}
+            />
+          ))}
+          {entry.tags.length > 0 && (
+            // Each tag opens the timeline filtered by it (DESIGN.md §4 Feed; the filter is task 4.11). Every link is
+            // at least 44 × 44 px (design.md §9), so a short tag such as "Trip" keeps a blank tail; that is why they
+            // are spaced rather than joined by commas as in the mockup.
+            <ul aria-label="Tags" className="flex flex-wrap gap-x-4">
+              {entry.tags.map((tag) => (
+                <li key={tag.id} className="text-small text-ink-2">
+                  <Link
+                    to={`/entries?tag=${encodeURIComponent(tag.id)}`}
+                    className="inline-flex min-h-11 min-w-11 items-center"
+                  >
+                    {tag.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <EntryMenu
+          entryId={entry.id}
+          name={entryDisplayTitle(entry) ?? formatDay(entry.entryDate, { year: true })}
+        />
       </div>
     </>
   );

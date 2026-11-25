@@ -38,7 +38,10 @@ describe('an entry with photos only', () => {
     expect(img).toHaveAttribute('width', '960');
     expect(img).toHaveAttribute('height', '640');
     expect(screen.queryByRole('group')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    // No arrows: the only button is the entry's more-actions menu (task 4.12).
+    expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
+      'More actions for Photo',
+    ]);
     // D-24: with nothing written, the entry is named by its first media item.
     expect(screen.getByText('Photo', { selector: 'p' })).toBeInTheDocument();
   });

@@ -336,3 +336,36 @@ export function monthKey(day: IsoDate): string {
 export function formatMonth(day: IsoDate): string {
   return format(calendarDay(day), 'MMMM yyyy');
 }
+
+// ---------- Recently deleted (task 4.12, D-30) ----------
+
+/** How long a deleted entry waits before the daily sweep may erase it (D-30; the backend's RETENTION). */
+export const RETENTION_DAYS = 30;
+
+/**
+ * The hour (UTC) the daily sweep runs: 16:00, which is 02:00 or 03:00 in Melbourne (API_CONTRACT §Entries, Recently
+ * deleted; RecentlyDeletedSweepJob's default cron). If the backend's cron changes, change this with it.
+ */
+export const SWEEP_HOUR_UTC = 16;
+
+// TODO(human) PRACTICE: Write erasureDay(deletedAt, zone): the day, in the user's zone, on which the daily sweep
+// erases an entry deleted at the instant `deletedAt` ("Erased on 27 Nov" on the Recently deleted screen).
+// Hint: the sweep erases what was deleted MORE than 30 days before it runs, and it runs once a day at 16:00 UTC.
+// So find the instant 30 days after the delete, then the first 16:00 UTC strictly after it, and only then turn that
+// instant into a day in the user's zone (dayIn). Adding 30 days to the memory date, or to the day in Melbourne, is
+// off by one for most of the day; time.test.ts has a morning, an evening, an exact-16:00 case and London.
+// ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+export function erasureDay(deletedAt: string, zone: string): IsoDate {
+  const due = Date.parse(deletedAt) + RETENTION_DAYS * 86_400_000;
+  const sweep = new Date(due);
+  sweep.setUTCHours(SWEEP_HOUR_UTC, 0, 0, 0);
+  // "More than 30 days": a sweep at exactly the due instant still keeps it, so the next day's sweep erases it.
+  if (sweep.getTime() <= due) sweep.setUTCDate(sweep.getUTCDate() + 1);
+  return dayIn(sweep, zone);
+}
+// └── END ANSWER ▲ ──
+
+/** "27 Nov": the erasure day on a Recently deleted row (DESIGN.md §6 `#deleted`). It is never more than 31 days away. */
+export function formatDayMonth(day: IsoDate): string {
+  return format(calendarDay(day), 'd MMM');
+}

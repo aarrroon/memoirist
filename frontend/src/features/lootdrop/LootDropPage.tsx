@@ -2,18 +2,10 @@ import { Clock } from 'lucide-react';
 import { lazy, Suspense, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { Entry } from '../../api/entries';
-import { useDeleteEntry, useSeal } from '../../api/lootDrops';
-import { problemMessage } from '../../api/problem';
+import { useSeal } from '../../api/lootDrops';
 import { Page } from '../../components/Page';
 import { TravellingStar } from '../../components/TravellingStar';
 import { Button } from '../../components/ui/button';
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogTitle,
-} from '../../components/ui/dialog';
 import {
   addDays,
   countdown,
@@ -27,6 +19,7 @@ import {
   unlockInstant,
   type IsoDate,
 } from '../../lib/time';
+import { DeleteEntryDialog } from '../deleted/DeleteEntryDialog';
 import { sealProblem } from './sealProblem';
 
 // The panel and its date picker load only when Extend is pressed (design.md §6).
@@ -55,7 +48,6 @@ export function LootDropPage({
   const extendButton = useRef<HTMLButtonElement>(null);
   const deleteButton = useRef<HTMLButtonElement>(null);
   const seal = useSeal(entry.id);
-  const remove = useDeleteEntry(entry.id);
 
   const opens = entry.unlockDate;
   if (!opens) return null;
@@ -131,43 +123,15 @@ export function LootDropPage({
         </Suspense>
       )}
 
-      <AlertDialog open={deleting} onOpenChange={setDeleting}>
-        <AlertDialogContent
-          onCloseAutoFocus={(event) => {
-            if (!deleteButton.current?.isConnected) return;
-            event.preventDefault();
-            deleteButton.current.focus();
-          }}
-        >
-          <AlertDialogTitle className="font-display text-title">
-            Delete this Loot Drop?
-          </AlertDialogTitle>
-          <AlertDialogDescription className="text-body text-ink-2">
-            It moves to Recently deleted, still sealed. You can restore it there for 30 days.
-          </AlertDialogDescription>
-          {remove.isError && (
-            <p role="alert" className="text-small text-danger">
-              {problemMessage(remove.error)}
-            </p>
-          )}
-          <div className="flex flex-wrap justify-end gap-2">
-            <AlertDialogCancel asChild>
-              <Button variant="secondary">Keep it</Button>
-            </AlertDialogCancel>
-            <Button
-              className="border-danger text-danger"
-              disabled={remove.isPending}
-              onClick={() =>
-                remove.mutate(undefined, {
-                  onSuccess: () => void navigate('/', { replace: true }),
-                })
-              }
-            >
-              Delete
-            </Button>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Task 4.12: the shared delete question, with the copy task 4.8 wrote for a Loot Drop. */}
+      <DeleteEntryDialog
+        entryId={entry.id}
+        sealed
+        open={deleting}
+        onOpenChange={setDeleting}
+        returnFocus={deleteButton}
+        onDeleted={() => void navigate('/', { replace: true })}
+      />
     </Page>
   );
 }

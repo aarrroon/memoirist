@@ -11,8 +11,8 @@ import { devUser } from './handlers';
 // deleted or foreign entries nowhere (D-10, D-26, D-30). The backend's own tests (task 3.9, 3.8) prove the server.
 
 /** "Now" for the stand-in server: the sample's Tuesday 24 November 2026, Melbourne morning. */
-const NOW = Date.parse('2026-11-24T00:00:00Z');
-const OTHER_USER = '00000000-0000-0000-0000-000000000002';
+export const NOW = Date.parse('2026-11-24T00:00:00Z');
+export const OTHER_USER = '00000000-0000-0000-0000-000000000002';
 
 export interface StoredEntry {
   id: string;
@@ -94,6 +94,23 @@ export function timelineJournal() {
       tagIds: ['tag-work'],
       deletedAt: '2026-11-20T00:00:00Z',
     }),
+    // Task 4.12: a sealed Loot Drop in Recently deleted, with a title, a photo and a tag the server must never send
+    // while it is sealed, there or anywhere (D-10, D-30).
+    stored('entry-deleted-sealed', '2026-10-11', {
+      title: 'The deleted sealed secret',
+      previewLine: 'The deleted sealed secret line',
+      photoCount: 1,
+      firstMediaKind: 'PHOTO',
+      tagIds: ['tag-secret'],
+      unlockDate: '2027-10-10T22:00:00Z',
+      deletedAt: '2026-11-22T05:00:00Z',
+    }),
+    // Another user's entry in Recently deleted: never in the dev user's list.
+    stored('entry-bob-deleted', '2026-10-18', {
+      userId: OTHER_USER,
+      title: 'Bob’s deleted entry',
+      deletedAt: '2026-11-23T00:00:00Z',
+    }),
     // Another user's entry, with a tag of the dev user's name: never listed or counted.
     stored('entry-bob', '2026-10-19', {
       userId: OTHER_USER,
@@ -111,11 +128,11 @@ export function timelineJournal() {
 
 export type TimelineJournal = ReturnType<typeof timelineJournal>;
 
-const isSealed = (entry: StoredEntry) =>
+export const isSealed = (entry: StoredEntry) =>
   entry.unlockDate !== null && Date.parse(entry.unlockDate) > NOW;
 
 /** The rows EntryMapper.toSummary would build: a sealed entry keeps only its ids and dates (D-10). */
-function toRow(journal: TimelineJournal, entry: StoredEntry): TimelineRow {
+export function toRow(journal: TimelineJournal, entry: StoredEntry): TimelineRow {
   const sealed = isSealed(entry);
   const base = {
     id: entry.id,
@@ -155,7 +172,7 @@ function toRow(journal: TimelineJournal, entry: StoredEntry): TimelineRow {
 const mine = (journal: TimelineJournal) =>
   journal.entries.filter((entry) => entry.userId === devUser.id && entry.deletedAt === null);
 
-function problem(status: number, suffix: string) {
+export function problem(status: number, suffix: string) {
   return HttpResponse.json(
     {
       type: `urn:memoirist:problem:${suffix}`,

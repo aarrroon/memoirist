@@ -7,6 +7,19 @@ import { Button } from './ui/button';
 // DESIGN.md §7): nothing for 300 ms, then row shapes in --surface; a failure names the problem in the app's own
 // words and offers Try again (F-14).
 
+/**
+ * What a lazily loaded screen shows inside the shell while its code arrives on a cold load (task 4.12, router.tsx).
+ * Only a status for screen readers: the chunk is small and local, and an empty column for a moment reads calmer than
+ * a spinner that flashes. Without it React Router draws nothing at all, not even the shell, until the chunk arrives.
+ */
+export function ScreenLoading() {
+  return (
+    <p role="status" className="sr-only">
+      Opening…
+    </p>
+  );
+}
+
 export function ListLoading({ label, rows = 3 }: { label: string; rows?: number }) {
   const show = useDelayed(300);
   return (

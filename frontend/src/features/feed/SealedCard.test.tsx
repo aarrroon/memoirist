@@ -104,6 +104,7 @@ describe('the sealed card', () => {
       />,
     );
     expect(container).toHaveTextContent('Open now');
-    expect(container.querySelector('svg')).toBeNull();
+    // No star: the one drawing is the more-actions menu's icon (task 4.12).
+    expect(container.querySelector('svg:not(.lucide-ellipsis)')).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { Link, useParams } from 'react-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
 import type { Entry } from '../../api/entries';
 import { useEntry, useMarkSeen } from '../../api/lootDrops';
 import { ApiProblem, problemMessage } from '../../api/problem';
@@ -14,6 +14,7 @@ import { isPicture } from '../../lib/media';
 import { hasText } from '../../lib/tiptap';
 import { formatDay, formatShortDay, openedLabel } from '../../lib/time';
 import { useNow } from '../../lib/useNow';
+import { DeleteEntryDialog } from '../deleted/DeleteEntryDialog';
 import { LootDropPage } from './LootDropPage';
 import { useUnlockWatch } from './useUnlockWatch';
 
@@ -70,6 +71,9 @@ export function EntryPage() {
 /** An entry that can be read: an opened Loot Drop with its whole trail lit, or an ordinary entry. */
 function OpenEntry({ entry, zone, now }: { entry: Entry; zone: string; now: Date }) {
   const opened = entry.unlockDate !== null;
+  const navigate = useNavigate();
+  const [deleting, setDeleting] = useState(false);
+  const deleteButton = useRef<HTMLButtonElement>(null);
   const markSeen = useMarkSeen();
   const marked = useRef<string | null>(null);
   const { mutate } = markSeen;
@@ -131,6 +135,26 @@ function OpenEntry({ entry, zone, now }: { entry: Entry; zone: string; now: Date
           ))}
         </ul>
       )}
+      {/* Task 4.12 (F-09): Delete asks first, then the entry waits in Recently deleted for 30 days (D-30). Quiet, as
+          on the Loot Drop page; Edit joins it when a task builds the edit view. */}
+      <div>
+        <Button
+          ref={deleteButton}
+          variant="quiet"
+          className="-ml-3"
+          onClick={() => setDeleting(true)}
+        >
+          Delete
+        </Button>
+      </div>
+      <DeleteEntryDialog
+        entryId={entry.id}
+        sealed={false}
+        open={deleting}
+        onOpenChange={setDeleting}
+        returnFocus={deleteButton}
+        onDeleted={() => void navigate('/', { replace: true })}
+      />
     </Page>
   );
 }

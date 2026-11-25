@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Link } from 'react-router';
+import { useDeletedCount } from '../../api/deleted';
 import { ApiProblem, problemMessage } from '../../api/problem';
 import { useTags } from '../../api/tags';
 import { useTemplates } from '../../api/templates';
@@ -137,10 +138,12 @@ function AppearancePicker() {
 function JournalRows() {
   const tags = useTags();
   const templates = useTemplates();
+  // Task 4.12: how many entries wait in Recently deleted (GET /entries/deleted, D-30).
+  const deleted = useDeletedCount();
   const rows = [
     { to: '/tags', label: 'Tags', count: tags.data?.length },
     { to: '/templates', label: 'Templates', count: templates.data?.length },
-    { to: '/recently-deleted', label: 'Recently deleted', count: undefined },
+    { to: '/recently-deleted', label: 'Recently deleted', count: deleted.data },
   ];
   return (
     <section aria-labelledby="you-journal" className="flex flex-col gap-4">

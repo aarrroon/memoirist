@@ -326,7 +326,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:** `/entries` lists every entry newest first with infinite scroll over `GET /entries`, one row each (display title, date, icons, tags), filterable by tag; a `/tags` page to rename and delete tags.
   - **Done when:** filtering by a tag shows only its unsealed entries; sealed rows show no title or tags; renaming a tag updates everywhere; component tests pass.
 
-- [ ] **4.12 Recently deleted screen** (D-30)
+- [x] **4.12 Recently deleted screen** (D-30)
   - **Read:** USER_FLOWS F-09 and F-18.
   - **Do:** a delete confirmation that says the entry can be restored for 30 days, and a `/recently-deleted` screen over `GET /entries/deleted` with *restore* and *erase now*, reached from settings and the timeline.
   - **Done when:** component tests cover a normal and a sealed entry in the list; restoring puts the entry back in its week in the feed; *erase now* asks for confirmation; and an entry deleted from the feed shows up in the list.

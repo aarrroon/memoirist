@@ -20,4 +20,8 @@ export const handlers = [
   http.get('*/api/v1/feed', () => HttpResponse.json(page(sampleWeeks))),
   // The Opened strip (task 4.8): empty unless a test says a Loot Drop has opened.
   http.get('*/api/v1/entries/opened', () => HttpResponse.json([])),
+  // Recently deleted (task 4.12): empty, for You's count, unless a test serves a journal (msw/deleted.ts).
+  http.get('*/api/v1/entries/deleted', () =>
+    HttpResponse.json({ items: [], page: 0, size: 1, totalItems: 0, totalPages: 0 }),
+  ),
 ];

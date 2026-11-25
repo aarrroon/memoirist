@@ -41,7 +41,8 @@
 | 4.9 Eras, templates and settings pages | done (2026-11-25, after the run): the user kept the stacked Era cover (D-36, DESIGN.md §4), and the flaky full `npm test` run was fixed (a 5 s `findBy` wait, a 20 s test limit, and a warm-up import of capture in the AppShell test; 6 full runs clean) | `af2aa96` Sprint 4.9: Build the Eras, Templates and You screens [needs-attention] | `GET /eras/{id}` leaves out weeks with no entry to show (D-22); the Eras list with nesting, the Era page (cover, title band, weeks as contents, Eras inside), one Era form with the pin and Delete; Templates with the starter gallery (one tap adds an editable copy); You with name, timezone, birthday and Appearance kept on the device (340 frontend tests) | [4.9](build-journal/sprint-4/4.9-eras-templates-settings.md) |
 | 4.10 Week summary view | needs attention: the design check fails its `images` line in light and dark (the thumbnails are the original photos, 7.3x at 375 px and 7.8x at 1440 px; Q29). Every other check passes; not ticked | Sprint 4.10: Build the week summary with bars, counts and rename [needs-attention] | `/weeks/:weekId` over `GET /weekly-logs/{id}`: name, dates and Eras, a stats row, up to ten thumbnails, tags with counts, one bar per entry in day order (a sealed one shows only the star, the day and the opening date), Rename, Close and Reopen week; display titles computed on the client (D-24); entry writes drop cached weeks so Back never draws a sealed entry (370 frontend tests) | [4.10](build-journal/sprint-4/4.10-week-summary.md) |
 | 4.11 All-entries timeline and tags UI | done | Sprint 4.11: Build the Timeline with tag filter and the Tags page | `/entries` is the Timeline over `GET /entries` (50 a page, newest first, sticky month headings, tag chips filtering through `?tag=<id>`, a star-only sealed row); `/tags` lists tags with counts and renames or deletes them, refreshing every query that shows a tag name; seals, saves, deletes and openings refresh every Timeline (389 frontend tests) | [4.11](build-journal/sprint-4/4.11-timeline-tags.md) |
-| 4.12 to 4.17 | not started | none | **Next task: 4.10 still needs the Q29 decision; after it, 4.12 (Recently deleted screen)** | |
+| 4.12 Recently deleted screen | done | Sprint 4.12: Lazy-load inner screens and build Recently deleted | Every screen but the Journal loads on first visit (feed's first JS 199.43 → 190.53 kB gzip); `/recently-deleted` over `GET /entries/deleted` with the erase day, Restore and Erase now (asks first); one delete question from a feed entry's new more-actions menu, an open entry and the Loot Drop page; a 404 on delete refreshes the feed; count on You and a Timeline row (404 frontend tests) | [4.12](build-journal/sprint-4/4.12-recently-deleted.md) |
+| 4.13 to 4.17 | not started | none | **Next task: 4.10 still needs the Q29 decision; after it, 4.13 (Photo dump and photo dates)** | |
 
 **S4 Overview:** [build-journal/sprint-4/README.md](build-journal/sprint-4/README.md) (tasks 4.1 to 4.9).
 
@@ -68,6 +69,7 @@
 | 2026-11-25 21:15 | 0% | 91% | Start the sprint wrap-up (draft PR; 4.10 to 4.17 left) |
 | 2026-11-26 01:24 | 16% | 93% | The user asked to continue. The weekly window resets at 06:00, before their workday, so start 4.10; a run the limit stops resumes after the reset |
 | 2026-11-26 02:31 | 10% | 98% | 4.10 committed (needs attention: thumbnails fail the image check, Q29). Start 4.11; it will likely stop at 100% and resume after 06:00 |
+| 2026-11-26 06:13 | 50% | 3% | 4.11 done (it stopped at the limit and resumed by itself). The weekly window reset. Start 4.12 (with lazy-loaded routes first: the feed chunk is 199.42 of 200 kB) |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
@@ -157,6 +159,16 @@
 | 83 | 4.11 | USER_FLOWS F-17 edge case; no copy in DESIGN.md | On a rename 409, the message names the clashing tag by finding it, ignoring case, in the tag list already loaded (the server's `detail` never repeats input). The copy for a 404 tag (*This tag isn't in your journal any more.* + *Clear the filter*), the empty Tags page and the rename hint was written here |
 | 84 | 4.11 | D-42; API_CONTRACT §Entries | The Timeline asks for 50 rows a page (the server default, under the limit of 100) |
 | 85 | 4.11 | D-10 | Leaving sealed entries out of a tag filter and its counts is the server's job; the client draws what comes back. MSW stand-in data with a sealed, a deleted and another user's entry shows the screen adds nothing |
+| 86 | 4.12 | USER_FLOWS F-09 vs the round 3 feed mockup | Each open feed entry has a quiet 44 px *More actions* button (Open, Delete) at the top right of its text; negative margins keep it from adding a row. Edit joins it when the edit view is built |
+| 87 | 4.12 | No Sprint 4 task gives an ordinary entry Delete outside the feed | The open entry page has a quiet *Delete* at its foot, as the Loot Drop page does; afterwards it goes back to the Journal |
+| 88 | 4.12 | DESIGN.md §6 #deleted vs D-30 / API_CONTRACT | D-30 wins on how (D-27): a sealed row also offers *Erase now* ("Erase this Loot Drop now? It is erased unopened, at once."). DESIGN.md not yet changed: see Needs attention |
+| 89 | 4.12 | Round 3 #deleted (thumbnails) vs API_CONTRACT (no file URL in the row) | Each row has a 48 px icon tile: the star in accent for a sealed row, else Image, BookOpen, Mic or FileText from `firstMediaKind` |
+| 90 | 4.12 | DESIGN.md "Erased on 26 Nov"; API_CONTRACT sweep at 16:00 UTC | The erase day is the user's-zone day of the first 16:00 UTC sweep strictly after `deletedAt` + 30 days (`erasureDay`, `SWEEP_HOUR_UTC = 16`); it must change if the backend's cron does |
+| 91 | 4.12 | No doc gives the copy | *Delete this entry? It moves to Recently deleted. You can restore it there for 30 days.*; *Erase this entry now? It is erased with its photos and voice notes, at once. This can't be undone.*; *Nothing is waiting here.*; *Restored to the week of …* with *Go there*; *Erased.*; Keep it / Delete / Erase; Show more |
+| 92 | 4.12 | USER_FLOWS F-18 step 2; a toast would need capture's lazy Sonner chunk | After a restore or an erase, one focused `role="status"` line at the top of the list says what happened; restoring asks nothing, erasing asks first |
+| 93 | 4.12 | Task ("reached from settings and the timeline") vs the Timeline mockup | The Timeline ends with a *Recently deleted* row link; You's row shows the count from a `size=1` request |
+| 94 | 4.12 | D-42 | 50 rows a page (the endpoint's limit) with a quiet *Show more*, not infinite scroll |
+| 95 | 4.12 | Lazy routes, first visit to an inner screen | On a cold load the shell draws and the column holds a screen-reader-only *Opening…* status; in-app navigations keep the old screen until the new one is ready |
 
 ### S4 Needs attention
 - **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
@@ -217,7 +229,17 @@
 - **4.11:** the audit, keyboard, reduced-motion and live-rename checks come from the first attempt (stopped by the usage limit after every gate passed); the second attempt re-ran `npm test` (389/389), lint, typecheck and build only. The close-out read the saved audit outputs (each ends "No check failed"). The local dev database's Work tag was renamed to Office and back.
 - **4.11:** the review's three minor findings were fixed in docs only: F-17 step 3 in `docs/USER_FLOWS.md`, and the journal's practice-block row and line links.
 - **4.11:** CLAUDE.md's Current focus still names 4.10 (the first unticked task, waiting on Q29); 4.11 is ticked.
-- **Sprint 4 not finished:** tasks 4.12 to 4.17 are left, and 4.10 needs the Q29 decision above. The pull request stays a draft for that reason and for 4.9.
+- **4.12, decision needed (design):** the sealed row in Recently deleted offers *Erase now* and a 20 px star in a 48 px icon tile, where DESIGN.md §6 #deleted says a sealed row shows only its dates and *Restore, still sealed*, and §4 Sealed row a 16 px star. D-30 was followed over DESIGN.md (assumption 88). Once decided, update DESIGN.md §6 and §4, or the code (review minor 3).
+- **4.12, follow-up (review minor 1):** the delete question always says the entry can be restored for 30 days, but the server erases an entry with no title, caption or media at once (API_CONTRACT DELETE, F-18 "An empty entry"). "with its photos" was dropped at close-out; the empty-entry wording waits for the edit view, where an entry can become empty.
+- **4.12, follow-up (review minor 4):** the D-23 offer to delete an entry when its last photo is removed (F-09 step 3) wasn't built; it needs the edit view.
+- **4.12, fixed at close-out (review minor 2):** a delete that answers 404 (deleted on another device) now refreshes the feed, weeks and Timelines so the stale card leaves; new test, seen to fail without the fix. F-09's "This memory was deleted" wording isn't shown.
+- **4.12:** the feed's real first JS is 190.53 kB gzip (was 199.43; limit 200): Vite's 162 kB entry figure leaves out the shared chunks it preloads. Capture's chunk (205 kB) stays lazy.
+- **4.12:** the delete dialog moves focus to `#main` two timer turns after it unmounts, when the feed's refetch removes the card while it is open, because Radix's own restore lands on `<body>`; it depends on Radix's timing (confirmed live).
+- **4.12:** on a phone, a sealed row's *Erase now* wraps under *Restore, still sealed*; the audit passes.
+- **4.12, local data:** the sample's *A draft I didn't keep* was restored and deleted again, so it now erases in late December; Sunday reset and the sealed Loot Drop were restored.
+- **4.12, seen, not caused by this task:** within the current week the feed lists Tuesday 24 November before Yesterday (25 November). Worth checking against the intended order within a week.
+- **4.12:** the audit wasn't rerun after the close-out fixes (one sentence of dialog copy and a 404 error path; no layout changed).
+- **Sprint 4 not finished:** tasks 4.13 to 4.17 are left, and 4.10 needs the Q29 decision above. The pull request stays a draft for that reason and for 4.9.
 
 ### S4 Questions for the morning
 

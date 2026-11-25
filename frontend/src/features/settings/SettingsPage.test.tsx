@@ -54,7 +54,8 @@ describe('You', () => {
     // The moon line greets in the user's zone: 18:30 in Melbourne.
     // (The phone's top bar and the laptop's side nav both carry the line.)
     expect(await screen.findAllByText('Wednesday at dusk')).not.toHaveLength(0);
-    await user.click(screen.getByRole('button', { name: /^Timezone/ }));
+    // The shell draws the moon line before the lazily loaded screen arrives (task 4.12), so wait for the row.
+    await user.click(await screen.findByRole('button', { name: /^Timezone/ }));
     const dialog = await screen.findByRole('dialog', { name: 'Timezone' });
     await user.selectOptions(within(dialog).getByLabelText('Timezone'), 'Europe/London');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));

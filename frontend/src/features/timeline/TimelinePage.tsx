@@ -1,4 +1,4 @@
-import { ChevronRight, Image, Mic, Plus } from 'lucide-react';
+import { ChevronRight, Image, Mic, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { ApiProblem, problemMessage } from '../../api/problem';
@@ -52,6 +52,15 @@ export function TimelinePage() {
       <TagFilter selected={tagId} onChoose={choose} />
       {/* Keyed by the filter, so the foot's observer and the scroll-to-chip start again for each list. */}
       <TimelineList key={tagId ?? 'all'} tagId={tagId} onClear={() => choose(null)} />
+      {/* Task 4.12 (F-18): Recently deleted is reached from You and from here, a row with a chevron at the foot. */}
+      <Link
+        to="/recently-deleted"
+        className="flex min-h-14 items-center gap-4 border-b border-line text-body"
+      >
+        <Trash2 size={20} aria-hidden className="shrink-0 text-ink-2" />
+        <span className="flex-1">Recently deleted</span>
+        <ChevronRight size={20} aria-hidden className="shrink-0 text-ink-2" />
+      </Link>
     </Page>
   );
 }

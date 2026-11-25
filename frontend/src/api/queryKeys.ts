@@ -41,5 +41,10 @@ export const queryKeys = {
   // not refetch a 50-row list. `null` is All entries.
   timelines: () => [...all, 'timeline'] as const,
   timeline: (tagId: string | null) => [...all, 'timeline', { tagId }] as const,
+  // Task 4.12. Recently deleted (GET /entries/deleted, D-30): the screen's list and the count on You, both under
+  // `deleted`, so a delete, a restore or an erase refetches both with one prefix. Not under 'entries' either.
+  deleted: () => [...all, 'deleted'] as const,
+  deletedList: () => [...all, 'deleted', 'list'] as const,
+  deletedCount: () => [...all, 'deleted', 'count'] as const,
 };
 // └── END ANSWER ▲ ──

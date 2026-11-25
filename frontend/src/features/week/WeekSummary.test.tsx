@@ -161,7 +161,8 @@ describe('week summary', () => {
     server.use(http.get('*/api/v1/entries/:id', () => HttpResponse.json(grampiansWeek.entries[1])));
     const { router } = renderApp('/weeks/week-gramp');
     await user.click((await bars())[1]!);
-    expect(router.state.location.pathname).toBe('/entries/e-halls');
+    // The entry page is a lazy route (task 4.12): the navigation commits once its chunk has loaded.
+    await waitFor(() => expect(router.state.location.pathname).toBe('/entries/e-halls'));
   });
 
   test('a week without a title is named by its dates, said once', async () => {

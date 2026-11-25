@@ -216,7 +216,8 @@ describe('capture', { timeout: 15_000 }, () => {
     const go = await screen.findByRole('button', { name: 'Go there' });
     expect(screen.getByText('Saved in the week of 16–22 November')).toBeVisible();
     await user.click(go);
-    expect(router.state.location.pathname).toBe('/weeks/week-2026-11-16');
+    // The week page is a lazy route (task 4.12): the navigation commits once its chunk has loaded.
+    await waitFor(() => expect(router.state.location.pathname).toBe('/weeks/week-2026-11-16'));
   });
 
   test('a reload keeps the draft (D-23)', async () => {

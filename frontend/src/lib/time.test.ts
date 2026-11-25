@@ -32,6 +32,8 @@ import {
   openingParts,
   sealProgress,
   unlockInstant,
+  erasureDay,
+  formatDayMonth,
 } from './time';
 
 // Plain unit tests with fixed instants (frontend.md: plain Vitest for lib/). Every instant is written in UTC, so
@@ -388,5 +390,37 @@ describe('the Timeline (task 4.11)', () => {
     expect(monthKey('2026-11-01')).toBe('2026-11');
     expect(formatMonth('2026-10-31')).toBe('October 2026');
     expect(formatMonth('2025-01-01')).toBe('January 2025');
+  });
+});
+
+describe('Recently deleted (task 4.12, D-30)', () => {
+  const LONDON = 'Europe/London';
+
+  test('a morning delete in Melbourne is erased by the sweep two nights after its 30 days', () => {
+    // 09:00 on 28 Oct in Melbourne. 30 days later is 09:00 on 27 Nov there (22:00 UTC on the 26th), after that
+    // day's 16:00 UTC sweep, so the next sweep erases it: 16:00 UTC on 27 Nov, 03:00 on 28 Nov in Melbourne.
+    // "28 Oct + 30 days" would say 27 Nov.
+    expect(erasureDay('2026-10-27T22:00:00Z', MELBOURNE)).toBe('2026-11-28');
+  });
+
+  test('an evening delete is erased at the first sweep after its 30 days', () => {
+    // 20:00 on 28 Oct in Melbourne (09:00 UTC): due 09:00 UTC on 27 Nov, swept at 16:00 UTC the same day.
+    expect(erasureDay('2026-10-28T09:00:00Z', MELBOURNE)).toBe('2026-11-28');
+    // The same instant in London is 16:00 on 27 Nov there.
+    expect(erasureDay('2026-10-28T09:00:00Z', LONDON)).toBe('2026-11-27');
+  });
+
+  test('a sweep at exactly 30 days keeps it: it must be MORE than 30 days (RecentlyDeletedSweeper)', () => {
+    expect(erasureDay('2026-10-27T16:00:00Z', MELBOURNE)).toBe('2026-11-28');
+    expect(erasureDay('2026-10-27T15:59:59Z', MELBOURNE)).toBe('2026-11-27');
+  });
+
+  test('after daylight saving ends, the sweep is 02:00 in Melbourne, still the next day', () => {
+    expect(erasureDay('2026-03-10T00:00:00Z', MELBOURNE)).toBe('2026-04-10');
+  });
+
+  test('formatDayMonth writes the day and short month', () => {
+    expect(formatDayMonth('2026-11-28')).toBe('28 Nov');
+    expect(formatDayMonth('2026-04-01')).toBe('1 Apr');
   });
 });
