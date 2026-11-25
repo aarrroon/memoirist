@@ -315,7 +315,7 @@ New in this sprint:
 8. `frontend/src/test/setup.ts` and the `beforeAll` lazy imports: why the full run is slow and how it was made to pass.
 
 ## Open items carried into 4.10
-- **4.9 still needs attention:** the stacked Era cover was approved on 2026-11-25 (D-36), but the full `npm test` run still times out on 1 to 6 tests under load. Once that is fixed, tick 4.9 in SPRINT_PLAN and move the Current focus line in CLAUDE.md to 4.10.
+- **4.9 is done (2026-11-25):** the stacked Era cover was approved (D-36), and the flaky full `npm test` run was fixed: lookups that ran out of time under load, and a cold first import of the lazy capture screen (TECH_STACK §3, *Waiting in tests*).
 - **4.9 needs approval:** a test config change to make the full `npm test` run reliable.
 - **Follow-ups named for later tasks:** `SealedCard`'s `showMemoryDate` for 4.10 and 4.11; the delete offer when the last photo is removed (D-23) and Recently deleted's count for 4.12; a gentler shrink for diary pages and reading EXIF before shrinking for 4.13; Era covers in lists and an initial in place of a missing cover for 4.14; whole (`contain`) photos in the entry view.
 - **Approvals from earlier tasks:** the computed moon (4.3, design.md §5), `src/features/deleted/` in `.claude/rules/frontend.md` (4.3), voice notes fixed after the pictures vs F-03's drag-everything wording (4.7).

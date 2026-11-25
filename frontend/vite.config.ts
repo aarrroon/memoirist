@@ -17,6 +17,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Above the 5 s findBy wait (src/test/setup.ts) plus the 10 s ones of the lazy capture and seal panels, so a
+    // slow lookup fails as "Unable to find", not as a test timeout that hides which element was missing.
+    testTimeout: 20_000,
     // Vitest swaps CSS for an empty string unless a file is listed here; tokens.test.ts reads the token file.
     css: { include: [/src\/index\.css/] },
   },

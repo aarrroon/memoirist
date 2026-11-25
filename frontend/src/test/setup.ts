@@ -1,7 +1,12 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { server } from './msw/server';
+
+// findBy and waitFor give up after 1 s by default. In the full run 34 files share the CPU, and a screen that
+// renders in 50 ms alone (an MSW answer, then a lazy chunk) can take over a second, so 1 to 6 random tests failed
+// with "Unable to find …" while every file passed alone (task 4.9). 5 s still fails a test that never renders.
+configure({ asyncUtilTimeout: 5_000 });
 
 // jsdom has no layout, so it doesn't implement scrolling and prints "Not implemented" when React Router's
 // <ScrollRestoration /> (the shell, task 4.3) scrolls to the top after a navigation. Nothing scrolls in a test.

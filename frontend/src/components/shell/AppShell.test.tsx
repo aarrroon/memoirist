@@ -1,11 +1,18 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { useUiStore } from '../../stores/ui';
 import { devUser } from '../../test/msw/handlers';
 import { server } from '../../test/msw/server';
 import { renderApp } from '../../test/render';
+
+// The Write menu opens capture, which is React.lazy (task 4.6). Its first import transforms TipTap, Vaul and the
+// rest, which took over 10 s on a cold run and failed the Write menu test; importing it here first means the lazy
+// import finds it loaded, as CaptureView.test.tsx does.
+beforeAll(async () => {
+  await import('../../features/capture/CaptureView');
+}, 60_000);
 
 // The shell around every screen (task 4.3, DESIGN.md §4 Shell). jsdom applies no CSS, so both navs are in the
 // tree: the laptop's side nav comes first in the document, the phone's tab bar last.
@@ -157,7 +164,7 @@ describe('the Write menu', () => {
     const sheet = await screen.findByRole('dialog', {}, { timeout: 10_000 });
     await waitFor(() => expect(sheet).toContainElement(document.activeElement as HTMLElement));
     expect(write).not.toHaveFocus();
-  }, 15_000);
+  });
 
   test('Escape closes it without opening anything', async () => {
     const user = userEvent.setup();
