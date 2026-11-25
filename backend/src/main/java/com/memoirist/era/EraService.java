@@ -154,8 +154,12 @@ public class EraService {
      * columns that changed; the flush is explicit so that {@code updatedAt} in the response is the new one.
      *
      * <p>The cover is checked only when the request changes it. An Era whose cover is hidden now (its entry was sealed
-     * or deleted since) can still be edited when the request names the same photo, and a request that leaves the cover
-     * out removes it, like every other field a {@code PUT} leaves out.
+     * or deleted since) can still be edited when the request names the same photo.
+     *
+     * <p>A request that leaves the cover out keeps a hidden cover (D-36, task 4.14): the client was shown
+     * {@code cover: null} and can't send an id it was never told, so "left out" can't mean "remove it". A visible
+     * cover left out is removed, like every other field a {@code PUT} leaves out. When the Loot Drop opens or the entry
+     * is restored, the kept cover shows again.
      */
     public EraResponse update(UUID eraId, EraUpdateRequest request) {
         UUID userId = currentUser.currentUserId();
@@ -166,7 +170,8 @@ public class EraService {
         era.setStartDate(request.startDate());
         era.setEndDate(request.endDate());
         era.setSoundtrack(request.soundtrack());
-        if (!Objects.equals(request.coverMediaId(), era.getCoverMediaId())) {
+        boolean keepHiddenCover = request.coverMediaId() == null && covers.isHidden(era, userId, now);
+        if (!keepHiddenCover && !Objects.equals(request.coverMediaId(), era.getCoverMediaId())) {
             requireCover(request.coverMediaId(), userId, now);
             era.setCoverMediaId(request.coverMediaId());
         }

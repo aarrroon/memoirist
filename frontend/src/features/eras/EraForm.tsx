@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from '../../components/ui/dialog';
 import { EARLIEST_DAY } from '../../lib/time';
+import { CoverPicker } from './CoverPicker';
 
 type FieldName = 'title' | 'startDate' | 'endDate' | 'description';
 type Errors = Partial<Record<FieldName, string>>;
@@ -60,6 +61,8 @@ function initial(era?: Era | EraDetail): EraFields {
     startDate: era?.startDate ?? '',
     endDate: era?.endDate ?? null,
     pinnedInFeed: era?.pinnedInFeed ?? false,
+    // The cover shown now, or none. A hidden cover reads as none here and is kept by the server (D-36).
+    coverMediaId: era?.cover?.id ?? null,
   };
 }
 
@@ -259,6 +262,14 @@ function EraFieldsDialog({
         checked={fields.pinnedInFeed}
         onChange={(checked) => set({ pinnedInFeed: checked })}
       />
+      {/* Only an Era page's own copy knows its weeks, where the photos are (task 4.14). */}
+      {era && 'weeklyLogs' in era && (
+        <CoverPicker
+          era={era}
+          value={fields.coverMediaId ?? null}
+          onChange={(coverMediaId) => set({ coverMediaId })}
+        />
+      )}
     </FormDialog>
   );
 }

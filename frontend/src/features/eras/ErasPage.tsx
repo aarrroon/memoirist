@@ -74,10 +74,10 @@ export function EraRow({ era, nested = false }: { era: Era; nested?: boolean }) 
 }
 
 /**
- * The Era's initial in a 64 px tile (48 inside another Era), as the feed's Era line shows it (task 4.4). The cover
- * photo joins this tile with task 4.14 (covers): while the API serves only original photos (Q29's default), a
- * 960 px or larger original shown at 64 px is 10 to 20 times the size it is drawn at, which design.md §6 and the
- * audit refuse. The Era page shows the cover large, where the original is the right size.
+ * The Era's initial in a 64 px tile (48 inside another Era). Task 4.14 put the cover on the feed's 32 px Era line,
+ * as DESIGN.md §4 draws it, and the audit fails it there as oversize until Q29 gives smaller copies. This list keeps
+ * the initial until then: a 960 px or larger original shown at 64 px is 10 to 20 times the size it is drawn at, which
+ * design.md §6 and the audit refuse. The Era page shows the cover large, where the original is the right size.
  */
 function EraThumb({ era, size }: { era: Era; size: 'large' | 'small' }) {
   const box = size === 'large' ? 'size-16' : 'size-12';

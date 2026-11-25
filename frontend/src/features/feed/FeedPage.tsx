@@ -1,26 +1,43 @@
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { useFeed, type Week } from '../../api/feed';
+import { useEras } from '../../api/eras';
+import { useFeed, type Media, type Week } from '../../api/feed';
 import { problemMessage } from '../../api/problem';
 import { useOpened } from '../../api/lootDrops';
+import { useOnThisDay } from '../../api/onThisDay';
 import { useMe } from '../../api/users';
 import { Page } from '../../components/Page';
 import { Button } from '../../components/ui/button';
+import { todayIn } from '../../lib/time';
 import { useNow } from '../../lib/useNow';
 import { OpenedRow } from '../lootdrop/OpenedRow';
 import { useUnlockWatch } from '../lootdrop/useUnlockWatch';
 import { FeedEmpty, FeedError, FeedLoading } from './FeedStates';
 import { groupFeed, type FeedSection } from './grouping';
+import { OnThisDay } from './OnThisDay';
 import { WeekSection } from './WeekSection';
 
 // The Journal, at / (task 4.4, DESIGN.md §4 Feed and §6, F-08): the user's weeks, newest first, filed under their
 // Eras (D-22), loaded a page at a time as the reader nears the end. The moon line above names the day, so the
 // heading is for screen readers only. The Opened row (task 4.8) sits at the top while a Loot Drop has just opened;
-// On this day joins in task 4.14, below the first entry while the Opened row shows (D-41).
+// On this day (task 4.14) takes that place otherwise, and moves below the first entry while the Opened row shows
+// (D-41), so the first screen keeps its budget (design.md §3).
 export function FeedPage() {
   const me = useMe();
   const feed = useFeed();
   const opened = useOpened();
+  const onThisDay = useOnThisDay();
+  // Covers come from GET /eras: a week's own `eras` carry none (API_CONTRACT, Eras). Until they arrive, and for an
+  // Era whose cover is hidden (its entry sealed or in Recently deleted, D-36), the line shows the initial in the
+  // same 32 px tile, so nothing moves when a cover appears.
+  const eras = useEras();
   const now = useNow();
+  const covers = useMemo(
+    () =>
+      new Map<string, Media>(
+        (eras.data ?? []).flatMap((era) => (era.cover ? [[era.id, era.cover] as const] : [])),
+      ),
+    [eras.data],
+  );
 
   const weeks = useMemo(() => feed.data?.pages.flatMap((page) => page.items) ?? [], [feed.data]);
   const groups = useMemo(() => groupFeed(weeks), [weeks]);
@@ -37,7 +54,8 @@ export function FeedPage() {
   let body;
   // The Opened row is waited for too (a failure counts as nothing to show), so it never pushes the feed down after
   // the first paint: layout shift stays at 0.1 or less (design.md §6).
-  if (!feed.data || !me.data || opened.isPending) {
+  // On this day is waited for in the same way: it sits above the first photo, so arriving late would push it down.
+  if (!feed.data || !me.data || opened.isPending || onThisDay.isPending) {
     // Every date needs the user's timezone (non-negotiable 2), so the feed waits for both. The error screen is
     // only for when nothing could be shown: a failed next page, or a failed refetch in the background, keeps the
     // weeks already on screen (FeedFoot).
@@ -56,9 +74,14 @@ export function FeedPage() {
   } else if (weeks.length === 0) {
     body = <FeedEmpty />;
   } else {
+    const hasOpened = (opened.data?.length ?? 0) > 0;
+    const memories = onThisDay.data && onThisDay.data.length > 0 && (
+      <OnThisDay rows={onThisDay.data} today={todayIn(me.data.timezone, now)} />
+    );
+    const firstWeekId = weeks[0]?.id;
     body = (
       <div className="flex flex-col gap-8">
-        {opened.data && opened.data.length > 0 && <OpenedRow rows={opened.data} />}
+        {hasOpened ? <OpenedRow rows={opened.data ?? []} /> : memories}
         {groups.map((group) => (
           <section
             key={group.key}
@@ -76,6 +99,8 @@ export function FeedPage() {
                     key={placed.week.id}
                     placed={placed}
                     eagerPhotoId={eagerPhotoId}
+                    cover={placed.home ? (covers.get(placed.home.id) ?? null) : null}
+                    afterFirstEntry={hasOpened && placed.week.id === firstWeekId ? memories : null}
                     zone={me.data.timezone}
                     now={now}
                   />

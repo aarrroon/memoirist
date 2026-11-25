@@ -369,3 +369,19 @@ export function erasureDay(deletedAt: string, zone: string): IsoDate {
 export function formatDayMonth(day: IsoDate): string {
   return format(calendarDay(day), 'd MMM');
 }
+
+// TODO(human) PRACTICE: Write yearsAgo(day, today): how On this day names a memory (task 4.14, D-32). "1 year ago",
+//   "3 years ago", from the YEARS alone: every row in the strip shares today's month and day, except that a 29 February
+//   entry shows on 28 February in a year with no leap day. Return null when the day isn't in an earlier year (the
+//   server never sends one, but this runs on data from the network).
+// Hint: compare the year parts of two ISO days; don't build Dates (the browser's zone would move a day across
+//   midnight). Number.parseInt on 'YYYY' and a guard for NaN. Check: ('2024-02-29', '2025-02-28') is "1 year ago".
+// ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+export function yearsAgo(day: IsoDate, today: IsoDate): string | null {
+  const then = Number.parseInt(day.slice(0, 4), 10);
+  const now = Number.parseInt(today.slice(0, 4), 10);
+  if (Number.isNaN(then) || Number.isNaN(now) || then >= now) return null;
+  const years = now - then;
+  return years === 1 ? '1 year ago' : `${years} years ago`;
+}
+// └── END ANSWER ▲ ──

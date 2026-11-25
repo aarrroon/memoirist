@@ -20,6 +20,10 @@ export const handlers = [
   http.get('*/api/v1/feed', () => HttpResponse.json(page(sampleWeeks))),
   // The Opened strip (task 4.8): empty unless a test says a Loot Drop has opened.
   http.get('*/api/v1/entries/opened', () => HttpResponse.json([])),
+  // On this day (task 4.14): empty unless a test serves memories (OnThisDay.test.tsx builds its own).
+  http.get('*/api/v1/entries/on-this-day', () => HttpResponse.json([])),
+  // The feed reads Era covers from GET /eras (task 4.14): none unless a test serves Eras (msw/eras.ts).
+  http.get('*/api/v1/eras', () => HttpResponse.json([])),
   // Recently deleted (task 4.12): empty, for You's count, unless a test serves a journal (msw/deleted.ts).
   http.get('*/api/v1/entries/deleted', () =>
     HttpResponse.json({ items: [], page: 0, size: 1, totalItems: 0, totalPages: 0 }),

@@ -32,6 +32,7 @@ import {
   openingParts,
   sealProgress,
   unlockInstant,
+  yearsAgo,
   erasureDay,
   formatDayMonth,
 } from './time';
@@ -422,5 +423,22 @@ describe('Recently deleted (task 4.12, D-30)', () => {
   test('formatDayMonth writes the day and short month', () => {
     expect(formatDayMonth('2026-11-28')).toBe('28 Nov');
     expect(formatDayMonth('2026-04-01')).toBe('1 Apr');
+  });
+});
+
+describe('On this day (task 4.14, D-32)', () => {
+  test('names a memory by whole years', () => {
+    expect(yearsAgo('2025-11-24', '2026-11-24')).toBe('1 year ago');
+    expect(yearsAgo('1999-11-24', '2026-11-24')).toBe('27 years ago');
+  });
+
+  test('a 29 February entry shown on 28 February is still a whole year ago', () => {
+    expect(yearsAgo('2024-02-29', '2025-02-28')).toBe('1 year ago');
+  });
+
+  test('this year, a later year or a broken day names nothing', () => {
+    expect(yearsAgo('2026-01-01', '2026-11-24')).toBeNull();
+    expect(yearsAgo('2027-11-24', '2026-11-24')).toBeNull();
+    expect(yearsAgo('', '2026-11-24')).toBeNull();
   });
 });

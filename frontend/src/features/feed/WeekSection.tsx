@@ -1,8 +1,8 @@
 import { ChevronRight } from 'lucide-react';
-import { Fragment } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Link } from 'react-router';
-import type { WeekEra } from '../../api/feed';
+import type { Media, WeekEra } from '../../api/feed';
 import { formatWeekRange, isWithin, todayIn } from '../../lib/time';
 import { FeedEntry } from './FeedEntry';
 import type { PlacedWeek } from './grouping';
@@ -28,11 +28,17 @@ function weekName(placed: PlacedWeek, zone: string, now: Date): string {
 export function WeekSection({
   placed,
   eagerPhotoId,
+  cover = null,
+  afterFirstEntry = null,
   zone,
   now,
 }: {
   placed: PlacedWeek;
   eagerPhotoId: string | null;
+  /** The home Era's cover, from GET /eras (task 4.14); null when it has none or it is hidden (D-36). */
+  cover?: Media | null;
+  /** Drawn after the first entry: On this day, while the Opened row has its place at the top (D-41). */
+  afterFirstEntry?: ReactNode;
   zone: string;
   now: Date;
 }) {
@@ -45,7 +51,7 @@ export function WeekSection({
       {/* The Era and week line: 48 px, `--page` with a hairline below, edge to edge on a phone. It is a row of two
           links, not a box (design.md §4). z-1 keeps the scrolling photos underneath it. */}
       <div className="sticky top-14 z-1 -mx-4 flex min-h-12 items-center justify-between gap-4 border-b border-line bg-page px-4 md:mx-0 md:px-0 lg:top-0">
-        {home ? <EraLink era={home} parent={parent} /> : <span />}
+        {home ? <EraLink era={home} parent={parent} cover={cover} /> : <span />}
         <h2 id={`week-${week.id}`} className="max-w-3/5 min-w-0 shrink-0">
           <Link
             to={`/weeks/${week.id}`}
@@ -72,7 +78,7 @@ export function WeekSection({
             <span className="sr-only">Also in</span>
             {chips.map((era) => (
               // A 32 px chip inside a 44 px link, so the hit area is big enough on a phone (design.md §9).
-              <Link key={era.id} to="/eras" className="flex min-h-11 items-center">
+              <Link key={era.id} to={`/eras/${era.id}`} className="flex min-h-11 items-center">
                 <span className="flex h-8 items-center rounded-full border border-control px-3 text-small">
                   {era.title}
                 </span>
@@ -103,6 +109,12 @@ export function WeekSection({
                   now={now}
                 />
               </ErrorBoundary>
+              {index === 0 && afterFirstEntry && (
+                <>
+                  <hr className="-mx-4 border-line md:mx-0" />
+                  {afterFirstEntry}
+                </>
+              )}
             </Fragment>
           );
         })}
@@ -112,19 +124,41 @@ export function WeekSection({
 }
 
 /**
- * The left of the line: the Era's 32 px cover, or its initial on `--raised` until covers arrive (D-36, task 4.14),
- * and its name. A week nested inside a bigger Era (D-22) names that one under it.
+ * The left of the line: the Era's 32 px cover, its title page in small (D-36, task 4.14), or its initial on
+ * `--raised` at the same size when it has none or the cover is hidden (design.md §10), and its name. It opens the
+ * Era's page. A week nested inside a bigger Era (D-22) names that one under it.
  */
-function EraLink({ era, parent }: { era: WeekEra; parent: WeekEra | null }) {
+function EraLink({
+  era,
+  parent,
+  cover,
+}: {
+  era: WeekEra;
+  parent: WeekEra | null;
+  cover: Media | null;
+}) {
   return (
-    // The Era page is task 4.9; until it exists the link opens the Eras list.
-    <Link to="/eras" className="flex min-h-11 min-w-0 items-center gap-3">
-      <span
-        aria-hidden
-        className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-raised text-small font-strong"
-      >
-        {era.title.charAt(0).toUpperCase()}
-      </span>
+    <Link to={`/eras/${era.id}`} className="flex min-h-11 min-w-0 items-center gap-3">
+      {cover ? (
+        // Decoration beside the Era's name, so alt is empty. Lazy like every photo but the first (design.md §6):
+        // it is the original photo while Q29 stands, so the audit reports it as oversize.
+        <img
+          src={cover.fileUrl}
+          alt=""
+          width={32}
+          height={32}
+          loading="lazy"
+          decoding="async"
+          className="size-8 shrink-0 rounded-sm object-cover"
+        />
+      ) : (
+        <span
+          aria-hidden
+          className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-raised text-small font-strong"
+        >
+          {era.title.charAt(0).toUpperCase()}
+        </span>
+      )}
       <span className="flex min-w-0 flex-col">
         <span
           className={

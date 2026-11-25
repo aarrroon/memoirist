@@ -282,6 +282,10 @@ public interface EntryRepository extends Repository<Entry, UUID> {
      * after {@code now}, the rule of {@code EntrySeal}; pass the same {@code now} that goes to the mapper. Entries in
      * Recently deleted are left out by {@code @SQLRestriction} (D-30).
      *
+     * <p><b>Guessed dates are left out (D-32, task 4.14).</b> An entry whose date is a guess ({@code dateUnknown}, set
+     * by the photo dump, D-34) may not be a memory of this day at all, and a wrong date would make a false memory.
+     * The server clears the flag when the user fixes the date, and from then on the entry is listed.
+     *
      * <p>The order is the timeline's, {@code entry_date} then {@code created_at} then the id (a total order, so entries
      * from one day never swap places between two requests). Because every row has the same month and day, dates sort
      * by year, so this is "newest year first". {@link Limit} becomes {@code fetch first ? rows only}. The month and day
@@ -293,6 +297,7 @@ public interface EntryRepository extends Repository<Entry, UUID> {
               and extract(month from e.entryDate) = :month
               and extract(day from e.entryDate) in :days
               and e.entryDate < :before
+              and e.dateUnknown = false
               and (e.unlockDate is null or e.unlockDate <= :now)
             order by e.entryDate desc, e.createdAt desc, e.id desc
             """)

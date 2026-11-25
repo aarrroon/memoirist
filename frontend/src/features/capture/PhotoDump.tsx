@@ -188,6 +188,7 @@ export function PhotoDump({
     onSuccess: async (failed) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.feed() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.onThisDay() }),
         queryClient.invalidateQueries({ queryKey: queryKeys.weeks() }),
         queryClient.invalidateQueries({ queryKey: queryKeys.timelines() }),
       ]);

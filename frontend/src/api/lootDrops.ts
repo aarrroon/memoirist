@@ -68,6 +68,7 @@ export async function afterSeal(queryClient: QueryClient, sealed: Entry): Promis
   queryClient.setQueryData(queryKeys.entry(sealed.id), sealed);
   await Promise.all([
     dropAndRefetch(queryClient, queryKeys.feed()),
+    dropAndRefetch(queryClient, queryKeys.onThisDay()),
     dropAndRefetch(queryClient, queryKeys.weeks()),
     // Task 4.11: a cached Timeline row still holds the entry's title and tags until it is read again (D-10).
     dropAndRefetch(queryClient, queryKeys.timelines()),
@@ -137,6 +138,7 @@ export function useDeleteEntry(entryId: string) {
       // dropped and read again, never drawn with the deleted entry first.
       await Promise.all([
         dropAndRefetch(queryClient, queryKeys.feed()),
+        dropAndRefetch(queryClient, queryKeys.onThisDay()),
         dropAndRefetch(queryClient, queryKeys.weeks()),
         dropAndRefetch(queryClient, queryKeys.timelines()),
         queryClient.invalidateQueries({ queryKey: queryKeys.opened() }),
@@ -153,6 +155,7 @@ export function useDeleteEntry(entryId: string) {
       if (!(error instanceof ApiProblem) || error.status !== 404) return;
       await Promise.all([
         dropAndRefetch(queryClient, queryKeys.feed()),
+        dropAndRefetch(queryClient, queryKeys.onThisDay()),
         dropAndRefetch(queryClient, queryKeys.weeks()),
         dropAndRefetch(queryClient, queryKeys.timelines()),
         queryClient.invalidateQueries({ queryKey: queryKeys.deleted() }),

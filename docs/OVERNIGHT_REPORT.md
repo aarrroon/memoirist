@@ -43,7 +43,8 @@
 | 4.11 All-entries timeline and tags UI | done | Sprint 4.11: Build the Timeline with tag filter and the Tags page | `/entries` is the Timeline over `GET /entries` (50 a page, newest first, sticky month headings, tag chips filtering through `?tag=<id>`, a star-only sealed row); `/tags` lists tags with counts and renames or deletes them, refreshing every query that shows a tag name; seals, saves, deletes and openings refresh every Timeline (389 frontend tests) | [4.11](build-journal/sprint-4/4.11-timeline-tags.md) |
 | 4.12 Recently deleted screen | done | Sprint 4.12: Lazy-load inner screens and build Recently deleted | Every screen but the Journal loads on first visit (feed's first JS 199.43 → 190.53 kB gzip); `/recently-deleted` over `GET /entries/deleted` with the erase day, Restore and Erase now (asks first); one delete question from a feed entry's new more-actions menu, an open entry and the Loot Drop page; a 404 on delete refreshes the feed; count on You and a Timeline row (404 frontend tests) | [4.12](build-journal/sprint-4/4.12-recently-deleted.md) |
 | 4.13 Photo dump and photo dates | done | Sprint 4.13: Build the photo dump and read photo dates | Photo dump reads each photo's EXIF date with exifr before shrinking and files one backdated entry per day (20 photos at most each; a retry reuses the client id, D-12), undated photos into one `dateUnknown` entry with a *Date unknown, fix it* badge on its feed card; capture offers a photo's own date; photos are shrunk at upload, a diary page more gently (433 frontend tests) | [4.13](build-journal/sprint-4/4.13-photo-dump.md) |
-| 4.14 to 4.17 | not started | none | **Next task: 4.10 still needs the Q29 decision; after it, 4.14 (On this day strip and Era covers)** | |
+| 4.14 On this day strip and Era covers | needs attention: the design check fails its `images` line on the feed in light and dark (the Era line's 32 px cover is the original photo, 15x at 375 px and 30x at 1440 px; Q29). Every other check passes; not ticked | Sprint 4.14: Build On this day and Era covers in the feed and form [needs-attention] | `GET /entries/on-this-day` leaves out `dateUnknown` entries (D-32) and a `PUT /eras/{id}` keeps a hidden cover (D-36); the feed's *On this day* row expands in place (at the top, or below the first entry while the Opened row shows); each Era line shows its cover and links to its Era page; Edit Era has a cover picker of the Era's photos (448 frontend tests) | [4.14](build-journal/sprint-4/4.14-on-this-day-era-covers.md) |
+| 4.15 to 4.17 | not started | none | **Next task: 4.10 still needs the Q29 decision (so does 4.14); after it, 4.15 (Soundtrack picker and player)** | |
 
 **S4 Overview:** [build-journal/sprint-4/README.md](build-journal/sprint-4/README.md) (tasks 4.1 to 4.9).
 
@@ -72,6 +73,7 @@
 | 2026-11-26 02:31 | 10% | 98% | 4.10 committed (needs attention: thumbnails fail the image check, Q29). Start 4.11; it will likely stop at 100% and resume after 06:00 |
 | 2026-11-26 06:13 | 50% | 3% | 4.11 done (it stopped at the limit and resumed by itself). The weekly window reset. Start 4.12 (with lazy-loaded routes first: the feed chunk is 199.42 of 200 kB) |
 | 2026-11-26 08:08 | 34% | 10% | 4.12 done (7% weekly; the feed's first JS is now 190.53 kB). Start 4.13 |
+| 2026-11-26 09:20 | 70% | 15% | 4.13 done. Start 4.14 (backend work; it may stop at the 5-hour limit and resume after 12:10) |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
@@ -180,6 +182,15 @@
 | 102 | 4.13 | Round 3 `#dump` (phone only) | Square thumbnails with sm corners: three across on a phone, four from `md`, five in the laptop dialog. A split day says *Filed as N entries, as an entry holds 20 photos at most.* The year shows only for another year |
 | 103 | 4.13 | 4.8 assumption (no edit view yet) | The badge fixes the date in place: a lazy-loaded month (`components/MemoryDayPicker.tsx`), then a full `PUT` through `useChangeEntryDate` that sends every field (D-26) and never `dateUnknown` (D-34) |
 | 104 | 4.13 | `.claude/rules/frontend.md` Time | `photoDay` formats the camera's own day with `toISOString()` on a `Date.UTC`-built value instead of `lib/time.ts`; a comment says why (review minor 4) |
+| 105 | 4.14 | DESIGN.md §4 (40 px thumbnail) vs API_CONTRACT (EntrySummary has no file URL); Q29 | The On this day tile is an icon on `--surface` chosen by `firstMediaKind` (Image, BookOpen, Mic, FileText), as 4.12's Recently deleted rows do, not a photo |
+| 106 | 4.14 | DESIGN.md §4 Era line vs design.md §6; Q29 | The Era line shows the original cover at 32 px (lazy, `alt=""`), so the feed audit fails *images* until Q29; the Eras list keeps the initial, as 4.9 left it |
+| 107 | 4.14 | D-36 ("title page above its weeks") vs DESIGN.md §4 and the first-screen budget | In the feed the cover appears only in the sticky 32 px Era line; no full-width title page above an Era's weeks (review 2 minor) |
+| 108 | 4.14 | DESIGN.md §3 (laptop right rail) | No rail exists in the shell, so on laptops the strip stays in the feed column, where it is on phones |
+| 109 | 4.14 | D-36 ("whenever the Era is edited") | The cover picker is in Edit Era only; it offers images of open entries inside the Era's dates from its weeks, newest first, six weeks per *Show more photos*; the current cover is always offered |
+| 110 | 4.14 | API_CONTRACT PUT and the cover; D-36 | `null` and a missing `coverMediaId` mean the same: a hidden cover is kept, a visible one removed, so a hidden cover can be replaced but not removed. In API_CONTRACT; D-36 not reworded (reviews 1 and 2 minor) |
+| 111 | 4.14 | design.md §6 (late content reserves its space) | The feed waits for `GET /entries/on-this-day` before its first paint (a failure counts as nothing), as for the Opened row; it doesn't wait for `GET /eras`, since the initial fills the same 32 px tile |
+| 112 | 4.14 | No doc gives the copy | Strip rows read the display title over *N years ago* (*Entry* when nothing names it); the picker says *Cover*, *A photo from this Era opens it, here and in your journal.*, *No cover*, *Finding photos…*, *No photos in this Era yet.*, *Show more photos*; tiles are *Photo from <day>* and *The cover now* |
+| 113 | 4.14 | 4.4 ("/eras until Era pages exist") | The feed's Era line and *Also in* chips now link to `/eras/<id>` |
 
 ### S4 Needs attention
 - **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
@@ -256,7 +267,12 @@
 - **4.13:** no URL loads a filled dump, so audit.mjs checked only the empty dump; the filled dump was checked with Playwright measurements (375 px wide, no target under 44 px) and screenshots. The audit wasn't rerun after the close-out fix (offer logic and a comment; no layout changed).
 - **4.13:** exifr's full ESM bundle (26.04 kB gzip) is in a lazy chunk; its lite build would be smaller but has no TypeScript types for the subpath. The feed's first JS is unchanged at 190.45 kB.
 - **4.13:** the builder's full `npm test` hit the 4.9 load flake once (SettingsPage "shows the name…"); it passed alone and in the next full runs (close-out run: 433/433). The local dev database is unchanged (the test entry was deleted and erased).
-- **Sprint 4 not finished:** tasks 4.14 to 4.17 are left, and 4.10 needs the Q29 decision above. The pull request stays a draft for that reason and for 4.9.
+- **4.14, decision needed (Q29):** audit.mjs fails `images` on the feed (`/`) in light and dark: the Era line's 32 px cover is the original photo (worst 15x on a phone, 30x on a laptop). Every other line passes, and the Era page passes in both modes. Options: decide Q29 (a small copy at upload, which also fixes 4.10's thumbnails); record an accepted exception while Q29 is open; or keep the initial on the feed's Era line, like the Eras list, and move the "cover on its Era's header" Done-when item to after Q29. Not ticked until one is chosen.
+- **4.14, follow-up (Q29):** the Edit Era cover picker's tiles (about 110 px on a phone) also show originals; the audit ran with the dialog closed, so they were never measured. Include them when Q29 is settled.
+- **4.14, decision needed (docs):** D-36 covers only a *left-out* `coverMediaId`; the code and API_CONTRACT also keep a hidden cover on an explicit `null`, so a hidden cover can be replaced but not removed (assumption 110). Confirm, then `/record-decision` to reword D-36.
+- **4.14, decision needed (docs):** D-36 says the feed shows the cover as the Era's title page above its weeks; the build follows DESIGN.md §4 and shows it only in the 32 px sticky Era line (assumption 107). Confirm and reword D-36.
+- **4.14, local data:** the local dev journal now holds three extra entries dated 26 November (2025 with a photo, 2022 text, 2024 marked `dateUnknown`), and *New job* has a cover. They were added for the screenshots.
+- **Sprint 4 not finished:** tasks 4.15 to 4.17 are left, and 4.10 and 4.14 need the Q29 decision above. The pull request stays a draft for that reason and for 4.9.
 
 ### S4 Questions for the morning
 

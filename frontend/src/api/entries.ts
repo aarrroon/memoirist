@@ -104,6 +104,7 @@ export function useChangeEntryDate() {
       // The entry may move to another week, so every list that files it by date is read again.
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.feed() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.onThisDay() }),
         queryClient.invalidateQueries({ queryKey: queryKeys.weeks() }),
         queryClient.invalidateQueries({ queryKey: queryKeys.timelines() }),
         queryClient.invalidateQueries({ queryKey: queryKeys.eras() }),

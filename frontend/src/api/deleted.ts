@@ -82,6 +82,7 @@ export function useRestoreEntry() {
       queryClient.setQueryData(queryKeys.entry(restored.id), restored);
       await Promise.all([
         dropAndRefetch(queryClient, queryKeys.feed()),
+        dropAndRefetch(queryClient, queryKeys.onThisDay()),
         dropAndRefetch(queryClient, queryKeys.weeks()),
         dropAndRefetch(queryClient, queryKeys.timelines()),
         queryClient.invalidateQueries({ queryKey: queryKeys.opened() }),

@@ -422,6 +422,7 @@ export function CaptureForm({
         ? afterSeal(queryClient, entry)
         : Promise.all([
             queryClient.invalidateQueries({ queryKey: queryKeys.feed() }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.onThisDay() }),
             queryClient.invalidateQueries({ queryKey: queryKeys.weeks() }),
             // Task 4.11: the Timeline lists the entry, with its title and tags.
             queryClient.invalidateQueries({ queryKey: queryKeys.timelines() }),

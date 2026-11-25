@@ -119,15 +119,39 @@ class OnThisDayEndpointTest extends OnThisDayApiTest {
                 .containsExactly("Holidays");
     }
 
+    // Guessed dates (D-32, D-34, task 4.14)
+
     @Test
-    void anEntryWhoseDateIsAGuessIsListedAndSaysSo() {
+    void anEntryWhoseDateIsAGuessIsLeftOutAndListedOnceItsDateIsFixed() {
         User alice = aUser();
-        String id = createEntryId(alice, json("entryDate", "2025-10-31", "dateUnknown", true));
+        User bob = aUser();
+        String known = entryOn(alice, "2023-10-31", "Known");
+        String guessed = createEntryId(alice, json("entryDate", "2025-10-31", "dateUnknown", true));
+        // The rest of the data a list test must hold: sealed, Recently deleted and another user's.
+        sealUntil(alice, entryOn(alice, "2022-10-31", "A secret"), SEALED_UNTIL);
+        delete(alice, entryOn(alice, "2021-10-31", "Deleted")).expectStatus().isNoContent();
+        entryOn(bob, "2025-10-31", "Bob's");
+
+        assertThat(onThisDayIds(alice))
+                .as("a guessed date is not a memory of this day")
+                .containsExactly(known);
+
+        // Fixing the date (to another 31 October) clears the mark on the server (D-34), so it is listed.
+        put(alice, guessed, json("version", 0, "entryDate", "2024-10-31"))
+                .expectStatus()
+                .isOk();
 
         List<Map<String, Object>> rows = onThisDayRows(alice);
+        assertThat(rows).extracting(row -> row.get("id")).containsExactly(guessed, known);
+        assertThat(rows.getFirst().get("dateUnknown")).isEqualTo(false);
+    }
 
-        assertThat(rows).extracting(row -> row.get("id")).containsExactly(id);
-        assertThat(rows.getFirst().get("dateUnknown")).isEqualTo(true);
+    @Test
+    void onlyGuessedEntriesFromThisDayGiveAnEmptyArray() {
+        User alice = aUser();
+        createEntryId(alice, json("entryDate", "2025-10-31", "dateUnknown", true));
+
+        assertThat(onThisDayBody(alice)).isEqualTo("[]");
     }
 
     // 29 February (D-32)
