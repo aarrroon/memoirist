@@ -24,5 +24,9 @@ export const queryKeys = {
   // Task 4.8. The Opened strip (GET /entries/opened, D-10). Not under 'entries', so a family invalidation of one
   // entry never refetches it by accident, and it can be invalidated on its own when a Loot Drop is dismissed.
   opened: () => [...all, 'opened'] as const,
+  // Task 4.9. GET /eras is the list; one Era (GET /eras/{id}) sits under it, so invalidating `eras()` after a
+  // create, edit or delete refetches the list and every Era page with one prefix.
+  eras: () => [...all, 'eras'] as const,
+  era: (id: string) => [...all, 'eras', id] as const,
 };
 // └── END ANSWER ▲ ──

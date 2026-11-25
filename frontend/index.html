@@ -16,16 +16,26 @@
     />
     <title>memoirist</title>
     <script>
-      // Light or dark follows the phone (D-41). It runs before the first paint, so the tokens in src/index.css
-      // switch with no flash. Appearance in settings (task 4.9) will add a choice kept on the device that wins.
-      // A content security policy (Phase 2) must allow this script by its hash.
+      // Light or dark (D-41). It runs before the first paint, so the tokens in src/index.css switch with no flash.
+      // Appearance in settings (task 4.9, src/lib/appearance.ts) keeps Light or Dark on the device under the same
+      // key; with nothing kept, the phone's own setting decides, and a change of it applies at once. A change made in
+      // another tab arrives as a storage event. A content security policy (Phase 2) must allow this script by its hash.
       {
         const dark = window.matchMedia('(prefers-color-scheme: dark)');
         const apply = () => {
-          document.documentElement.dataset.theme = dark.matches ? 'dark' : 'light';
+          let kept = null;
+          try {
+            kept = window.localStorage.getItem('memoirist.appearance');
+          } catch {
+            // Storage blocked: follow the phone.
+          }
+          const theme =
+            kept === 'light' || kept === 'dark' ? kept : dark.matches ? 'dark' : 'light';
+          document.documentElement.dataset.theme = theme;
         };
         apply();
         dark.addEventListener('change', apply);
+        window.addEventListener('storage', apply);
       }
     </script>
   </head>

@@ -3,6 +3,7 @@ import { NotFoundPage, RouteErrorPage } from './components/NotFoundPage';
 import { AppShell } from './components/shell/AppShell';
 import type { ShellHandle } from './components/shell/places';
 import { RecentlyDeletedPage } from './features/deleted/RecentlyDeletedPage';
+import { EraPage } from './features/eras/EraPage';
 import { ErasPage } from './features/eras/ErasPage';
 import { FeedPage } from './features/feed/FeedPage';
 import { EntryPage } from './features/lootdrop/EntryPage';
@@ -40,6 +41,12 @@ export const routes: RouteObject[] = [
         handle: { place: 'journal', back: { to: '/', label: 'Journal' } } satisfies ShellHandle,
       },
       { path: 'eras', Component: ErasPage, handle: { place: 'eras' } satisfies ShellHandle },
+      {
+        // Task 4.9: one Era, its title band, its weeks and the Eras inside it (DESIGN.md §6 `#era`).
+        path: 'eras/:eraId',
+        Component: EraPage,
+        handle: { place: 'eras', back: { to: '/eras', label: 'Eras' } } satisfies ShellHandle,
+      },
       {
         path: 'templates',
         Component: TemplatesPage,

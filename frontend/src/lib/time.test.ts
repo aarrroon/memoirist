@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import {
+  eraLength,
+  formatBirthday,
+  formatEraDates,
+  zoneLabel,
   countdown,
   dayLabel,
   dayParts,
@@ -322,5 +326,39 @@ describe('Loot Drops (task 4.8, D-23)', () => {
     expect(openedLabel('2026-11-23T22:00:00Z', MELBOURNE, now)).toBe('Opened today');
     expect(openedLabel('2026-11-22T22:00:00Z', MELBOURNE, now)).toBe('Opened yesterday');
     expect(openedLabel('2026-11-02T22:00:00Z', MELBOURNE, now)).toBe('Opened 3 Nov 2026');
+  });
+});
+
+describe('Eras (task 4.9)', () => {
+  test('formatEraDates writes the dates as short as they read', () => {
+    expect(formatEraDates('2026-10-23', '2026-10-25')).toBe('23–25 Oct 2026');
+    expect(formatEraDates('2026-10-30', '2026-11-02')).toBe('30 Oct – 2 Nov 2026');
+    expect(formatEraDates('2019-02-25', '2023-11-24')).toBe('25 Feb 2019 – 24 Nov 2023');
+    expect(formatEraDates('2026-10-25', '2026-10-25')).toBe('25 Oct 2026');
+    expect(formatEraDates('2024-03-02', null)).toBe('2 Mar 2024 – now');
+  });
+
+  test('eraLength counts both days and whole calendar months', () => {
+    expect(eraLength('2026-10-25', '2026-10-25')).toBe('1 day');
+    expect(eraLength('2026-10-23', '2026-10-25')).toBe('3 days');
+    expect(eraLength('2025-04-05', '2025-04-19')).toBe('15 days');
+    // 28 days of February is the whole month, so it is a month, and a 31-day stretch of March isn't two.
+    expect(eraLength('2026-02-01', '2026-02-28')).toBe('1 month');
+    expect(eraLength('2026-02-01', '2026-02-27')).toBe('27 days');
+    expect(eraLength('2026-03-01', '2026-03-31')).toBe('1 month');
+    expect(eraLength('2026-01-01', '2026-07-31')).toBe('7 months');
+    expect(eraLength('2025-01-01', '2025-12-31')).toBe('1 year');
+    expect(eraLength('2024-03-02', '2026-10-25')).toBe('2 years, 7 months');
+    expect(eraLength('2019-02-25', '2023-11-24')).toBe('4 years, 9 months');
+    // Across Melbourne's clock change (4 October 2026) a day is still a day.
+    expect(eraLength('2026-10-01', '2026-10-07')).toBe('7 days');
+    expect(eraLength('2026-10-02', '2026-10-01')).toBeNull();
+  });
+
+  test('zoneLabel and formatBirthday', () => {
+    expect(zoneLabel('Australia/Melbourne')).toBe('Melbourne');
+    expect(zoneLabel('America/New_York')).toBe('New York');
+    expect(zoneLabel('UTC')).toBe('UTC');
+    expect(formatBirthday('1994-08-12')).toBe('12 August');
   });
 });

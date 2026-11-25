@@ -1,5 +1,5 @@
 import { TZDate } from '@date-fns/tz';
-import { format } from 'date-fns';
+import { differenceInMonths, format } from 'date-fns';
 
 // The one place dates are worked out and written for the screen (CLAUDE.md, .claude/rules/frontend.md, task 4.3).
 // Every function that depends on "now" takes the user's IANA timezone from GET /users/me (users.timezone, default
@@ -256,4 +256,55 @@ export function openedLabel(instant: string | Date, zone: string, now: Date = ne
   if (ago <= 0) return 'Opened today';
   if (ago === 1) return 'Opened yesterday';
   return `Opened ${formatShortDay(dayIn(instant, zone))}`;
+}
+
+// ---------- Eras (task 4.9, D-22) ----------
+
+/**
+ * An Era's dates, as short as they can be read (DESIGN.md §6, the Eras list): "23–25 Oct 2026", "30 Oct – 2 Nov
+ * 2026", "25 Feb 2019 – 24 Nov 2023", "25 Oct 2026" for one day, and "2 Mar 2024 – now" while it is still going.
+ */
+export function formatEraDates(start: IsoDate, end: IsoDate | null): string {
+  const from = calendarDay(start);
+  if (end === null) return `${format(from, 'd MMM yyyy')} – now`;
+  if (end === start) return format(from, 'd MMM yyyy');
+  const to = calendarDay(end);
+  if (from.getFullYear() !== to.getFullYear()) {
+    return `${format(from, 'd MMM yyyy')} – ${format(to, 'd MMM yyyy')}`;
+  }
+  if (from.getMonth() !== to.getMonth()) {
+    return `${format(from, 'd MMM')} – ${format(to, 'd MMM yyyy')}`;
+  }
+  return `${format(from, 'd')}–${format(to, 'd MMM yyyy')}`;
+}
+
+// TODO(human) PRACTICE: Write eraLength(start, end): how long an Era lasts, in words, both days included.
+// Under a month it is days ("1 day", "3 days", "15 days"); under a year, months ("1 month", "7 months"); from a
+// year, years and any months left ("2 years", "2 years, 7 months"). Return null when end is before start.
+// Hint: "both days included" means the Era of 23–25 October is 3 days, so measure up to the day AFTER `end`.
+// Count whole calendar months with date-fns' differenceInMonths on calendarDay() values (UTC midnights, so no
+// daylight-saving hour can shave a day off), not days ÷ 30: 1 February to 28 February is 28 days, not a month.
+// time.test.ts has each boundary. An ongoing Era passes today (todayIn(zone)) as `end`.
+// ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+export function eraLength(start: IsoDate, end: IsoDate): string | null {
+  if (end < start) return null;
+  const months = differenceInMonths(calendarDay(addDays(end, 1)), calendarDay(start));
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  if (months < 1) return plural(daysBetween(start, end) + 1, 'day');
+  if (months < 12) return plural(months, 'month');
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  return rest === 0 ? plural(years, 'year') : `${plural(years, 'year')}, ${plural(rest, 'month')}`;
+}
+// └── END ANSWER ▲ ──
+
+/** A timezone as a person names it: "Australia/Melbourne" is "Melbourne", "America/New_York" is "New York". */
+export function zoneLabel(zone: string): string {
+  const last = zone.split('/').pop() ?? zone;
+  return last.replaceAll('_', ' ');
+}
+
+/** A birthday in the settings row: "12 August" (the year is the user's own business, D-33). */
+export function formatBirthday(day: IsoDate): string {
+  return format(calendarDay(day), 'd MMMM');
 }
