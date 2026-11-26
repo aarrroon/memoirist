@@ -17,26 +17,30 @@ One design system for the whole frontend: **one spacing scale, two typefaces at 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 :root { --page: …; --surface: …; --raised: …; --ink: …; --ink-2: …; --line: …; --control: …; --accent: …; --on-accent: …; --danger: …; --scrim: …;
-        --band: …; --on-band: …; --on-band-2: …; --moon-lit: …; --moon-dark: …; } /* values: DESIGN.md §1 */
+        --band: …; --on-band: …; --on-band-2: …; --moon-lit: …; --moon-dark: …; --float: …; } /* values: DESIGN.md §1 and §3 */
 [data-theme="dark"] { /* the same names, designed on their own, never inverted */ }
 
 @theme {
   --color-*: initial; --font-*: initial; --text-*: initial; --font-weight-*: initial; --radius-*: initial; --shadow-*: initial;
-  --font-text: …; --font-display: …;
+  --leading-*: initial; --tracking-*: initial; --inset-shadow-*: initial; --drop-shadow-*: initial; --text-shadow-*: initial; --breakpoint-*: initial;
+  --animate-*: initial; --default-transition-duration: 200ms; --default-transition-timing-function: ease-out; /* DESIGN.md §7 */
+  --font-text: …; --font-display: …; --default-font-family: var(--font-text); --default-mono-font-family: var(--font-text);
   --text-meta: 0.75rem;    --text-meta--line-height: 1.5;
   --text-small: 0.875rem;  --text-small--line-height: 1.5;
   --text-body: 1rem;       --text-body--line-height: 1.5;
   --text-read: 1.125rem;   --text-read--line-height: 1.6;
-  --text-title: 1.25rem;   --text-title--line-height: 1.2;
-  --text-heading: 1.75rem; --text-heading--line-height: 1.2;
-  --text-display: 2.5rem;  --text-display--line-height: 1.2;
-  --font-weight-normal: 400; --font-weight-strong: 600;
+  --text-title: 1.25rem;   --text-title--line-height: 1.2;   --text-title--font-weight: 500;
+  --text-heading: 1.75rem; --text-heading--line-height: 1.2; --text-heading--font-weight: 500; --text-heading--letter-spacing: -0.01em;
+  --text-display: 2.5rem;  --text-display--line-height: 1.2; --text-display--font-weight: 500; --text-display--letter-spacing: -0.02em;
+  --font-weight-normal: 400; --font-weight-strong: 600; /* the title sizes carry Newsreader's 500 themselves */
   --radius-sm: 0.5rem; --radius-lg: 1rem; /* rounded-full is built in */
-  --shadow-float: …;
+  --breakpoint-md: 48rem; --breakpoint-lg: 64rem;
 }
-@theme inline { --color-page: var(--page); /* …one line for each name in :root… */ }
+/* One line for each name in :root. The shadow differs by mode, so :root and dark hold --float. */
+@theme inline { --color-page: var(--page); /* … */ --shadow-float: var(--float); }
 ```
-- This syntax was checked against the Tailwind v4 docs on 2026-11-14. Check it again with context7 in task 4.1.
+- This syntax was checked against the Tailwind v4 docs on 2026-11-14, and again with context7 and a build of Tailwind 4.3.5 in task 4.1 (2026-11-24). The resets leave no named utilities (`bg-red-500`, `text-3xl`, `rounded-xl`, `shadow-lg`, `leading-tight`, `animate-spin`, `xl:` all compile to nothing). Three things still compile because they come from the spacing step or are built in: paddings off the scale (`p-5`), spacing line heights (`leading-6`) and `leading-none`. The checker catches all three.
+- `src/tokens.test.ts` fails when dark mode misses a token, a token has no utility, or a text pair is under 4.5:1 (3:1 for a `control` border). Add a pair there when a screen puts text on a new background.
 - shadcn/ui components arrive with Tailwind's default class names (`text-sm`, `rounded-md`, `bg-background`). Rewrite every class to these tokens when you copy one in (D-13).
 
 | Kind | Limit | Value (DESIGN.md, D-41) |
@@ -82,7 +86,7 @@ One design system for the whole frontend: **one spacing scale, two typefaces at 
 - Every `<img>` has `width` and `height`, or sits in a box with a fixed `aspect-ratio`, and has `decoding="async"`. The first photo on a screen is eager with `fetchpriority="high"`; every other one has `loading="lazy"`. A list loads only the first photo of each entry until the user swipes.
 - Anything that arrives late (photos, the Opened strip, On this day) has its space reserved, so nothing jumps: layout shift stays at 0.1 or less.
 - The feed doesn't ship the editor: load capture (TipTap, dnd-kit, Vaul), the lightbox and the date picker with `React.lazy`. The feed's first JavaScript is 200 KB gzipped or less.
-- Target on the slow-phone profile: the largest thing on screen appears within 2.5 s. Photos can't meet it while the API serves originals (Q29): report the numbers, and don't work around it in the client. A photo's shape is reserved from its stored `width` and `height` (D-17, from task 4.5), with a 4:5 frame when they are `null`.
+- Target on the slow-phone profile: the largest thing on screen appears within 2.5 s. No image is both over 2x the width it is drawn at (times the screen's pixel density) and over 50 KB: a small file passes at any size, so a 480 px thumbnail may fill a 32 px tile (D-43). Lists and the feed use the photo's smaller copies (D-43, from task 4.18): the thumbnail for anything small, the screen copy for the swipe, the original only in the entry view. When a copy is missing, fall back to the next size up. A photo's shape is reserved from its stored `width` and `height` (D-17, from task 4.5), with a 4:5 frame when they are `null`.
 
 ## 7. Colour
 - One accent hue. It marks the primary action, links, the selected item, focus and the Loot Drop. It never colours headings, body text or decoration.

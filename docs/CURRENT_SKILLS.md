@@ -103,6 +103,7 @@ Paste these into a new session. They live in [prompts/](prompts/).
 |---|---|---|
 | [split-into-features.md](prompts/split-into-features.md) | Checks the phases are in a buildable order, proposes features (`Pn-xx`), then writes the feature index and Phase 1 briefs after you approve | Plan mode |
 | [overnight-phase-1.md](prompts/overnight-phase-1.md) | Builds Sprints 1–3 unattended as a workflow (one fresh agent per task), one stacked PR per sprint, never stopping: it uses documented defaults and reports assumptions and problems at the end. Checklist in [WORKFLOW.md §5](WORKFLOW.md#5-overnight-runs) | Auto mode, `learn-later` style |
+| [overnight-sprint-4.md](prompts/overnight-sprint-4.md) | Builds the rest of Sprint 4 (the React UI). Part A, with you: preflight, `/sprint-ready 4` questions, and one approved `npm install` of the D-13 libraries. Part B, unattended: one workflow run per task, reading the usage limits between tasks, waiting for resets and resuming from cache, then the stacked Sprint 4 PR | Auto mode, `learn-later` style |
 | [design-round.md](prompts/design-round.md) | Runs one round of design explorations unattended as a workflow: plans 4–5 designs from the newest feedback in `design/explorations/FEEDBACK.md`, builds each in two colour themes, light and dark, at phone and laptop width, holds every design to D-40's limits with `tools/audit.mjs --mockup`, and makes screenshot boards to message friends. Commits nothing | Auto mode, `learn-later` style |
 
 ## Output styles

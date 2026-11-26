@@ -1,5 +1,6 @@
 # Continuous integration (D-14, task 2.7). The backend job builds and tests the Spring Boot app exactly as
-# `cd backend && ./gradlew build` does on a developer's machine. The frontend job arrives with task 4.17.
+# `cd backend && ./gradlew build` does on a developer's machine. The frontend job (task 4.17) runs the checks a
+# frontend change must pass before a commit: Vitest, ESLint with Prettier, TypeScript and the production build.
 #
 # Every `uses:` is pinned to a full commit SHA, with the release it stands for in the comment after it, because a
 # tag such as v7 can be moved to different code after the fact. Update the SHA and the comment together.
@@ -76,3 +77,49 @@ jobs:
             backend/build/reports/tests/
             backend/build/test-results/
           retention-days: 7
+
+  frontend:
+    name: Frontend (test, lint, typecheck, build)
+    runs-on: ubuntu-latest
+    # A normal run takes a minute or two; this stops a hung install from using up six hours of runner time.
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Node 24 is the version developers use (docs/DEVELOPMENT.md) and one package.json's engines allows.
+      # `cache: npm` saves npm's download cache (~/.npm, not node_modules) under a key made from the lock file's hash,
+      # so a changed lock file starts from an empty cache.
+      - name: Set up Node 24 and the npm cache
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # `npm ci` installs exactly what package-lock.json says and fails if package.json disagrees with it, so CI
+      # never quietly picks up a newer version than the one that was reviewed (D-13).
+      # It doesn't download Playwright's browsers (that is `npx playwright install`), and nothing here needs them: the
+      # smoke tests need the whole stack and run on a developer's machine (`npx playwright test`, task 4.17).
+      - name: Install the dependencies
+        run: npm ci
+
+      # The same four commands, in the same order, that CLAUDE.md asks for before frontend work is done.
+      # Vitest runs against MSW, so no backend is needed. The API types are the committed src/api/schema.d.ts.
+      - name: Unit and component tests (Vitest)
+        run: npm test
+
+      - name: Lint and formatting (ESLint, Prettier)
+        run: npm run lint
+
+      - name: Type-check (TypeScript)
+        run: npm run typecheck
+
+      - name: Production build (Vite)
+        run: npm run build

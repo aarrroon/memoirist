@@ -45,6 +45,21 @@ class EraCovers {
         return visible(List.of(era), userId, now).get(era.getId());
     }
 
+    /**
+     * Whether the Era stores a cover that may not be shown now: its entry is sealed or in Recently deleted (D-36).
+     * {@code PUT /eras/{id}} keeps such a cover when the request leaves {@code coverMediaId} out, because the client
+     * was never told its id (task 4.14). Nothing is signed here.
+     */
+    boolean isHidden(Era era, UUID userId, Instant now) {
+        if (era.getCoverMediaId() == null) {
+            return false;
+        }
+        // Not found (its entry is in Recently deleted, so the @SQLRestriction drops it) or sealed: both hide it.
+        // allMatch on no rows is true, which is the "not found" case.
+        return media.findAllWithEntryByIdInAndUserId(Set.of(era.getCoverMediaId()), userId).stream()
+                .allMatch(item -> EntrySeal.isSealed(item.getEntry(), now));
+    }
+
     // TODO(human) PRACTICE: Write visible(): from a list of Eras, answer a map from Era id to the cover to show, in ONE
     //   query however many Eras there are. An Era with no cover, a cover whose entry is sealed or in Recently
     //   deleted, or a cover that is not found, is simply not in the map. Nothing here may sign a URL for a sealed

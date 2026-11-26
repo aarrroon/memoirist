@@ -18,7 +18,7 @@ paths:
 - **UI state:** Zustand holds only UI state (open modal, draft text, selected era). Never copy server data into Zustand.
 - **Cache timing:** presigned media URLs expire after 60 minutes. Keep `staleTime` at 30 minutes or less and refetch on window focus.
 - **After mutations:** invalidate the affected keys (feed, the week, the entry) instead of patching caches by hand, unless the update is optimistic on purpose.
-- **Errors:** API errors are `ProblemDetail`. Show `fieldErrors` on their form fields, and a friendly message for `409 entry-sealed`.
+- **Errors:** API errors are `ProblemDetail`. Every query and mutation function ends with `unwrap()` from `src/api/problem.ts`, which throws an `ApiProblem` (`kind`, `status`, `fieldErrors`); never parse an error body anywhere else. Show `fieldErrors` on their form fields, and `problemMessage(error)` otherwise (it has the friendly message for `409 entry-sealed`).
 - **Dev user:** send `X-Dev-User-Id` only when `import.meta.env.DEV`.
 
 ## Time

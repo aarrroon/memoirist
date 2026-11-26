@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Lets the browser paint a dark canvas before the CSS arrives, so a dark phone never flashes white. -->
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <!-- The text face is on every screen, so it starts downloading before the CSS asks for it (design.md §6). -->
+    <link
+      rel="preload"
+      href="/fonts/instrument-sans-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <title>memoirist</title>
+    <script>
+      // Light or dark (D-41). It runs before the first paint, so the tokens in src/index.css switch with no flash.
+      // Appearance in settings (task 4.9, src/lib/appearance.ts) keeps Light or Dark on the device under the same
+      // key; with nothing kept, the phone's own setting decides, and a change of it applies at once. A change made in
+      // another tab arrives as a storage event. A content security policy (Phase 2) must allow this script by its hash.
+      {
+        const dark = window.matchMedia('(prefers-color-scheme: dark)');
+        const apply = () => {
+          let kept = null;
+          try {
+            kept = window.localStorage.getItem('memoirist.appearance');
+          } catch {
+            // Storage blocked: follow the phone.
+          }
+          const theme =
+            kept === 'light' || kept === 'dark' ? kept : dark.matches ? 'dark' : 'light';
+          document.documentElement.dataset.theme = theme;
+        };
+        apply();
+        dark.addEventListener('change', apply);
+        window.addEventListener('storage', apply);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

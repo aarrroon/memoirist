@@ -255,7 +255,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
 
 **Every screen task:** build from `docs/design/DESIGN.md` (D-41) and follow `.claude/rules/design.md` (D-40); compare with the round 3 mockup, but never copy its code. Before ticking it, run `node docs/design/explorations/tools/audit.mjs <url>` on each screen the task built or changed, and quote the result at phone and laptop width.
 
-- [ ] **4.1 Scaffold the frontend**
+- [x] **4.1 Scaffold the frontend**
   - **Read:** TECH_STACK §3, D-13, D-40.
   - **Do:**
     - Vite + React 19 + TypeScript in `/frontend`.
@@ -265,14 +265,14 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - Scripts: `dev`, `build`, `test`, `lint`, `typecheck`, `gen:api`.
   - **Done when:** `npm run build`, `npm test`, `npm run lint` and `npm run typecheck` all pass; the starter page uses only the tokens and passes the design check (`tools/audit.mjs`) at both widths.
 
-- [ ] **4.2 API client and data layer**
+- [x] **4.2 API client and data layer**
   - **Do:**
     - `gen:api` (openapi-typescript writes `src/api/schema.d.ts`).
     - An openapi-fetch client that sends `X-Dev-User-Id` only in dev.
     - A TanStack Query provider and a query-key factory, with `staleTime` below 60 minutes.
   - **Done when:** a typed `useMe()` hook renders the dev user's name against the running backend; a component test uses MSW.
 
-- [ ] **4.3 Routing, shell and time utilities**
+- [x] **4.3 Routing, shell and time utilities**
   - **Do:**
     - React Router routes: `/` (feed), `/entries` (all-entries timeline), `/weeks/:weekId` (week summary), `/eras`, `/templates`, `/tags`, `/settings`, `/recently-deleted`.
     - The app shell.
@@ -280,11 +280,11 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - `lib/time.ts` (formatting in the user's zone, "today" in the user's zone).
   - **Done when:** time utilities have unit tests covering a Melbourne daylight-saving change and a non-Melbourne zone.
 
-- [ ] **4.4 Feed**
+- [x] **4.4 Feed**
   - **Do:** infinite scroll over `GET /feed` (`useInfiniteQuery`), sticky era headers and week sections. A week in several Eras is grouped under `eras[0]`, with the others as chips; when `eras[0]` sits wholly inside another of the week's Eras, the week shows as a section nested inside that Era, one level deep (D-22).
   - **Done when:** the feed shows the local sample content (3.16); there are empty, loading and error states; component tests pass.
 
-- [ ] **4.5 Entry card**
+- [x] **4.5 Entry card**
   - **Read:** D-17 (photos store their size), D-40, D-41, DESIGN.md §4 (Swipe).
   - **Do:**
     - Backend first (`/new-migration`, then the media endpoints): `V2__media_dimensions.sql` adds `media.width` and `media.height` (nullable, both or neither). An upload reads an image's size from its header without decoding it; voice notes and unreadable headers stay `null`. `Media` responses gain `width` and `height` (`@Schema(nullable = true)`, and `ApiDocsContractTest`), then `npm run gen:api`.
@@ -292,7 +292,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - A read-only caption rendered from JSON (no `dangerouslySetInnerHTML`).
   - **Done when:** an upload test stores the size of a JPEG, a PNG and a WebP, and `null` for a voice note and an unreadable image; component tests cover image-only, caption-only and mixed entries, a tall, a wide and a size-less first photo; the feed's layout shift is 0.1 or less (`audit.mjs`).
 
-- [ ] **4.6 Capture modal**
+- [x] **4.6 Capture modal**
   - **Do:**
     - An optional title field and a TipTap editor (StarterKit + Link with a protocol allow-list).
     - A template picker that inserts headings above any existing text (D-23); template headings left empty are removed on save (D-06).
@@ -303,41 +303,42 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - The flow: create (client UUID) → upload → reorder.
   - **Done when:** creating an entry with a title, a tag and two photos shows it in the feed in the right week; save is disabled for an empty entry; an empty template prompt isn't saved; a photo marked as a diary page is saved as a page; a backdated save shows a toast that links to its week; a reload keeps the draft; validation errors from the API are shown on the right fields; a `409 entry-stale` keeps the typed text and offers to load the latest version (D-23).
 
-- [ ] **4.7 Voice notes**
+- [x] **4.7 Voice notes**
   - **Do:** a `MediaRecorder` recorder that picks `audio/webm;codecs=opus` or `audio/mp4`.
   - **Done when:** a recording uploads and plays back in Chrome. Note whether Safari or iOS could be tested.
 
-- [ ] **4.8 Loot Drops in the UI**
+- [x] **4.8 Loot Drops in the UI**
   - **Read:** D-10, D-41, DESIGN.md §4 (Loot Drops) and §5 (the travelling star).
   - **Do:** a seal dialog (pick a day; it opens at 09:00 in the user's timezone, D-23; then a confirmation repeating the date and time), the travelling star as one SVG in `src/assets/`, a sealed card with a live countdown, the Loot Drop page, a `409` that surfaces as a friendly message, and an *Opened* row that takes On this day's place at the top of the feed (D-10, D-41).
   - **Done when:** sealing an entry turns it into a sealed card; under a day heading the card shows only the opening date and the countdown, and elsewhere the memory date too; the countdown is correct in the user's zone; the star's lit part matches the days travelled; once the unlock time passes, the entry shows in the Opened row until it is opened or dismissed.
 
-- [ ] **4.9 Eras, templates and settings pages**
-  - **Do:** CRUD for eras and templates, with an Era page that lists its weeks and counts only the entries inside its dates (D-22); a gallery of starter templates that adds an editable copy with one tap (D-06); settings for display name, timezone and birthday (D-33), and *Appearance* (match phone, light or dark, kept on the device, D-41); a *show first in the feed* pin on each Era (D-22).
+- [x] **4.9 Eras, templates and settings pages**
+  - **Do:** CRUD for eras and templates, with an Era page that lists its weeks and counts only the entries inside its dates (D-22); backend: `GET /eras/{id}` leaves out weeks with no entry to show (D-22, with a test holding a sealed, a deleted and an out-of-range entry); a gallery of starter templates that adds an editable copy with one tap (D-06); settings for display name, timezone and birthday (D-33), and *Appearance* (match phone, light or dark, kept on the device, D-41); a *show first in the feed* pin on each Era (D-22).
   - **Done when:** changing the timezone changes the displayed times; Appearance switches the whole app at once and survives a reload, and *Match phone* follows the phone's setting; changing an Era's dates regroups the feed; pinning an Era moves its shared weeks under it; adding a starter template creates an editable copy; component tests pass.
 
-- [ ] **4.10 Week summary view**
+- [x] **4.10 Week summary view**
   - **Read:** D-25, USER_FLOWS F-15.
   - **Do:** tapping a week in the feed opens `/weeks/:weekId`: title, dates, Eras, counts, a few thumbnails, tags, then one bar per entry (display title, day, media icons, the Loot Drop's star if sealed, D-41). Tapping a bar opens the entry. Leave a slot at the top for the Phase 4 AI summary.
   - **Done when:** component tests cover a mixed week, a week with a sealed entry (its bar shows only the star, the day and the unlock date), and the display-title fallbacks (title → first non-heading line → *Photo* / *Diary page* / *Voice note*).
 
-- [ ] **4.11 All-entries timeline and tags UI**
+- [x] **4.11 All-entries timeline and tags UI**
   - **Read:** D-24, D-25, D-26, USER_FLOWS F-16 and F-17.
   - **Do:** `/entries` lists every entry newest first with infinite scroll over `GET /entries`, one row each (display title, date, icons, tags), filterable by tag; a `/tags` page to rename and delete tags.
   - **Done when:** filtering by a tag shows only its unsealed entries; sealed rows show no title or tags; renaming a tag updates everywhere; component tests pass.
 
-- [ ] **4.12 Recently deleted screen** (D-30)
+- [x] **4.12 Recently deleted screen** (D-30)
   - **Read:** USER_FLOWS F-09 and F-18.
   - **Do:** a delete confirmation that says the entry can be restored for 30 days, and a `/recently-deleted` screen over `GET /entries/deleted` with *restore* and *erase now*, reached from settings and the timeline.
   - **Done when:** component tests cover a normal and a sealed entry in the list; restoring puts the entry back in its week in the feed; *erase now* asks for confirmation; and an entry deleted from the feed shows up in the list.
 
-- [ ] **4.13 Photo dump and photo dates** (D-34)
+- [x] **4.13 Photo dump and photo dates** (D-34)
   - **Read:** D-12, D-13, D-17, D-34, USER_FLOWS F-19.
   - **Do:**
     - A *photo dump* action. It reads each photo's own date before shrinking it (with `exifr`, approved on 2026-10-28, D-13) and groups the photos by day in the user's timezone.
     - It creates one backdated entry per day, reusing the capture upload flow; a day with more than 20 photos becomes several entries.
     - Undated photos go into one entry dated today, created with `dateUnknown: true`; the card shows a *date unknown, fix it* badge (D-34).
     - In capture, a single photo's own date is offered as the memory date.
+    - Since task 4.6, capture shrinks each photo as soon as it is picked (`shrinkPhoto` in `lib/files.ts`), which drops its date: read the date before that call. Diary pages are shrunk like photos for now; give them the gentler setting TECH_STACK §3 Media describes, by shrinking once the purpose is known.
   - **Done when:** component tests cover:
     - photos from three days becoming three entries
     - a 25-photo day becoming two entries
@@ -345,15 +346,15 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - a failed upload retried without duplicates (client ids, D-12)
     - the date suggestion for one photo, accepted and dismissed
 
-- [ ] **4.14 On this day strip and Era covers** (D-32, D-36)
-  - **Do:** an *On this day* row at the top of the feed over `GET /entries/on-this-day`, which moves below the first entry while an Opened row shows (D-41); Era covers as title pages in the feed's sticky headers and on Era pages; and a cover picker in the Era form.
-  - **Done when:** component tests cover the strip with and without memories, a cover on its Era's header, and no cover while its entry is sealed.
+- [x] **4.14 On this day strip and Era covers** (D-32, D-36)
+  - **Do:** an *On this day* row at the top of the feed over `GET /entries/on-this-day`, which moves below the first entry while an Opened row shows (D-41); Era covers as title pages in the feed's sticky headers and on Era pages; and a cover picker in the Era form. Backend first: `GET /entries/on-this-day` leaves out `dateUnknown` entries (D-32), and a `PUT /eras/{id}` that leaves out `coverMediaId` keeps a hidden cover (D-36).
+  - **Done when:** component tests cover the strip with and without memories, a cover on its Era's header, and no cover while its entry is sealed; integration tests show a `dateUnknown` entry left out of On this day, and a title-only `PUT` keeping a cover whose entry is sealed (the cover comes back when it opens) while a visible cover left out is cleared.
 
-- [ ] **4.15 Soundtrack picker and player** (D-35)
+- [x] **4.15 Soundtrack picker and player** (D-35)
   - **Do:** a soundtrack field on entries, weeks and Eras: paste a Spotify link (turned into a URI), or search through `POST /music/search` when it's available. Spotify's player shows as a placeholder until tapped, and only then loads.
   - **Done when:** component tests cover pasting a link, picking a search result, search being unavailable (paste only), and no request to Spotify before the player is tapped.
 
-- [ ] **4.16 Loot Drop extras and the first letter** (D-33)
+- [x] **4.16 Loot Drop extras and the first letter** (D-33)
   - **Read:** USER_FLOWS F-01, F-06 and F-07.
   - **Do:**
     - Suggested unlock dates in the seal dialog: in a month, in a year, and on the next birthday once a birthday is set.
@@ -365,12 +366,21 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - a reply showing what it answers
     - skipping the first letter
 
-- [ ] **4.17 End-to-end smoke test and CI: frontend**
+- [x] **4.17 End-to-end smoke test and CI: frontend**
   - **Do:**
     - A Playwright smoke test: create an entry with a photo, then seal another.
     - A CI frontend job (lint, typecheck, test, build).
     - Check the HEIC→JPEG behaviour on iOS if possible (D-17).
   - **Done when:** Playwright passes locally against Compose and the dev servers; CI is green.
+
+- [x] **4.18 Smaller copies of photos** (D-43)
+  - **Read:** D-43, D-17, D-10, D-30, design.md §6.
+  - **Do:**
+    - Backend first (`/new-migration`, then the media endpoint): `V3__media_copies.sql` adds nullable object keys for the thumbnail and the screen copy on `media`. The upload takes the copies as optional parts of the same multipart request, checks each like the original (D-17), stores them next to it, and deletes them with it (media delete, erase, the 30-day sweep). `Media` responses gain a presigned URL for each copy (`@Schema(nullable = true)`, `ApiDocsContractTest`), never signed while the entry is sealed; then `npm run gen:api`.
+    - Capture and the photo dump make the copies with browser-image-compression (480 px and 1600 px on the longest side; WebP stays WebP, the rest become JPEG) and upload them with the photo.
+    - Every picture on screen uses the right size (D-43), falling back to the next size up when a copy is missing. The entry view keeps the original.
+    - Then close tasks 4.10 and 4.14: re-run their design checks and tick them.
+  - **Done when:** upload tests store and presign both copies, store none for a voice note or a photo smaller than a copy, refuse a bad copy type or size, never sign a sealed entry's copies, and remove every file with the photo; component tests show the thumbnail in a cover and a week thumbnail, the screen copy in the swipe and the original in the entry view, with the fallback; `audit.mjs` passes the `images` line (2x or 50 KB, D-43) on `/`, `/weeks/<id>` and an Era page, in light and dark; the slow-phone time to the first photo is measured again and reported; 4.10 and 4.14 are ticked.
 
 ---
 

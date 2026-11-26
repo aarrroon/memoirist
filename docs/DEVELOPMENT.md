@@ -2,7 +2,7 @@
 
 > Setup and day-to-day commands for working on memoirist. For what the app is, see the [README](../README.md). For how it's built, see [TECH_STACK.md](TECH_STACK.md).
 >
-> **Status:** `docker-compose.yml` (task 1.3) and the backend project (`backend/`, tasks 2.1 to 2.6) exist. The backend reads its configuration (`local` and `test` profiles), creates the Phase 1 tables and the dev user in Postgres when it starts, knows who is calling (the dev-user header, task 2.5), answers every error in one RFC 9457 problem shape (task 2.6), answers its health check and serves the first Phase 1 endpoints: `/users/me`, Eras, Templates, Entries, Media, the feed and weekly logs, and Tags (tasks 3.2 to 3.8; the entry lists follow in the rest of Sprint 3). A GitHub Actions workflow (`.github/workflows/ci.yml`, task 2.7) builds and tests it on every push to `main` or a `phase-*` branch and on every pull request (see [Continuous integration](#continuous-integration-task-27)). The frontend (`frontend/`) doesn't exist yet. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
+> **Status:** `docker-compose.yml` (task 1.3) and the backend project (`backend/`, tasks 2.1 to 2.6) exist. The backend reads its configuration (`local` and `test` profiles), creates the Phase 1 tables and the dev user in Postgres when it starts, knows who is calling (the dev-user header, task 2.5), answers every error in one RFC 9457 problem shape (task 2.6), answers its health check and serves the whole Phase 1 API (Sprint 3). A GitHub Actions workflow (`.github/workflows/ci.yml`, task 2.7) builds and tests it on every push to `main` or a `phase-*` branch and on every pull request (see [Continuous integration](#continuous-integration-task-27)). The frontend project (`frontend/`, task 4.1) exists: it builds, lints, type-checks and tests, and its starter page shows the design tokens and greets the dev user through the typed API client (task 4.2); the screens come with the rest of Sprint 4. Each section says which sprint task creates what it describes. Commands marked with a task number work once that task is done.
 
 ## 1. Prerequisites
 
@@ -11,7 +11,7 @@
 | Git (with Git Bash on Windows) | any recent | `git --version` | Run every command here in Git Bash |
 | Docker Desktop | recent | `docker info` | Must be **running** for Compose and for backend tests (Testcontainers) |
 | JDK | 25 | `java -version` | For example Eclipse Temurin 25 (`winget install EclipseAdoptium.Temurin.25.JDK`). Make sure `java` is on `PATH` |
-| Node.js | 22 or later | `node -v` | npm comes with it |
+| Node.js | 22.22.2+, 24.15.0+ or 26+ | `node -v` | npm comes with it. jsdom needs these versions (not 25), and `npm ci` refuses others (`engine-strict`) |
 | Editor | — | — | IntelliJ IDEA (backend) and/or VS Code |
 | Claude Code | latest | — | Optional, but the repo is set up for it (section 6) |
 
@@ -96,13 +96,15 @@ cd backend
 - `./gradlew build` fails when a Java file isn't formatted (`spotlessCheck`); `./gradlew spotlessApply` fixes it. The formatter is palantir-java-format: 4-space indents, 120 columns.
 - Tests print each result as `PASSED` or `FAILED`; the full report is `build/reports/tests/test/index.html`. Each test run starts its own Postgres container (`pgvector/pgvector:pg17`) and leaves the Compose database alone. Integration tests use the `@IntegrationTest` annotation, which gives them the `test` profile and one shared app and container per run, so each extra test class costs milliseconds, not another 30-second start. `MigrationsTest` is the exception: it runs Flyway by hand and starts a second container of its own, and so does `DevProviderAbsentInProdTest` (it starts the app under the `prod` profile). Tests that store files add `@Import(SeaweedFsTestConfiguration.class)`: a SeaweedFS container on the image Compose pins (`chrislusf/seaweedfs:4.48`, pulled on the first run), shared by every such class, which costs one more app start (task 3.1). Tests that need to say what time it is add `@Import(MutableClockConfiguration.class)`: it swaps the app's clock for a `MutableClock` that a test moves with `clockAt("2026-11-01T12:30:00Z")` (the entry tests start every test at Saturday 2026-10-31 12:00 in Melbourne). That is one more app start and one more Postgres container, shared by every entry test class through `EntryApiTest` (task 3.5). The `test` profile also switches on Hibernate's statistics (`hibernate.generate_statistics` in `src/test/resources/application-test.yml`, and nowhere else), so a test can count the SQL statements a request ran: `FeedQueryCountTest` clears `Statistics`, makes one request and reads `getPrepareStatementCount()`, which is how "a page of the feed costs the same however many entries it holds" is checked (task 3.7); `EntryListQueryCountTest` does the same for the entry list (task 3.9) and `EntryOpenedQueryCountTest` for the Opened strip (task 3.10). `EntryOpenedIndexTest` goes one step further: it runs `EXPLAIN` on the SQL Hibernate really sent for the strip, over 50,000 generated rows, and checks that Postgres reads the partial index. Plain unit tests and `@WebMvcTest` slices such as `CurrentUserHttpTest` need no Docker.
 
-### Continuous integration (task 2.7)
-GitHub Actions runs `.github/workflows/ci.yml`. Its `backend` job does what you do before a commit, on a clean Linux machine:
+### Continuous integration (tasks 2.7 and 4.17)
+GitHub Actions runs `.github/workflows/ci.yml`. Its two jobs do what you do before a commit, on a clean Linux machine, side by side:
 
 | When | What runs |
 |---|---|
-| A push to `main` or to any `phase-*` branch, and every pull request (whatever branch it targets) | `cd backend && ./gradlew build --no-daemon` on `ubuntu-latest` with Eclipse Temurin 25: compile, `spotlessCheck`, every test, the jar |
-| By hand: **Actions** tab, **CI**, **Run workflow** (or `gh workflow run ci.yml --ref <branch>`) | The same job. This works once the file is on `main` |
+| A push to `main` or to any `phase-*` branch, and every pull request (whatever branch it targets) | `backend`: `cd backend && ./gradlew build --no-daemon` on `ubuntu-latest` with Eclipse Temurin 25: compile, `spotlessCheck`, every test, the jar. `frontend` (task 4.17): `npm ci`, `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` in `frontend/` with Node 24 |
+| By hand: **Actions** tab, **CI**, **Run workflow** (or `gh workflow run ci.yml --ref <branch>`) | The same jobs. This works once the file is on `main` |
+
+- The frontend job needs no backend: Vitest runs against MSW and the API types are the committed `src/api/schema.d.ts`. npm's download cache is kept between runs, keyed on `frontend/package-lock.json`. It does not run the Playwright smoke tests, which need the whole stack (below).
 
 - The tests start their own Postgres containers and one SeaweedFS container (pulled from Docker Hub on the first run) with Testcontainers, using the Docker that `ubuntu-latest` already has. The job needs no `.env`, no Compose services and no secrets: the `test` profile carries its own settings.
 - The Gradle dependencies and the Gradle distribution are cached between runs (`actions/setup-java` with `cache: gradle`). Changing `build.gradle.kts`, `settings.gradle.kts` or `gradle-wrapper.properties` starts from an empty cache, so that run is slower.
@@ -115,14 +117,31 @@ GitHub Actions runs `.github/workflows/ci.yml`. Its `backend` job does what you 
 ```bash
 cd frontend
 npm ci                  # install exactly what package-lock.json says
-npm run dev             # dev server on :5173
-npm test                # Vitest
-npm run lint            # ESLint
+npm run dev             # dev server on :5173; /api goes to the backend on :8080
+npm test                # Vitest, once (npm run test:watch keeps it running)
+npm run lint            # ESLint, then Prettier's check
+npm run format          # fix formatting with Prettier
 npm run typecheck       # TypeScript
-npm run build           # production build
-npm run gen:api         # regenerate API types (backend must be running) — task 4.2
-npx playwright test     # end-to-end smoke tests — task 4.17
+npm run build           # type-check, then the production build in dist/
+npm run gen:api         # regenerate src/api/schema.d.ts from /v3/api-docs (backend must be running; task 4.2)
+npx playwright test     # end-to-end smoke tests (task 4.17): needs Compose and the backend running, see below
 ```
+Before saying frontend work is done: `npm test && npm run lint && npm run typecheck && npm run build`. For a screen, also run the design check with the dev server up: `node docs/design/explorations/tools/audit.mjs http://localhost:5173/<path>` from the repo root, and again with `--dark` (`.claude/rules/design.md`). Capture opens from a link, so it can be checked the same way: `http://localhost:5173/?write=entry` (or `?write=page` for Diary page, task 4.6). [TECH_STACK §3](TECH_STACK.md#build-task-41) says how the project is set up and why.
+
+### End-to-end tests (task 4.17)
+The Playwright smoke tests in `frontend/e2e/` drive the real app in Chromium against the real stack. Nothing is mocked. Each test is named after its flow in [USER_FLOWS.md](USER_FLOWS.md): `f03-entry-with-photo.spec.ts` (F-03) and `f06-seal-entry.spec.ts` (F-06). Each runs twice, at phone size (375×812, capture is a sheet) and laptop size (1440×900, capture is a dialog).
+
+```bash
+docker compose up -d                                                      # Postgres and SeaweedFS
+cd backend && ./gradlew bootRun --args='--spring.profiles.active=local'   # leave it running
+cd frontend && npx playwright test                                        # starts Vite on :5173 itself, or reuses one already up
+cd frontend && npx playwright test f06 --project=phone                    # one file, one size
+cd frontend && npx playwright show-report                                 # the HTML report of the last run
+```
+- `e2e/global-setup.ts` asks the backend for the dev user before any test runs, and stops the run with the commands above if it doesn't answer.
+- The tests write to the seeded dev journal (D-11), one at a time. The `journal` fixture in `e2e/fixtures.ts` records every entry a test creates and erases it afterwards (DELETE, then `POST …/erase`), so the journal is left as it was, even after a failed test. The sample content (`--memoirist.sample-content=true`) can be there or not.
+- A failed test keeps a screenshot and a trace in `frontend/test-results/`: `npx playwright show-trace <folder>/trace.zip`. Both folders are git-ignored.
+- They run on your machine, not in CI, because they need the backend and the Compose services.
 
 ## 5. Working on the code
 
@@ -146,11 +165,14 @@ A typical task: start a fresh session, run `/implement-task`, approve the plan, 
 
 Personal, uncommitted settings go in `.claude/settings.local.json` or `CLAUDE.local.md` (both gitignored).
 
+In the Claude desktop app, `.claude/launch.json` lets Claude start the frontend and open it in the app's browser pane. `frontend` is the dev server (port 5173). `frontend-build` serves the last `npm run build` with `vite preview` (port 4173), which is what `audit.mjs --slow` should measure: the dev server's unbundled scripts are megabytes no phone downloads. It runs nothing on its own.
+
 ## 7. Troubleshooting
 
 | Problem | Likely cause and fix |
 |---|---|
 | `failed to connect to the docker API` | Docker Desktop isn't running. Start it and wait until it says it's running |
+| The starter page says "Something went wrong. Try again." in development | The Vite proxy found no backend on :8080 and answered `502` with an empty body itself. That isn't one of our problems, so the client retries twice, then shows the general message. Start the backend from `backend/` |
 | Port 5432, 8333, 8888, 8080 or 5173 already in use | Another Postgres, app or Compose project (check `docker ps`) is using it. Stop it, or find it with `netstat -ano \| findstr :5432` |
 | Port 8080 still answers after you closed the terminal that ran `./gradlew bootRun` | The app runs in its own Java process, started by the Gradle daemon, so closing or killing the terminal can leave it running. Find its PID with `netstat -ano \| findstr :8080`, then `taskkill //PID <pid> //F` in Git Bash (`taskkill /PID <pid> /F` in cmd). Next time, stop it with Ctrl+C in that terminal |
 | The backend fails to start with `Failed to configure a DataSource: 'url' attribute is not specified` (`local` profile) | `.env` wasn't loaded. The `local` profile reads `../.env` relative to the working directory, so start it from `backend/` (an IDE run configuration needs `backend/` as its working directory), and check that `.env` has `DB_URL`. A missing `.env` is skipped without a warning (`optional:`, TECH_STACK §1), so the first sign is the first missing setting. `application.yml` gives an unset variable an empty value (`${DB_URL:}`), which is why the message names the datasource rather than showing a literal `${DB_URL}` |
@@ -171,3 +193,5 @@ Personal, uncommitted settings go in `.claude/settings.local.json` or `CLAUDE.lo
 | Tests hang or fail to start containers | Docker isn't running, or it's low on memory. Give Docker Desktop at least 4 GB |
 | CI fails but `./gradlew build` passes on your machine | Four usual causes. (1) Line endings: CI checks out LF files, so `spotlessCheck` fails if the committed text has CRLF; check with `git ls-files --eol backend` (every text file should say `i/lf`). (2) Case: Linux tells `Entry.java` from `entry.java`, Windows doesn't. (3) A test reads `.env` or a Compose service, which CI doesn't have. (4) `gradlew` lost its executable bit (`git ls-files -s backend/gradlew` should start with `100755`). To reproduce on Linux, build a clean copy in a container; the journal entry for task 2.7 shows how |
 | Frontend types out of date | Start the backend, then `npm run gen:api` |
+| `npm run lint` fails only at `prettier --check` | The formatting differs from Prettier's. Run `npm run format`. Line endings don't count: `.prettierrc.json` sets `endOfLine: auto`, so CRLF checkouts pass |
+| `/api` calls from the dev server answer `500` or `ECONNREFUSED` in the Vite log | The backend isn't running on :8080. Start it (and `docker compose up -d` first) |

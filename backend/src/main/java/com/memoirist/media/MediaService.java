@@ -3,6 +3,7 @@ package com.memoirist.media;
 import com.memoirist.common.EntrySealedException;
 import com.memoirist.common.NotFoundException;
 import com.memoirist.common.PayloadTooLargeException;
+import com.memoirist.common.UnsupportedFileTypeException;
 import com.memoirist.common.ValidationFailedException;
 import com.memoirist.entry.Entry;
 import com.memoirist.entry.EntryRepository;
@@ -101,31 +102,51 @@ public class MediaService {
      *   <li>A short write transaction locks the entry, checks again (the entry may have been sealed, deleted or filled
      *       in the meantime), makes room at the position and inserts the row.
      * </ol>
-     * If anything goes wrong once storing has begun, the file is deleted again.
+     * If anything goes wrong once storing has begun, every file it began is deleted again.
      *
+     * <p>A photo or diary page may come with its two smaller copies (D-43), made by the browser. Each is checked like
+     * the original (D-17), stored next to it under its own key and named on the same row. A copy that fails a check
+     * refuses the whole upload, so a photo is never half there.
+     *
+     * @param thumbnail the 480 px copy, or {@code null}
+     * @param screen the 1600 px copy, or {@code null}
      * @param requestedOrder where to put it ({@code 0} is first), or {@code null} for the end
      * @param requestedPurpose {@code PHOTO} (the default when {@code null}) or {@code PAGE_SCAN}
      * @throws NotFoundException the entry isn't the user's, doesn't exist or is in Recently deleted
      * @throws EntrySealedException the entry is a sealed Loot Drop
      * @throws ValidationFailedException the file is missing or empty, the purpose is unknown, or the position is out
-     *     of range, or the entry already holds 20 items
-     * @throws com.memoirist.common.UnsupportedFileTypeException the type isn't allowed, or a diary page isn't an image
-     * @throws PayloadTooLargeException the file is over 25 MB
+     *     of range, or the entry already holds 20 items; or a copy is empty or came with a voice note
+     * @throws UnsupportedFileTypeException the type isn't allowed, or a diary page or a copy isn't an image
+     * @throws PayloadTooLargeException the file or a copy is over 25 MB
      * @throws com.memoirist.common.StorageUnavailableException storage failed
      */
-    public MediaResponse upload(UUID entryId, MultipartFile file, Integer requestedOrder, String requestedPurpose) {
+    public MediaResponse upload(
+            UUID entryId,
+            MultipartFile file,
+            MultipartFile thumbnail,
+            MultipartFile screen,
+            Integer requestedOrder,
+            String requestedPurpose) {
         UUID userId = currentUser.currentUserId();
 
         Upload upload = reading.execute(status -> {
             Entry entry = findEntry(entryId, userId);
             refuseIfSealed(entry);
-            Upload checked = check(file, requestedPurpose, requestedOrder);
+            Upload checked = check(file, requestedPurpose, requestedOrder, thumbnail, screen);
             checkRoom(media.countByEntryId(entryId), requestedOrder);
             return checked;
         });
 
         UUID mediaId = UUID.randomUUID();
-        String objectKey = objectKey(userId, entryId, mediaId, upload.type());
+        String objectKey = objectKey(userId, entryId, mediaId, "", upload.type());
+        String thumbnailKey = upload.thumbnailType() == null
+                ? null
+                : objectKey(userId, entryId, mediaId, "-thumbnail", upload.thumbnailType());
+        String screenKey = upload.screenType() == null
+                ? null
+                : objectKey(userId, entryId, mediaId, "-screen", upload.screenType());
+        Files files = new Files(objectKey, thumbnailKey, screenKey);
+        ImageSize size = sizeOf(file, upload.type());
 
         // TODO(human) PRACTICE: A file in storage and a row in the database can't be committed together, so write the
         //   compensation: store the file, then insert the row in its own short transaction, and if either step fails
@@ -135,17 +156,17 @@ public class MediaService {
         //   failure must not hide the first, because the first is what the user needs to hear about. storage.delete
         //   throws StorageUnavailableException; log the key (an id, never a URL) and the exception class, not its
         //   message. The write transaction is a TransactionTemplate, so an exception thrown inside it rolls it back.
+        //   Since task 4.18 a photo can bring two copies (D-43): every file that was begun must go, not only the first.
         // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+        List<String> begun = new ArrayList<>(3);
         try {
-            try (InputStream content = file.getInputStream()) {
-                storage.put(objectKey, content, file.getSize(), upload.type());
-            } catch (IOException unreadableUpload) {
-                throw new UncheckedIOException("The uploaded file couldn't be read back from disk", unreadableUpload);
-            }
+            store(objectKey, file, upload.type(), begun);
+            store(thumbnailKey, thumbnail, upload.thumbnailType(), begun);
+            store(screenKey, screen, upload.screenType(), begun);
             return writing.execute(
-                    status -> insert(entryId, userId, mediaId, objectKey, upload, file.getSize(), requestedOrder));
+                    status -> insert(entryId, userId, mediaId, files, upload, file.getSize(), size, requestedOrder));
         } catch (RuntimeException failure) {
-            deleteQuietly(objectKey);
+            begun.forEach(this::deleteQuietly);
             throw failure;
         }
         // └── END ANSWER ▲ ──
@@ -191,20 +212,48 @@ public class MediaService {
         items.remove(doomed);
         media.delete(doomed);
         renumber(items);
-        storage.deleteAfterCommit(List.of(doomed.getObjectKey()));
+        // The original and its copies (D-43): a removed photo leaves no file behind.
+        storage.deleteAfterCommit(doomed.storedKeys());
     }
 
     // ---- Upload ---------------------------------------------------------------------------------------------------
 
-    /** What the request checks found out about the file: its allowed type and its purpose. */
-    private record Upload(String type, String purpose) {}
+    /**
+     * What the request checks found out about the file: its allowed type and its purpose, and the allowed type of each
+     * copy that came with it ({@code null} for a copy that didn't).
+     */
+    private record Upload(String type, String purpose, String thumbnailType, String screenType) {}
+
+    /** The object keys of one upload: the original's, and each copy's or {@code null}. */
+    private record Files(String original, String thumbnail, String screen) {}
+
+    /**
+     * Stores one part under its key. The key is noted as begun <em>before</em> the put, so a put that fails half way
+     * is cleaned up too. A copy that didn't come ({@code key} is {@code null}) is skipped.
+     */
+    private void store(String key, MultipartFile part, String type, List<String> begun) {
+        if (key == null) {
+            return;
+        }
+        begun.add(key);
+        try (InputStream content = part.getInputStream()) {
+            storage.put(key, content, part.getSize(), type);
+        } catch (IOException unreadableUpload) {
+            throw new UncheckedIOException("The uploaded file couldn't be read back from disk", unreadableUpload);
+        }
+    }
 
     /**
      * The checks that need no database, in the order the contract promises: the file is there and has bytes, the
      * purpose is known, the position isn't negative (all {@code 400}), then the type (and a diary page being an image,
-     * {@code 415}), then the size ({@code 413}).
+     * {@code 415}), then the size ({@code 413}), then each copy in turn (D-43).
      */
-    private static Upload check(MultipartFile file, String requestedPurpose, Integer requestedOrder) {
+    private static Upload check(
+            MultipartFile file,
+            String requestedPurpose,
+            Integer requestedOrder,
+            MultipartFile thumbnail,
+            MultipartFile screen) {
         if (file == null) {
             throw new ValidationFailedException("file", "must not be null");
         }
@@ -222,7 +271,35 @@ public class MediaService {
             // written where the code can be tested without sending 25 MB, and where a changed setting can't undo it.
             throw new PayloadTooLargeException("A file can be at most 25 MB.");
         }
-        return new Upload(type, purpose);
+        return new Upload(type, purpose, checkCopy("thumbnail", thumbnail, type), checkCopy("screen", screen, type));
+    }
+
+    /**
+     * One smaller copy (D-43), checked like the original (D-17): it has bytes ({@code 400}), it comes with a picture and
+     * not a voice note ({@code 400}), it is a JPEG, PNG or WebP image ({@code 415}) and at most 25 MB ({@code 413}).
+     * Its pixel size isn't checked: the server reads no more of a file than it needs, and a copy too big for its slot
+     * costs the sender's own data, never anyone's privacy.
+     *
+     * @return the copy's allowed type, or {@code null} when the request had no such part
+     */
+    private static String checkCopy(String field, MultipartFile copy, String originalType) {
+        if (copy == null) {
+            return null;
+        }
+        if (copy.isEmpty()) {
+            throw new ValidationFailedException(field, "must not be empty");
+        }
+        if (!UploadRules.isImage(originalType)) {
+            throw new ValidationFailedException(field, "only a photo or a diary page has copies");
+        }
+        String type = UploadRules.allowedType(copy.getContentType());
+        if (!UploadRules.isImage(type)) {
+            throw new UnsupportedFileTypeException("A copy of a photo must be a JPEG, PNG or WebP image.");
+        }
+        if (copy.getSize() > UploadRules.MAX_FILE_BYTES) {
+            throw new PayloadTooLargeException("A file can be at most 25 MB.");
+        }
+        return type;
     }
 
     /** The entry has a free place, and the position asked for (if any) is somewhere in the carousel or just after it. */
@@ -241,9 +318,10 @@ public class MediaService {
             UUID entryId,
             UUID userId,
             UUID mediaId,
-            String objectKey,
+            Files files,
             Upload upload,
             long fileSize,
+            ImageSize size,
             Integer requestedOrder) {
         Entry entry = lockEntry(entryId, userId);
         refuseIfSealed(entry);
@@ -254,14 +332,44 @@ public class MediaService {
         // Make room: everything from the position on moves down one place. For a moment two rows share a position,
         // which the deferred unique constraint allows until the commit (V1, uq_media_entry_order).
         items.subList(position, items.size()).forEach(later -> later.setDisplayOrder(later.getDisplayOrder() + 1));
-        Media created = media.saveAndFlush(
-                new Media(mediaId, entry, objectKey, upload.type(), upload.purpose(), position, fileSize));
+        Media created = media.saveAndFlush(new Media(
+                mediaId,
+                entry,
+                files.original(),
+                upload.type(),
+                upload.purpose(),
+                position,
+                fileSize,
+                size,
+                files.thumbnail(),
+                files.screen()));
         return mapper.toResponse(entryId, created);
     }
 
-    /** {@code users/{userId}/entries/{entryId}/{mediaId}.{ext}}: the key shape TECH_STACK (Storage) and the schema give. */
-    private static String objectKey(UUID userId, UUID entryId, UUID mediaId, String type) {
-        return "users/" + userId + "/entries/" + entryId + "/" + mediaId + "." + UploadRules.extensionFor(type);
+    /**
+     * An image's width and height from its header (D-17), or {@code null} for a voice note and for an image whose
+     * header can't be read: a photo without a size is still accepted, and the screen gives it a 4:5 frame. It runs
+     * before the file is stored and outside any transaction, and reads only the header's bytes.
+     */
+    private static ImageSize sizeOf(MultipartFile file, String allowedType) {
+        if (!UploadRules.isImage(allowedType)) {
+            return null;
+        }
+        try (InputStream content = file.getInputStream()) {
+            return ImageSize.read(content).orElse(null);
+        } catch (IOException unreadable) {
+            return null;
+        }
+    }
+
+    /**
+     * {@code users/{userId}/entries/{entryId}/{mediaId}{suffix}.{ext}}: the key shape TECH_STACK (Storage) and the
+     * schema give. The original has no suffix; a copy has {@code -thumbnail} or {@code -screen} (D-43) and the
+     * extension of its own type, so a PNG photo's JPEG copy is stored as {@code .jpg}.
+     */
+    private static String objectKey(UUID userId, UUID entryId, UUID mediaId, String suffix, String type) {
+        return "users/" + userId + "/entries/" + entryId + "/" + mediaId + suffix + "."
+                + UploadRules.extensionFor(type);
     }
 
     /** Best effort: a file that can't be removed is wasted space, and the failure that got us here matters more. */

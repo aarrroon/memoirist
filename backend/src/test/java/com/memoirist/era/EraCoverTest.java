@@ -367,6 +367,71 @@ class EraCoverTest extends RecentlyDeletedApiTest {
         assertThat(storedCover(eraId)).isEqualTo(photo.mediaId());
     }
 
+    // PUT and a hidden cover (D-36, task 4.14)
+
+    @Test
+    void aTitleOnlyPutKeepsACoverWhoseEntryIsSealedAndItShowsAgainWhenItOpens() {
+        User alice = aUser();
+        Photo photo = aPhotoOf(alice, "Beach");
+        String eraId = eraWithCover(alice, "Summer", photo.mediaId());
+        sealUntil(alice, photo.entryId(), SEALED_UNTIL);
+
+        // The client was shown cover: null, so it can't send the id back; leaving it out must not lose the cover.
+        RestTestClient.ResponseSpec renamed =
+                putEra(alice, eraId, json("title", "Summer break", "startDate", "2026-10-01"));
+
+        renamed.expectStatus().isOk();
+        String body = bodyText(renamed);
+        assertThat(JsonPath.<Object>read(body, "$.cover")).isNull();
+        assertThat(body).as("nothing about the hidden photo").doesNotContain(photo.mediaId());
+        assertThat(storedCover(eraId)).as("kept while hidden").isEqualTo(photo.mediaId());
+
+        clockAt(AFTER_SEALED_UNTIL);
+
+        assertThat(coverIdInDetail(alice, eraId)).isEqualTo(photo.mediaId());
+    }
+
+    @Test
+    void aPutThatLeavesTheCoverOutKeepsOneWhoseEntryIsInRecentlyDeletedUntilItIsRestored() {
+        User alice = aUser();
+        Photo photo = aPhotoOf(alice, "Beach");
+        String eraId = eraWithCover(alice, "Summer", photo.mediaId());
+        deleteOk(alice, photo.entryId());
+
+        putEra(alice, eraId, json("title", "Summer break", "startDate", "2026-10-01"))
+                .expectStatus()
+                .isOk();
+        assertThat(storedCover(eraId)).isEqualTo(photo.mediaId());
+
+        restore(alice, photo.entryId()).expectStatus().isOk();
+
+        assertThat(coverIdInDetail(alice, eraId)).isEqualTo(photo.mediaId());
+    }
+
+    @Test
+    void aVisibleCoverLeftOutIsClearedAndAnotherUsersHiddenCoverIsNoneOfYourBusiness() {
+        User alice = aUser();
+        User bob = aUser();
+        Photo photo = aPhotoOf(alice, "Beach");
+        String eraId = eraWithCover(alice, "Summer", photo.mediaId());
+
+        RestTestClient.ResponseSpec left = putEra(alice, eraId, json("title", "Summer", "startDate", "2026-10-01"));
+
+        left.expectStatus().isOk();
+        assertThat(JsonPath.<Object>read(bodyText(left), "$.cover")).isNull();
+        assertThat(storedCover(eraId))
+                .as("a visible cover left out is a full replace")
+                .isNull();
+
+        // Another user's PUT can't reach the Era at all, hidden cover or not.
+        String sealedEra = eraWithCover(alice, "Winter", photo.mediaId());
+        sealUntil(alice, photo.entryId(), SEALED_UNTIL);
+        putEra(bob, sealedEra, json("title", "Mine now", "startDate", "2026-10-01"))
+                .expectStatus()
+                .isNotFound();
+        assertThat(storedCover(sealedEra)).isEqualTo(photo.mediaId());
+    }
+
     @Test
     void replayingACreateReturnsTheStoredEraWithItsCoverAndAppliesNoNewCover() {
         User alice = aUser();

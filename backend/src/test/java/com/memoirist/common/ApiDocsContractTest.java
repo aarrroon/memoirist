@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
 import com.memoirist.entry.RecentlyDeletedApiTest;
+import com.memoirist.media.TestImages;
 import com.memoirist.user.User;
 import java.util.ArrayList;
 import java.util.List;
@@ -228,6 +229,18 @@ class ApiDocsContractTest extends RecentlyDeletedApiTest {
                 .isTrue();
         assertThat(allowsNull(map(properties(schemas, "UserResponse").get("birthday")), schemas))
                 .isTrue();
+        // A voice note, or a photo whose header couldn't be read, has no size (D-17, task 4.5).
+        assertThat(allowsNull(map(properties(schemas, "MediaResponse").get("width")), schemas))
+                .isTrue();
+        assertThat(allowsNull(map(properties(schemas, "MediaResponse").get("height")), schemas))
+                .isTrue();
+        // A photo with no smaller copy, and every voice note, has null for that copy (D-43, task 4.18).
+        assertThat(allowsNull(map(properties(schemas, "MediaResponse").get("thumbnailUrl")), schemas))
+                .isTrue();
+        assertThat(allowsNull(map(properties(schemas, "MediaResponse").get("screenUrl")), schemas))
+                .isTrue();
+        assertThat(allowsNull(map(properties(schemas, "MediaResponse").get("fileUrl")), schemas))
+                .isFalse();
     }
 
     private static Map<String, Object> properties(Map<String, Object> schemas, String name) {
@@ -376,13 +389,37 @@ class ApiDocsContractTest extends RecentlyDeletedApiTest {
                 schemaOf(docs, "get", "/api/v1/entries/on-this-day"),
                 schemas);
 
-        // Media
+        // Media: a photo whose bytes aren't a picture (no size, the null case) and a real PNG (a size).
         check(
                 problems,
                 "POST /entries/{id}/media",
                 photo,
                 answerSchema(docs, "post", "/api/v1/entries/{entryId}/media", "201"),
                 schemas);
+        Object sized = JsonPath.read(
+                bodyText(upload(user, open, TestImages.png(64, 48), "image/png")
+                        .expectStatus()
+                        .isCreated()),
+                "$");
+        check(
+                problems,
+                "POST /entries/{id}/media with a size",
+                sized,
+                answerSchema(docs, "post", "/api/v1/entries/{entryId}/media", "201"),
+                schemas);
+        assertThat(photo).containsEntry("width", null);
+        assertThat(JsonPath.<Integer>read(sized, "$.width")).isEqualTo(64);
+        // And a photo with both copies (D-43): the copy URLs are strings, where the others above are null.
+        Map<String, Object> copied = uploadPhotoWithCopies(user, open);
+        check(
+                problems,
+                "POST /entries/{id}/media with copies",
+                copied,
+                answerSchema(docs, "post", "/api/v1/entries/{entryId}/media", "201"),
+                schemas);
+        assertThat(photo).containsEntry("thumbnailUrl", null).containsEntry("screenUrl", null);
+        assertThat(copied.get("thumbnailUrl")).isInstanceOf(String.class);
+        assertThat(copied.get("screenUrl")).isInstanceOf(String.class);
 
         assertThat(problems).as("where the API and /v3/api-docs disagree").isEmpty();
         // The data really covered the cases the checks are for.

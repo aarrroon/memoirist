@@ -1,0 +1,993 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { JSONContent } from '@tiptap/react';
+import { CornerUpLeft, Image, Mic, Music, Tag, X } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { toast } from 'sonner';
+import { getEntry, type Entry } from '../../api/entries';
+import { afterSeal, sealEntry, useEntry } from '../../api/lootDrops';
+import { ApiProblem, problemMessage } from '../../api/problem';
+import { queryKeys } from '../../api/queryKeys';
+import { StarMark } from '../../components/TravellingStar';
+import { Button } from '../../components/ui/button';
+import { entryDisplayTitle } from '../../lib/displayTitle';
+import { fileProblem, isImageType, MAX_FILES } from '../../lib/files';
+import { pictureUrl } from '../../lib/media';
+import { readPhotoDay, usableDay } from '../../lib/photoDate';
+import { canRecord } from '../../lib/recording';
+import { captionForSave, insertTemplateHeadings, isBlankDoc } from '../../lib/templateDoc';
+import {
+  addDays,
+  addMonthsClamped,
+  chipDay,
+  formatClock,
+  formatLongDay,
+  formatWeekRange,
+  isWithin,
+  latestSealDay,
+  todayIn,
+  unlockInstant,
+  weekOf,
+  type IsoDate,
+} from '../../lib/time';
+import type { CaptureKind } from '../../stores/ui';
+import SealPanel from '../lootdrop/SealPanel';
+import { SealConfirm, SealForm } from '../lootdrop/SealForm';
+import { sealProblem } from '../lootdrop/sealProblem';
+import { DateChip } from './DateChip';
+import { DateSuggestion } from './DateSuggestion';
+import { clearDraft, readDraft, writeDraft, type Draft } from './draft';
+import { EntryEditor } from './Editor';
+import { useEntryEditor } from './editorSetup';
+import { MediaTray } from './MediaTray';
+import { picturesFirst, saveEntry, type SaveResult, type TrayItem } from './saveEntry';
+import { SoundtrackField } from '../music/SoundtrackField';
+import { TagPicker } from './TagPicker';
+import { TemplateChip } from './TemplateChip';
+import { useRecorder, type Recording } from './useRecorder';
+import { VoiceRecorder } from './VoiceRecorder';
+
+// Capture: New entry and Diary page (DESIGN.md §4 Write, F-02 to F-05, task 4.6). Everything the user types lives in
+// this component's state, never in Zustand (frontend.md, Data): it is a form, and the server owns the entry once it
+// is saved. A draft of it goes to local storage as it changes (D-23). Photo dump (D-34) is PhotoDump.tsx (task 4.13).
+
+/** What one Save (or Seal it) did: the save's own result, the entry as saved before any seal, and the seal's fate. */
+type SaveOutcome = SaveResult & {
+  savedEntry: Entry | null;
+  /** The opening day, when the entry is now sealed. */
+  sealed: IsoDate | null;
+  /** Why the seal failed, when it was asked for and the save worked. */
+  sealError: unknown;
+};
+
+const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
+
+/** Which fields the API named in a 400 (API_CONTRACT §Entries), shown beside each one. */
+type FieldMessages = Partial<
+  Record<'title' | 'entryDate' | 'contentJson' | 'tagIds' | 'replyToEntryId', string>
+>;
+
+export interface CaptureFormProps {
+  kind: CaptureKind;
+  zone: string;
+  /** For the seal's On my birthday (task 4.16, D-33); null hides it. */
+  birthday: IsoDate | null;
+  /** The opened Loot Drop that *Reply to past you* answers (task 4.16, D-33), or null. */
+  replyTo?: string | null;
+  /** The Cancel button, Escape and the scrim all ask the frame; the frame asks here whether to confirm first. */
+  onRequestClose: (dirty: boolean) => void;
+  /** Closes for good, after a save or a discard. */
+  onDone: () => void;
+  /** Keeps the frame told whether closing now would lose something (D-23). */
+  onDirtyChange: (dirty: boolean) => void;
+  /** The frame's title id, so the sheet or dialog is named by the visible heading. */
+  titleId: string;
+  layout: 'sheet' | 'dialog';
+}
+
+function freshDraft(kind: CaptureKind, zone: string): Draft {
+  return {
+    kind,
+    clientId: crypto.randomUUID(),
+    entryId: null,
+    entryVersion: null,
+    entryDate: todayIn(zone),
+    templateId: null,
+    prompts: [],
+    title: '',
+    content: null,
+    tagIds: [],
+    savedAt: new Date().toISOString(),
+  };
+}
+
+let itemCount = 0;
+const nextKey = () => `item-${++itemCount}`;
+
+/** A photo already on the server, as a tray item. */
+const uploadedItem = (m: Entry['media'][number]): TrayItem => ({
+  key: nextKey(),
+  file: null,
+  // The tray tile is 72 px: the thumbnail, falling back to the next size up (D-43). A voice note has no copy.
+  previewUrl: pictureUrl(m, 'thumbnail'),
+  mediaType: m.mediaType,
+  purpose: m.purpose === 'PAGE_SCAN' ? 'PAGE_SCAN' : 'PHOTO',
+  status: 'uploaded',
+  mediaId: m.id,
+  error: null,
+});
+
+export function CaptureForm({
+  kind,
+  zone,
+  birthday,
+  replyTo = null,
+  onRequestClose,
+  onDone,
+  onDirtyChange,
+  titleId,
+  layout,
+}: CaptureFormProps) {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  // One draft at a time (D-23): a reload brings it back, whichever Write choice opened capture.
+  const [restored] = useState(() => readDraft());
+  const [start] = useState(() => restored ?? freshDraft(kind, zone));
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(restored?.savedAt ?? null);
+
+  const [clientId, setClientId] = useState(start.clientId);
+  const [saved, setSaved] = useState(
+    start.entryId !== null && start.entryVersion !== null
+      ? { id: start.entryId, version: start.entryVersion }
+      : null,
+  );
+  const [entryDate, setEntryDate] = useState(start.entryDate);
+  const [templateId, setTemplateId] = useState(start.templateId);
+  const [prompts, setPrompts] = useState(start.prompts);
+  const [title, setTitle] = useState(start.title);
+  const [content, setContent] = useState<JSONContent | null>(start.content);
+  const [tagIds, setTagIds] = useState(start.tagIds);
+  const [items, setItems] = useState<TrayItem[]>([]);
+  const [removedMediaIds, setRemovedMediaIds] = useState<string[]>([]);
+  // The soundtrack (D-35, task 4.15): a Spotify URI or null, sent on every save, since a PUT without it clears it.
+  const [soundtrack, setSoundtrack] = useState<string | null>(start.soundtrack ?? null);
+  const songRef = useRef<HTMLElement | null>(null);
+  // The Loot Drop this entry answers (task 4.16, D-33), sent on every save, since a PUT without it unlinks it (D-26).
+  // Reply to past you names it; otherwise it comes from the draft or from what the server last said.
+  const [kept, setKept] = useState<{ replyToEntryId: string | null }>({
+    replyToEntryId: replyTo ?? start.replyToEntryId ?? null,
+  });
+
+  const [fieldErrors, setFieldErrors] = useState<FieldMessages>({});
+  const [message, setMessage] = useState<string | null>(null);
+  const [fileMessages, setFileMessages] = useState<string[]>([]);
+  // Task 4.13 (D-34): the day the photos just picked were taken, offered as the memory date until used or dismissed.
+  const [suggestedDay, setSuggestedDay] = useState<IsoDate | null>(null);
+  const [stale, setStale] = useState(false);
+  const [tagsOpen, setTagsOpen] = useState(false);
+  // Sealing (task 4.8): the phone's seal panel, and what went wrong with the last seal, shown inside it.
+  const [sealOpen, setSealOpen] = useState(false);
+  const [sealError, setSealError] = useState<string | null>(null);
+  const addRef = useRef<HTMLInputElement>(null);
+  const titleFieldId = useId();
+  const sealTitleId = useId();
+  // Voice (task 4.7): hidden when this browser can't record one of our formats (F-03), decided once.
+  const [recordable] = useState(canRecord);
+  const voiceTrigger = useRef<HTMLButtonElement | null>(null);
+  // The seal panel opens from state, so Escape hands focus back to the Seal button by hand (task 4.8).
+  const sealTrigger = useRef<HTMLButtonElement>(null);
+  // The photo-date row (task 4.13) goes once it is answered, so focus moves to the date chip it was about.
+  const dateTrigger = useRef<HTMLButtonElement>(null);
+  const refocusDate = () => requestAnimationFrame(() => dateTrigger.current?.focus());
+  const kindOfDraft = restored?.kind ?? kind;
+
+  const editor = useEntryEditor(start.content, setContent);
+
+  // A recording in progress is held by the recorder until Stop, so it is declared before `dirty`, which counts it.
+  // The recorder calls back after Stop; the ref lets that call reach addRecording (declared further down, as it needs
+  // the tray) as it is in the latest render.
+  const recordedRef = useRef<(recording: Recording) => void>(() => undefined);
+  const recorder = useRecorder((done) => recordedRef.current(done));
+  const recording = recorder.state.status === 'recording' || recorder.state.status === 'asking';
+
+  const caption = captionForSave(content, prompts);
+  const hasContent = title.trim() !== '' || caption !== null || items.length > 0;
+  const dirty =
+    recording ||
+    title.trim() !== '' ||
+    !isBlankDoc(content) ||
+    items.some((i) => i.status !== 'uploaded') ||
+    removedMediaIds.length > 0 ||
+    tagIds.length > 0 ||
+    soundtrack !== null ||
+    templateId !== null ||
+    entryDate !== todayIn(zone);
+
+  useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
+
+  // A restored draft whose entry already exists (a save whose photos partly failed, D-23): the photos that did upload
+  // are on the server, not in the draft, so read them back into the tray, where they can be seen, moved and removed.
+  // The typed text and the version stay the draft's, so a change made elsewhere still meets 409 entry-stale.
+  const restoredId = restored?.entryId ?? null;
+  const restoredSoundtrack = restored?.soundtrack;
+  const restoredReply = restored?.replyToEntryId;
+  const restoring = useRef(false);
+  // Save waits for this read: until it answers, `kept` is empty, and a PUT would clear the soundtrack and the reply
+  // (D-26). A sealed entry keeps Save off for good (D-10). Review 2 fix, task 4.6.
+  const [restore, setRestore] = useState<'reading' | 'done' | 'sealed'>(
+    restoredId === null ? 'done' : 'reading',
+  );
+  useEffect(() => {
+    if (restoredId === null || restoring.current) return;
+    restoring.current = true;
+    queryClient
+      .fetchQuery({
+        queryKey: queryKeys.entry(restoredId),
+        queryFn: ({ signal }) => getEntry(restoredId, signal),
+        staleTime: 0,
+      })
+      .then((latest) => {
+        if (latest.isLocked) {
+          // Sealed somewhere else: nothing of it can be shown or changed (D-10).
+          setMessage('This entry is now a sealed Loot Drop, so it can’t be changed.');
+          setRestore('sealed');
+          return;
+        }
+        // Reply to past you, pressed with a saved draft waiting, makes that draft the reply (task 4.16).
+        // A draft from before task 4.16 holds no link, so the entry's own is kept; a newer draft's choice wins, even a
+        // link the user removed (null), as the soundtrack does below (D-23, review 1 of task 4.16).
+        setKept({
+          replyToEntryId:
+            replyTo ?? (restoredReply === undefined ? latest.replyToEntryId : restoredReply),
+        });
+        // A draft from before task 4.15 holds no soundtrack, so the entry's own is kept; a newer draft's choice wins.
+        if (restoredSoundtrack === undefined) setSoundtrack(latest.soundtrack);
+        setItems((list) => [...latest.media.map(uploadedItem), ...list]);
+        setRestore('done');
+      })
+      .catch((error: unknown) => {
+        if (error instanceof ApiProblem && error.kind === 'not-found') {
+          // Deleted elsewhere: the next save makes a new entry instead of replacing a missing one.
+          setSaved(null);
+          setClientId(crypto.randomUUID());
+          setRestore('done');
+          return;
+        }
+        // Any other failure: Save stays on, and the PUT's own answer (409 entry-stale, 404) handles the rest.
+        setMessage(problemMessage(error));
+        setRestore('done');
+      });
+  }, [restoredId, restoredSoundtrack, restoredReply, replyTo, queryClient]);
+  const canSave = hasContent && restore === 'done';
+
+  // The draft follows the form, a moment after the typing stops (D-23).
+  useEffect(() => {
+    if (!dirty && saved === null) return;
+    const id = setTimeout(() => {
+      const savedAt = new Date().toISOString();
+      writeDraft({
+        kind: kindOfDraft,
+        clientId,
+        entryId: saved?.id ?? null,
+        entryVersion: saved?.version ?? null,
+        entryDate,
+        templateId,
+        prompts,
+        title,
+        content,
+        tagIds,
+        soundtrack,
+        replyToEntryId: kept.replyToEntryId,
+        savedAt,
+      });
+      setDraftSavedAt(savedAt);
+    }, 400);
+    return () => clearTimeout(id);
+  }, [
+    dirty,
+    kindOfDraft,
+    clientId,
+    saved,
+    entryDate,
+    templateId,
+    prompts,
+    title,
+    content,
+    tagIds,
+    soundtrack,
+    kept.replyToEntryId,
+  ]);
+
+  // Object URLs hold the picked files in memory until they are revoked.
+  const urls = useRef(new Set<string>());
+  useEffect(() => {
+    const held = urls.current;
+    return () => held.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
+
+  const patchItem = (key: string, patch: Partial<TrayItem>) =>
+    setItems((list) => list.map((i) => (i.key === key ? { ...i, ...patch } : i)));
+
+  const addFiles = async (files: File[]) => {
+    const problems: string[] = [];
+    const room = MAX_FILES - items.length;
+    if (files.length > room)
+      problems.push(
+        `An entry holds 20 photos and voice notes at most, so ${files.length - room} weren’t added.`,
+      );
+    const days = new Set<IsoDate>();
+    for (const picked of files.slice(0, Math.max(room, 0))) {
+      // The type first. A photo's size is checked when it uploads, once it has been shrunk for its purpose (a diary
+      // page more gently, task 4.13), because that is what is sent (D-17); anything else is sent as it is.
+      const image = isImageType(picked.type);
+      const problem = fileProblem(image ? { type: picked.type, size: 0 } : picked);
+      if (problem) {
+        problems.push(`${picked.name}: ${problem}`);
+        continue;
+      }
+      const file = picked;
+      // Its own date, read now: shrinking drops it (D-34). An undated photo has no say in the offer (4.13 review fix).
+      if (image) {
+        const day = usableDay(await readPhotoDay(file, zone), todayIn(zone));
+        if (day) days.add(day);
+      }
+      const previewUrl = URL.createObjectURL(file);
+      urls.current.add(previewUrl);
+      const item: TrayItem = {
+        key: nextKey(),
+        file,
+        previewUrl,
+        mediaType: file.type,
+        // Diary page marks every photo it adds as a page (D-20); New entry adds photos.
+        purpose: kindOfDraft === 'page' && isImageType(file.type) ? 'PAGE_SCAN' : 'PHOTO',
+        status: 'waiting',
+        mediaId: null,
+        error: null,
+      };
+      // A photo picked after a recording still goes before it (D-24; task 4.7 review fix).
+      setItems((list) => picturesFirst([...list, item]));
+    }
+    setFileMessages(problems);
+    // Offered when the photos just picked were all taken on one day that isn't the memory date already (D-34): one
+    // photo, usually. Photos from several days give no single answer, so nothing is offered.
+    const [only] = [...days];
+    setSuggestedDay(days.size === 1 && only && only !== entryDate ? only : null);
+  };
+
+  /** A finished recording joins the tray like a picked file, with its bars and length for its row. */
+  const addRecording = ({ file, seconds, levels }: Recording) => {
+    const problem =
+      items.length >= MAX_FILES
+        ? 'An entry holds 20 photos and voice notes at most.'
+        : fileProblem(file);
+    if (problem) {
+      setFileMessages([`Voice note: ${problem}`]);
+      return;
+    }
+    const previewUrl = URL.createObjectURL(file);
+    urls.current.add(previewUrl);
+    setItems((list) => [
+      ...list,
+      {
+        key: nextKey(),
+        file,
+        previewUrl,
+        mediaType: file.type,
+        purpose: 'PHOTO',
+        status: 'waiting',
+        mediaId: null,
+        error: null,
+        levels,
+        seconds,
+      },
+    ]);
+    setFileMessages([]);
+  };
+
+  useEffect(() => {
+    recordedRef.current = addRecording;
+  });
+
+  /** Voice: start recording, remembering which button asked, so focus can go back to it afterwards. */
+  const startVoice = (event: React.MouseEvent<HTMLButtonElement>) => {
+    voiceTrigger.current = event.currentTarget;
+    recorder.start();
+  };
+  const refocusVoice = () => requestAnimationFrame(() => voiceTrigger.current?.focus());
+  const voiceBusy = recording || items.length >= MAX_FILES;
+
+  const removeItem = (key: string) => {
+    const item = items.find((i) => i.key === key);
+    if (!item) return;
+    if (item.mediaId) setRemovedMediaIds((ids) => [...ids, item.mediaId as string]);
+    setItems((list) => list.filter((i) => i.key !== key));
+  };
+
+  const togglePage = (key: string) =>
+    setItems((list) =>
+      list.map((i) =>
+        i.key === key ? { ...i, purpose: i.purpose === 'PAGE_SCAN' ? 'PHOTO' : 'PAGE_SCAN' } : i,
+      ),
+    );
+
+  // Save, and Seal it (task 4.8): a seal is the last step of the same save (D-10, frontend.md: create → upload →
+  // reorder → seal), and only when every file is on the server, so nothing is sealed half-finished. A seal that fails
+  // leaves the entry saved and unsealed, and says so (F-06).
+  const save = useMutation({
+    mutationFn: async (sealDay: IsoDate | null): Promise<SaveOutcome> => {
+      const result = await saveEntry(
+        {
+          clientId,
+          saved,
+          fields: {
+            entryDate,
+            templateId,
+            title: title.trim() === '' ? null : title.trim(),
+            contentJson: caption,
+            tagIds,
+            soundtrack,
+            replyToEntryId: kept.replyToEntryId,
+          },
+          items,
+          removedMediaIds,
+        },
+        patchItem,
+      );
+      if (!sealDay || !result.entry || result.failed > 0) {
+        return { ...result, savedEntry: result.entry, sealed: null, sealError: null };
+      }
+      try {
+        const sealedEntry = await sealEntry(result.entry.id, unlockInstant(sealDay, zone));
+        return {
+          ...result,
+          savedEntry: result.entry,
+          entry: sealedEntry,
+          sealed: sealDay,
+          sealError: null,
+        };
+      } catch (error) {
+        return { ...result, savedEntry: result.entry, sealed: null, sealError: error };
+      }
+    },
+    onMutate: () => {
+      setFieldErrors({});
+      setMessage(null);
+      setSealError(null);
+      setStale(false);
+    },
+    onSuccess: async ({ entry, savedEntry, failed, sealed, sealError }, sealDay) => {
+      setRemovedMediaIds([]);
+      // A seal goes through afterSeal, as useSeal's does: it overwrites any whole copy of this entry that capture
+      // read back when it restored the draft, so the Loot Drop page never shows a sealed entry's content (D-10).
+      // A save also refreshes the weeks: Go there opens the entry's week, which must show the new entry (task 4.10).
+      await (sealed && entry
+        ? afterSeal(queryClient, entry)
+        : Promise.all([
+            queryClient.invalidateQueries({ queryKey: queryKeys.feed() }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.onThisDay() }),
+            queryClient.invalidateQueries({ queryKey: queryKeys.weeks() }),
+            // Task 4.11: the Timeline lists the entry, with its title and tags.
+            queryClient.invalidateQueries({ queryKey: queryKeys.timelines() }),
+          ]));
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tags() });
+      // Task 4.16 (D-33): the Loot Drop lists its replies, so its page reads them again.
+      if (kept.replyToEntryId) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.entry(kept.replyToEntryId) });
+      }
+      if (sealed && entry) {
+        clearDraft();
+        setSealOpen(false);
+        announceSaved(entry, sealed);
+        onDone();
+        return;
+      }
+      if (sealError && savedEntry) {
+        // Saved, not sealed: the next Save or Seal it replaces this entry instead of making another (D-12).
+        setSaved({ id: savedEntry.id, version: savedEntry.version });
+        setKept({ replyToEntryId: savedEntry.replyToEntryId });
+        setSealError(`Saved, but ${lowerFirst(sealProblem(sealError))}`);
+        return;
+      }
+      if (failed === 0 && entry) {
+        clearDraft();
+        announceSaved(entry);
+        onDone();
+        return;
+      }
+      if (entry === null) {
+        // Nothing but photos, and none uploaded: the empty entry was erased (D-23), so the next try starts anew.
+        setSaved(null);
+        setClientId(crypto.randomUUID());
+        setMessage(
+          'Nothing was saved, because the photos didn’t upload. Try again, or remove them.',
+        );
+        return;
+      }
+      setSaved({ id: entry.id, version: entry.version });
+      setKept({ replyToEntryId: entry.replyToEntryId });
+      setSealOpen(false);
+      setMessage(
+        (failed === 1
+          ? 'Saved, but 1 photo didn’t upload. Open it to try again or remove it.'
+          : `Saved, but ${failed} photos didn’t upload. Open them to try again or remove them.`) +
+          // Seal last (D-10): a Loot Drop is never sealed with a photo missing.
+          (sealDay ? ' It isn’t sealed yet: seal it once every photo is saved.' : ''),
+      );
+    },
+    onError: (error) => {
+      // The save itself failed, so the message belongs to the form, which the seal panel would cover.
+      setSealOpen(false);
+      if (error instanceof ApiProblem && error.kind === 'entry-stale') {
+        // D-23: keep every word typed, and offer the latest version instead of overwriting it.
+        setStale(true);
+        return;
+      }
+      if (error instanceof ApiProblem && error.kind === 'validation-failed') {
+        setFieldErrors(fieldMessages(error));
+      }
+      if (error instanceof ApiProblem && error.kind === 'payload-too-large') {
+        setFieldErrors({ contentJson: 'This entry is too long to save. Shorten the text.' });
+      }
+      setMessage(problemMessage(error));
+    },
+  });
+
+  /**
+   * After a save: a backdated entry lands outside the week on screen, so a toast names its week (G-04). A Loot Drop
+   * always says when it opens (task 4.8), with the same Go there when it is backdated.
+   */
+  const announceSaved = (entry: Entry, sealed: IsoDate | null = null) => {
+    const thisWeek = weekOf(todayIn(zone));
+    const backdated = !isWithin(entry.entryDate, thisWeek.start, thisWeek.end);
+    const week = weekOf(entry.entryDate);
+    const goThere = backdated
+      ? {
+          action: {
+            label: 'Go there',
+            onClick: () => void navigate(`/weeks/${entry.weeklyLogId}`),
+          },
+        }
+      : {};
+    if (sealed) {
+      toast(`Sealed as a Loot Drop. Opens ${chipDay(sealed, zone)}.`, goThere);
+      return;
+    }
+    if (!backdated) return;
+    toast(`Saved in the week of ${formatWeekRange(week.start, week.end)}`, goThere);
+  };
+
+  const loadLatest = useMutation({
+    mutationFn: () =>
+      queryClient.fetchQuery({
+        queryKey: queryKeys.entry(saved?.id ?? ''),
+        queryFn: ({ signal }) => getEntry(saved?.id ?? '', signal),
+        staleTime: 0,
+      }),
+    onSuccess: (latest) => {
+      if (latest.isLocked) {
+        // Sealed somewhere else: nothing of it can be shown or changed (D-10).
+        setStale(false);
+        setMessage('This entry is now a sealed Loot Drop, so it can’t be changed.');
+        return;
+      }
+      setSaved({ id: latest.id, version: latest.version });
+      setKept({ replyToEntryId: latest.replyToEntryId });
+      setSoundtrack(latest.soundtrack);
+      setEntryDate(latest.entryDate);
+      setTemplateId(latest.templateId);
+      setTitle(latest.title ?? '');
+      setTagIds(latest.tags.map((t) => t.id));
+      const doc = (latest.contentJson as JSONContent | null) ?? { type: 'doc', content: [] };
+      editor.commands.setContent(doc);
+      setContent(editor.getJSON());
+      setRemovedMediaIds([]);
+      setItems((list) => [
+        ...latest.media.map(uploadedItem),
+        // Files that never reached the server stay, so they can still be sent.
+        ...list.filter((i) => i.status !== 'uploaded'),
+      ]);
+      setStale(false);
+    },
+    onError: (error) => setMessage(problemMessage(error)),
+  });
+
+  const chooseTemplate = (template: { id: string; subheadings: string[] }) => {
+    editor.commands.setContent(insertTemplateHeadings(editor.getJSON(), template.subheadings));
+    setContent(editor.getJSON());
+    setTemplateId(template.id);
+    // Prompts from an earlier choice stay in the list, so they are tidied away on save too.
+    setPrompts((list) => [...list, ...template.subheadings.filter((p) => !list.includes(p))]);
+  };
+
+  // The first letter (task 4.16, D-33): written today, sealed for a month, so its only seal is the Seal it in the
+  // top bar, which asks first like every seal (D-10). The quick seal controls are left out.
+  const letter = kindOfDraft === 'letter';
+  const letterDay = addMonthsClamped(todayIn(zone), 1);
+  const [confirmingLetter, setConfirmingLetter] = useState(false);
+  const submitButton = useRef<HTMLButtonElement>(null);
+
+  const heading = letter
+    ? 'Letter to future you'
+    : kept.replyToEntryId
+      ? 'Reply to past you'
+      : kindOfDraft === 'page'
+        ? 'Diary page'
+        : 'New entry';
+  const failedCount = items.filter((i) => i.status === 'failed').length;
+
+  const writing = (
+    <div className="flex flex-col gap-4">
+      {letter && (
+        <p className="text-small text-ink-2">
+          It opens on {formatLongDay(letterDay)} at 9:00 am. Until then nobody can read it, you
+          included.
+        </p>
+      )}
+      {kept.replyToEntryId && (
+        <ReplyLink
+          entryId={kept.replyToEntryId}
+          error={fieldErrors.replyToEntryId}
+          onRemove={() => {
+            setKept({ replyToEntryId: null });
+            setFieldErrors((errors) => ({ ...errors, replyToEntryId: undefined }));
+          }}
+        />
+      )}
+      <div className="flex flex-wrap gap-2">
+        <DateChip
+          day={entryDate}
+          zone={zone}
+          onChange={setEntryDate}
+          error={fieldErrors.entryDate}
+          triggerRef={dateTrigger}
+        />
+        <TemplateChip chosen={templateId} onChoose={chooseTemplate} />
+      </div>
+      {suggestedDay && suggestedDay !== entryDate && (
+        <DateSuggestion
+          day={suggestedDay}
+          zone={zone}
+          onUse={() => {
+            setEntryDate(suggestedDay);
+            setSuggestedDay(null);
+            refocusDate();
+          }}
+          onDismiss={() => {
+            setSuggestedDay(null);
+            refocusDate();
+          }}
+        />
+      )}
+      <div className="flex flex-col gap-1">
+        <label htmlFor={titleFieldId} className="sr-only">
+          Title (optional)
+        </label>
+        <input
+          id={titleFieldId}
+          value={title}
+          maxLength={150}
+          placeholder="Title"
+          onChange={(event) => setTitle(event.target.value)}
+          aria-invalid={fieldErrors.title ? true : undefined}
+          className="min-h-11 bg-page font-display text-title text-ink placeholder:text-ink-2"
+        />
+        {fieldErrors.title && <p className="text-small text-danger">{fieldErrors.title}</p>}
+      </div>
+      <EntryEditor
+        editor={editor}
+        error={fieldErrors.contentJson}
+        hint={letter ? 'Dear future me…' : undefined}
+      />
+    </div>
+  );
+
+  // Seal it saves the entry, then seals it (D-10: seal last). Nothing to save means nothing to seal (D-23), and a
+  // save under way (uploads included) keeps it unavailable (F-06).
+  const sealForm = {
+    zone,
+    birthday,
+    earliest: addDays(todayIn(zone), 1),
+    latest: latestSealDay(zone),
+    busy: save.isPending,
+    disabled: !canSave,
+    error: sealError,
+    onSeal: (day: IsoDate) => save.mutate(day),
+  };
+
+  const extras = (
+    <div className="flex flex-col gap-4">
+      <MediaTray
+        items={items}
+        addRef={addRef}
+        onAddFiles={(files) => void addFiles(files)}
+        onReorder={setItems}
+        onRemove={removeItem}
+        onTogglePage={togglePage}
+        onRetry={() => save.mutate(null)}
+      />
+      {fileMessages.length > 0 && (
+        <ul role="alert" className="flex flex-col gap-1 text-small text-danger">
+          {fileMessages.map((m) => (
+            <li key={m}>{m}</li>
+          ))}
+        </ul>
+      )}
+      <VoiceRecorder
+        recorder={{
+          ...recorder,
+          stop: () => {
+            recorder.stop();
+            refocusVoice();
+          },
+          discard: () => {
+            recorder.discard();
+            refocusVoice();
+          },
+        }}
+        onClose={() => {
+          recorder.discard();
+          refocusVoice();
+        }}
+      />
+      {layout === 'dialog' && recordable && !recording && (
+        <Button className="self-start" disabled={voiceBusy} onClick={startVoice}>
+          <Mic size={20} aria-hidden />
+          Record a voice note
+        </Button>
+      )}
+      <TagPicker
+        selected={tagIds}
+        onChange={setTagIds}
+        open={tagsOpen}
+        onOpenChange={setTagsOpen}
+        error={fieldErrors.tagIds}
+      />
+      {/* Task 4.15 (D-35): paste a Spotify link or search for one. The phone's Song button brings focus here. */}
+      <SoundtrackField value={soundtrack} onChange={setSoundtrack} focusRef={songRef} />
+      {/* Laptop: the Seal as Loot Drop box on the first screen, in the right column (DESIGN.md §4 Write, D-41). Save
+          stays the one primary button, so Seal it is secondary here. */}
+      {layout === 'dialog' && !letter && (
+        <section
+          aria-labelledby={sealTitleId}
+          className="flex flex-col gap-4 rounded-lg bg-surface p-4"
+        >
+          <h3 id={sealTitleId} className="font-display text-title">
+            Seal as Loot Drop
+          </h3>
+          <p className="text-small text-ink-2">
+            Nobody, including you, can open it until the day you pick. You can make the wait longer
+            later, never shorter.
+          </p>
+          <SealForm {...sealForm} primary={false} />
+        </section>
+      )}
+    </div>
+  );
+
+  return (
+    <form
+      className="flex min-h-0 flex-1 flex-col"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!canSave || save.isPending) return;
+        if (letter) setConfirmingLetter(true);
+        else save.mutate(null);
+      }}
+    >
+      {/* The 56 px bar: Cancel, the heading over "Draft saved 7:41 pm", and the one primary button, Save. */}
+      <div className="grid min-h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-line px-4">
+        <Button
+          variant="quiet"
+          className="justify-self-start"
+          onClick={() => onRequestClose(dirty)}
+        >
+          Cancel
+        </Button>
+        <div className="flex flex-col items-center">
+          <h2 id={titleId} className="text-body font-strong">
+            {heading}
+          </h2>
+          <p className="text-meta text-ink-2" aria-live="polite">
+            {save.isPending
+              ? 'Saving…'
+              : draftSavedAt && dirty
+                ? `Draft saved ${formatClock(draftSavedAt, zone)}`
+                : ''}
+          </p>
+        </div>
+        <Button
+          ref={submitButton}
+          type="submit"
+          variant="primary"
+          className="justify-self-end"
+          disabled={!canSave || save.isPending}
+          aria-disabled={!canSave || save.isPending}
+        >
+          {failedCount > 0 && saved ? 'Try again' : letter ? 'Seal it' : 'Save'}
+        </Button>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 lg:px-8 lg:py-6">
+        {stale && (
+          <div role="alert" className="flex flex-col items-start gap-2">
+            <p className="text-body">
+              This entry changed somewhere else. Everything you typed is still here.
+            </p>
+            <Button onClick={() => loadLatest.mutate()} disabled={loadLatest.isPending}>
+              Load the latest version
+            </Button>
+          </div>
+        )}
+        {letter && sealError && (
+          <p role="alert" className="text-body">
+            {sealError}
+          </p>
+        )}
+        {message && !stale && (
+          <p role="alert" className="text-body">
+            {message}
+          </p>
+        )}
+        {layout === 'dialog' ? (
+          <div className="grid grid-cols-[1fr_20rem] gap-8">
+            {writing}
+            {extras}
+          </div>
+        ) : (
+          <>
+            {writing}
+            {extras}
+          </>
+        )}
+      </div>
+
+      {/* The seal panel opens from the bottom over the sheet (task 4.8). */}
+      {layout === 'sheet' && !letter && (
+        <SealPanel
+          open={sealOpen}
+          onOpenChange={setSealOpen}
+          title="Seal as Loot Drop"
+          returnFocus={sealTrigger}
+          primary
+          {...sealForm}
+        />
+      )}
+
+      {/* The add bar (DESIGN.md §4 Write): fixed at the foot of the phone sheet. Photo, Voice, Tag, Song and Seal. Voice
+          (4.7) shows when this browser can record; Song (4.15) brings the soundtrack field into view. */}
+      {layout === 'sheet' && (
+        <div className="grid h-16 shrink-0 grid-cols-5 border-t border-line">
+          <button
+            type="button"
+            onClick={() => addRef.current?.click()}
+            className="flex flex-col items-center justify-center gap-1 text-meta text-ink-2 focus-visible:-outline-offset-2"
+          >
+            <Image size={20} aria-hidden className="text-ink" />
+            Photo
+          </button>
+          {recordable && (
+            <button
+              type="button"
+              onClick={startVoice}
+              disabled={voiceBusy}
+              className="flex flex-col items-center justify-center gap-1 text-meta text-ink-2 focus-visible:-outline-offset-2 disabled:opacity-60"
+            >
+              <Mic size={20} aria-hidden className="text-ink" />
+              Voice
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setTagsOpen(true)}
+            className="flex flex-col items-center justify-center gap-1 text-meta text-ink-2 focus-visible:-outline-offset-2"
+          >
+            <Tag size={20} aria-hidden className="text-ink" />
+            Tag
+          </button>
+          {/* Song (task 4.15): the soundtrack field is in the sheet, under the tags; this brings it into view with
+              focus, the text field or, when a song is chosen, its Remove button. */}
+          <button
+            type="button"
+            onClick={() => {
+              songRef.current?.scrollIntoView({ block: 'center' });
+              songRef.current?.focus();
+            }}
+            className="col-start-4 flex flex-col items-center justify-center gap-1 text-meta text-ink-2 focus-visible:-outline-offset-2"
+          >
+            <Music size={20} aria-hidden className="text-ink" />
+            Song
+          </button>
+          {/* Seal, in the accent with the star mark, so sealing is on the first screen (DESIGN.md §4 Write). It sits
+              in the fifth column whatever is missing before it. The first letter's seal is Seal it, in the top bar. */}
+          {!letter && (
+            <button
+              type="button"
+              ref={sealTrigger}
+              onClick={() => setSealOpen(true)}
+              disabled={!canSave || save.isPending}
+              className="col-start-5 flex flex-col items-center justify-center gap-1 text-meta text-accent focus-visible:-outline-offset-2 disabled:text-ink-2"
+            >
+              <StarMark size={20} />
+              Seal
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* The first letter's question (task 4.16): the same one every seal asks, a month from today (D-33, D-10). */}
+      {letter && (
+        <SealConfirm
+          open={confirmingLetter}
+          onOpenChange={setConfirmingLetter}
+          zone={zone}
+          day={letterDay}
+          action="Seal it"
+          onConfirm={() => save.mutate(letterDay)}
+          returnFocus={submitButton}
+        />
+      )}
+    </form>
+  );
+}
+
+/**
+ * What a reply answers, in capture (task 4.16, D-33): "In reply to Letter to future me", with Remove to make it an
+ * ordinary entry. The Loot Drop is read with useEntry, so it shares the page's cache; a sealed one (sealed again
+ * since) shows no title, as the server sends none (D-10).
+ */
+function ReplyLink({
+  entryId,
+  error,
+  onRemove,
+}: {
+  entryId: string;
+  error?: string;
+  onRemove: () => void;
+}) {
+  const target = useEntry(entryId);
+  const name = target.data ? (entryDisplayTitle(target.data) ?? 'a Loot Drop') : 'a Loot Drop';
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between gap-4">
+        <p className="flex min-w-0 items-center gap-2 text-small text-ink-2">
+          <CornerUpLeft size={16} aria-hidden className="shrink-0" />
+          <span className="truncate">
+            In reply to <span className="font-strong text-ink">{name}</span>
+          </span>
+        </p>
+        <Button variant="quiet" className="-mr-3 min-w-11 shrink-0" onClick={onRemove}>
+          <X size={16} aria-hidden />
+          <span className="sr-only">Remove the link to {name}</span>
+        </Button>
+      </div>
+      {error && <p className="text-small text-danger">{error}</p>}
+    </div>
+  );
+}
+
+/** The API's field names in a 400, folded onto capture's four fields ("tagIds[2]" is the tags). */
+function fieldMessages(problem: ApiProblem): FieldMessages {
+  const out: FieldMessages = {};
+  for (const [field, text] of Object.entries(problem.fieldErrors)) {
+    const name = field.replace(/\[\d+\]$/, '');
+    if (name === 'title') out.title = sentence('title', text);
+    else if (name === 'entryDate') out.entryDate = sentence('entryDate', text);
+    else if (name === 'contentJson') out.contentJson = 'Something in the text can’t be saved.';
+    else if (name === 'tagIds') out.tagIds = 'An entry holds 20 tags at most.';
+    // Task 4.16 (D-33): the Loot Drop was sealed again since Reply was pressed. The server's words never show.
+    else if (name === 'replyToEntryId')
+      out.replyToEntryId =
+        'That Loot Drop is sealed again, so this can’t answer it. Remove the link to save it.';
+  }
+  return out;
+}
+
+// The server's messages are written for developers (problem.ts); these are the user's words for the ones capture can
+// meet. The server never repeats what was sent, so nothing typed comes back through here.
+function sentence(field: 'title' | 'entryDate', serverText: string): string {
+  if (field === 'title') return 'A title is at most 150 characters.';
+  if (serverText.includes('after today')) return 'The memory date can’t be after today.';
+  if (serverText.includes('1900')) return 'The memory date can’t be before 1900.';
+  return 'Check the memory date.';
+}

@@ -78,6 +78,51 @@ public abstract class MediaApiTest extends EntryOpenedApiTest {
                 .exchange();
     }
 
+    /** One part of a multipart upload: its bytes and the type the client declares for them. */
+    protected record Part(byte[] bytes, String contentType) {}
+
+    /**
+     * An upload of a photo with its smaller copies (D-43, task 4.18), as the browser sends it: {@code file}, then a
+     * {@code thumbnail} and a {@code screen} part for each copy that isn't {@code null}, then the fields.
+     */
+    protected RestTestClient.ResponseSpec uploadWithCopies(
+            User user, Object entryId, Part original, Part thumbnail, Part screen, Map<String, String> fields) {
+        MultipartBodyBuilder form = new MultipartBodyBuilder();
+        form.part("file", file(original.bytes())).contentType(MediaType.parseMediaType(original.contentType()));
+        if (thumbnail != null) {
+            form.part("thumbnail", file(thumbnail.bytes()))
+                    .contentType(MediaType.parseMediaType(thumbnail.contentType()));
+        }
+        if (screen != null) {
+            form.part("screen", file(screen.bytes())).contentType(MediaType.parseMediaType(screen.contentType()));
+        }
+        fields.forEach(form::part);
+        return client.post()
+                .uri(ENTRIES + "/" + entryId + "/media")
+                .header(HEADER, user.getId().toString())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(form.build())
+                .exchange();
+    }
+
+    /** Uploads a JPEG with both copies, which must be accepted ({@code 201}), and returns the item's JSON. */
+    @SuppressWarnings("unchecked")
+    protected Map<String, Object> uploadPhotoWithCopies(User user, Object entryId) {
+        int seed = new Random().nextInt();
+        return uploadWithCopies(
+                        user,
+                        entryId,
+                        new Part(bytes(4096, seed), "image/jpeg"),
+                        new Part(bytes(512, seed + 1L), "image/jpeg"),
+                        new Part(bytes(1024, seed + 2L), "image/jpeg"),
+                        Map.of())
+                .expectStatus()
+                .isCreated()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+    }
+
     /** A form with no {@code file} part at all, only the given fields. */
     protected RestTestClient.ResponseSpec uploadWithoutFile(User user, Object entryId, Map<String, String> fields) {
         MultipartBodyBuilder form = new MultipartBodyBuilder();
@@ -185,6 +230,23 @@ public abstract class MediaApiTest extends EntryOpenedApiTest {
 
     protected List<String> objectKeysOf(Object entryId) {
         return jdbc.sql("SELECT object_key FROM media WHERE entry_id = :id ORDER BY display_order")
+                .param("id", UUID.fromString(entryId.toString()))
+                .query(String.class)
+                .list();
+    }
+
+    /**
+     * Every file the entry's media rows point at, originals and copies (D-43), read with SQL and not through the
+     * repository query that erasing uses, so a mistake in that query can't hide itself here.
+     */
+    protected List<String> allStoredKeysOf(Object entryId) {
+        return jdbc.sql("""
+                        SELECT k FROM (
+                            SELECT object_key AS k FROM media WHERE entry_id = :id
+                            UNION ALL SELECT thumbnail_key FROM media WHERE entry_id = :id
+                            UNION ALL SELECT screen_key FROM media WHERE entry_id = :id
+                        ) keys WHERE k IS NOT NULL
+                        """)
                 .param("id", UUID.fromString(entryId.toString()))
                 .query(String.class)
                 .list();

@@ -97,7 +97,8 @@ class RecentlyDeletedVisibilityTest extends RecentlyDeletedApiTest {
         response.expectStatus().isOk();
         List<Integer> counts =
                 JsonPath.read(bodyText(response), "$.weeklyLogs[?(@.id == '" + weekId + "')].entryCount");
-        return counts.getFirst();
+        // A week with no entry to show is left out of the Era (D-22, task 4.9): that reads as a count of 0.
+        return counts.isEmpty() ? 0 : counts.getFirst();
     }
 
     private void deleteTheThree() {

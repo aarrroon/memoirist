@@ -45,7 +45,7 @@ Don't put accent text on `--raised` in light mode (4.26:1), and don't put a `--c
 
 ## 2. Type
 
-Two typefaces, served by the app as `woff2` (D-40): **Instrument Sans** 400 and 600 for text and the interface, entry text included, and **Newsreader** 500 for titles only. That is three files, Latin subset, preloading Instrument Sans 400. Both are SIL Open Font License fonts from Google Fonts. The task that adds the files confirms with the user where they come from (a font package would be a new dependency).
+Two typefaces, served by the app as `woff2` (D-40): **Instrument Sans** 400 and 600 for text and the interface, entry text included, and **Newsreader** 500 for titles only. Both are SIL Open Font License fonts. Task 4.1 added them as Latin woff2 files from Google Fonts, the source the user chose on 2026-11-24, in `frontend/public/fonts/` with each font's licence. That is two files, 89 KB together: one variable Instrument Sans holds 400 and 600, and Newsreader 500 keeps its optical-size axis, so titles get the display cuts. Instrument Sans is preloaded.
 
 | Token | Size | Line height | Face and weight | Used for |
 |---|---|---|---|---|
@@ -121,7 +121,7 @@ Bold is 600. No italics in the interface; italic in an entry's own text is Instr
 - **Laptop**: a dialog up to 960 px wide over the scrim, two columns: the writing on the left; photos, voice note, tags, soundtrack and a *Seal as Loot Drop* box with the quick dates on the right (320 px).
 
 ### Title band (Era page)
-The Era's cover photo (3:2, edge to edge on a phone), then a band in `--band`: the Era's name in `display`, the dates and length (`small`, `--on-band-2`), its description (`body`), its soundtrack, and a stats row (weeks, entries, photos, voice notes). On a laptop the cover and the band sit side by side, with `lg` corners.
+The Era's cover photo (3:2, edge to edge on a phone), then a band in `--band`: the Era's name in `display`, the dates and length (`small`, `--on-band-2`), its description (`body`), its soundtrack, and a stats row (weeks, entries, photos, voice notes). On a laptop the cover sits above the band too, both with `lg` corners, not side by side: beside the band the cover is drawn about 320 px wide, while the API serves the original photo, so it would be over twice its drawn size (D-36, Q29; chosen 2026-11-25).
 
 ### Constellation
 Every week of an Era drawn as a dot, sized by its entries (2 to 6 px, more for busier weeks), in `--ink-2`; the listed weeks are brighter (`--ink`) and joined by 1 px `--control` lines; an Era inside it (a trip) makes a small figure of its own. It is a picture only, with a text label for screen readers. The contents list below it is how a week is found.
@@ -184,5 +184,4 @@ PRD §3 words only: Journal, Timeline, Eras, You, Write, entries, weeks, *On thi
 
 ## 10. Not settled here
 
-- **Smaller copies of photos** (Q29): until it is decided, lists load originals, which is slow on a phone.
 - **A palette picker:** Dusk blue and Sunset rose (FEEDBACK.md) stay candidates for a later phase; nothing promises one.

@@ -24,7 +24,7 @@ const LIMITS = {
   sizes: 7, minSize: 12, families: 2, weights: 3, leadings: 3,
   radii: 2, // besides "full" (pills and circles)
   hues: 1, target: 44, nest: 2, tabGap: 8,
-  oversize: 2, cls: 0.1, lcpWarn: 2500, lcpFail: 4000, fontKb: 150,
+  oversize: 2, imageKb: 50, cls: 0.1, lcpWarn: 2500, lcpFail: 4000, fontKb: 150,
 };
 const PHONE = { name: 'phone', width: 375, height: 812, dpr: 2, mobile: true };
 const LAPTOP = { name: 'laptop', width: 1440, height: 900, dpr: 1, mobile: false };
@@ -252,7 +252,7 @@ async function probe() {
   // Every image the browser paints counts here, even one hidden from screen readers or under a dialog: it still downloads.
   const images = [...document.images].filter(rendered).map((img) => {
     const r = img.getBoundingClientRect();
-    return { file: (img.currentSrc || img.src).split('/').pop().split('?')[0].slice(0, 28), top: Math.round(r.top + scrollY), w: Math.round(r.width), h: Math.round(r.height), oversize: round(img.naturalWidth / Math.max(1, r.width * dpr), 1), lazy: img.loading === 'lazy', priority: img.fetchPriority === 'high', behind: !!img.closest('[inert]') };
+    return { src: img.currentSrc || img.src, file: (img.currentSrc || img.src).split('/').pop().split('?')[0].slice(0, 28), top: Math.round(r.top + scrollY), w: Math.round(r.width), h: Math.round(r.height), oversize: round(img.naturalWidth / Math.max(1, r.width * dpr), 1), lazy: img.loading === 'lazy', priority: img.fetchPriority === 'high', behind: !!img.closest('[inert]') };
   });
   const big = images.find((i) => !i.behind && i.w >= Math.min(vw, 760) * 0.5 && i.h >= 120);
   const rowsAbove = big ? new Set(visible.filter((el) => ownText(el) && el.getBoundingClientRect().bottom + scrollY <= big.top).map((el) => Math.round(el.getBoundingClientRect().top / 6))).size : null;
@@ -309,9 +309,14 @@ function judge(r, vp, net) {
   add(r.scrollWidth <= vp.width, 'overflow', `page is ${r.scrollWidth}px wide on a ${vp.width}px screen`);
   add(r.clipped.length === 0, 'clipped', r.clipped.length ? `${r.clipped.length} cut off: ${r.clipped.slice(0, 3).join(', ')}` : 'no text cut off', true);
   add(r.drawnText === 0 && r.onArt.length === 0, 'text on art', `${r.drawnText} text runs inside drawings, ${r.onArt.length} laid over a drawing or photo${r.onArt.length ? ` (check by eye: ${r.onArt.slice(0, 2).join('; ')})` : ''}`, true);
-  const eager = r.images.filter((i) => !i.lazy && i.top > r.vh * 1.5), heavy = r.images.filter((i) => i.oversize > LIMITS.oversize);
+  // An image is heavy when it is over 2x its drawn width AND over 50 KB (D-43): the rule exists to save data, and a
+  // small copy costs almost nothing even on a 32 px tile. An image with no byte count (a blob:, or not seen) is weighed
+  // by its width alone.
+  const bytesOf = (src) => { const n = net.find((x) => x.url === src); return n && n.bytes > 0 ? n.bytes : null; };
+  const eager = r.images.filter((i) => !i.lazy && i.top > r.vh * 1.5);
+  const heavy = r.images.filter((i) => { const b = bytesOf(i.src); return i.oversize > LIMITS.oversize && (b == null || b > LIMITS.imageKb * 1024); });
   const mockup = flag('--mockup'); // a mockup can't shrink its sample photos or host its own fonts
-  if (r.images.length) add(eager.length === 0 && (mockup || heavy.length === 0), 'images', `${r.images.length} images: ${eager.length} below the first screen load at once, ${heavy.length} are over ${LIMITS.oversize}x the width they are shown at${heavy.length ? ` (worst ${Math.max(...heavy.map((i) => i.oversize))}x, ${heavy.sort((a, b) => b.oversize - a.oversize)[0].file})` : ''}`);
+  if (r.images.length) add(eager.length === 0 && (mockup || heavy.length === 0), 'images', `${r.images.length} images: ${eager.length} below the first screen load at once, ${heavy.length} are over ${LIMITS.oversize}x the width they are shown at and over ${LIMITS.imageKb} KB${heavy.length ? ` (worst ${Math.max(...heavy.map((i) => i.oversize))}x, ${heavy.sort((a, b) => b.oversize - a.oversize)[0].file})` : ''}`);
   add(r.timing.cls <= LIMITS.cls, 'shift', `layout shift ${r.timing.cls} (max ${LIMITS.cls})`);
   const others = [...new Set(net.map((n) => { try { return new URL(n.url).host; } catch { return ''; } }).filter((h) => h && !/^(127\.0\.0\.1|localhost)(:|$)/.test(h) && h !== new URL(r.url).host))];
   add(others.length === 0, 'other hosts', others.length ? `the page calls ${others.join(', ')}` : 'no requests to other hosts', mockup);
@@ -363,7 +368,8 @@ await send('Page.enable'); await send('Runtime.enable'); await send('Network.ena
 async function load(url, vp, slow) {
   await send('Emulation.setDeviceMetricsOverride', { width: vp.width, height: vp.height, deviceScaleFactor: vp.dpr, mobile: vp.mobile });
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: flag('--dark') ? 'dark' : 'light' }] });
-  await send('Network.setCacheDisabled', { cacheDisabled: slow });
+  // Always an empty cache, so every image's byte count is real (a cached image reports 0 bytes, D-43's budget).
+  await send('Network.setCacheDisabled', { cacheDisabled: true });
   // Lighthouse's phone profile: a slow 4G line (1.6 Mbps down, 150 ms delay) and a mid-range phone's processor.
   await send('Network.emulateNetworkConditions', slow ? { offline: false, latency: 150, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 } : { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   await send('Emulation.setCPUThrottlingRate', { rate: slow ? 4 : 1 });

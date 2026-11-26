@@ -124,7 +124,7 @@ class EraWeeksTest {
                             .containsEntry("startDate", "2026-10-26")
                             .containsEntry("endDate", "2026-11-01")
                             .containsEntry("isClosed", true)
-                            .containsEntry("entryCount", 1);
+                            .containsEntry("entryCount", 2);
                 });
     }
 
@@ -184,13 +184,54 @@ class EraWeeksTest {
     }
 
     @Test
-    void aWeekWithNoEntriesInsideTheEraStillAppearsWithZero() {
+    void aWeekWithNoEntriesInsideTheEraIsLeftOut() {
         User alice = aUser();
         WeeklyLog week = weeks.save(Fixtures.week(alice.getId(), W4));
         entries.save(new Entry(UUID.randomUUID(), alice.getId(), week.getId(), W4)); // Monday: outside the Era
         String eraId = createEra(alice, "Weekend", "2026-10-31", "2026-11-01");
 
-        assertThat(counts(alice, eraId)).containsExactly(Map.entry(id(week), 0));
+        assertThat(counts(alice, eraId)).isEmpty();
+    }
+
+    @Test
+    void onlyWeeksWithAnEntryToShowAreListed() {
+        // D-22 (task 4.9): one week for each way an entry can be hidden from the Era, and one with an entry to show.
+        User alice = aUser();
+        User bob = aUser();
+        Instant now = Instant.now();
+        WeeklyLog shown = weeks.save(Fixtures.week(alice.getId(), W5));
+        entryOn(alice, shown, LocalDate.of(2026, 11, 4));
+        WeeklyLog sealedOnly = weeks.save(Fixtures.week(alice.getId(), W4));
+        Entry sealed = entryOn(alice, sealedOnly, LocalDate.of(2026, 10, 28));
+        sealed.setUnlockDate(now.plus(30, ChronoUnit.DAYS));
+        entries.save(sealed);
+        WeeklyLog deletedOnly = weeks.save(Fixtures.week(alice.getId(), W3));
+        Entry deleted = entryOn(alice, deletedOnly, LocalDate.of(2026, 10, 21));
+        jdbc.sql("UPDATE entries SET deleted_at = now() WHERE id = :id")
+                .param("id", deleted.getId())
+                .update();
+        WeeklyLog outsideOnly = weeks.save(Fixtures.week(alice.getId(), W2));
+        entryOn(alice, outsideOnly, LocalDate.of(2026, 10, 12)); // Monday, the day before the Era starts
+        // Bob's entry is inside Alice's Era dates, in a week of his that starts on the same Monday as her W2.
+        WeeklyLog bobs = weeks.save(Fixtures.week(bob.getId(), W2));
+        entryOn(bob, bobs, LocalDate.of(2026, 10, 14));
+
+        String eraId = createEra(alice, "Autumn", "2026-10-13", "2026-11-08");
+
+        String body = detail(alice, eraId);
+        assertThat(counts(alice, eraId)).containsExactly(Map.entry(id(shown), 1));
+        assertThat(body)
+                .doesNotContain(id(sealedOnly), id(deletedOnly), id(outsideOnly), id(bobs))
+                .doesNotContain(sealed.getId().toString(), deleted.getId().toString());
+
+        // Opening the Loot Drop and restoring the entry bring their weeks back at once: nothing is stored.
+        jdbc.sql("UPDATE entries SET unlock_date = now() - interval '1 day' WHERE id = :id")
+                .param("id", sealed.getId())
+                .update();
+        jdbc.sql("UPDATE entries SET deleted_at = NULL WHERE id = :id")
+                .param("id", deleted.getId())
+                .update();
+        assertThat(weekIds(alice, eraId)).containsExactly(id(shown), id(sealedOnly), id(deletedOnly));
     }
 
     // GET /eras/{id}: which entries are counted
@@ -271,7 +312,7 @@ class EraWeeksTest {
     }
 
     @Test
-    void anEraWhoseOnlyEntriesAreSealedCountsZeroSoItCannotTellHowManyAreSealed() {
+    void anEraWhoseOnlyEntriesAreSealedListsNoWeekSoItCannotTellHowManyAreSealed() {
         User alice = aUser();
         WeeklyLog w4 = weeks.save(Fixtures.week(alice.getId(), W4));
         for (int day = 0; day < 3; day++) {
@@ -281,7 +322,7 @@ class EraWeeksTest {
         }
         String eraId = createEra(alice, "Week", "2026-10-26", "2026-11-01");
 
-        assertThat(counts(alice, eraId)).containsExactly(Map.entry(id(w4), 0));
+        assertThat(counts(alice, eraId)).isEmpty();
     }
 
     @Test
@@ -318,7 +359,7 @@ class EraWeeksTest {
                 .update();
         String eraId = createEra(alice, "Week", "2026-10-26", "2026-11-01");
 
-        assertThat(counts(alice, eraId)).containsExactly(Map.entry(id(w4), 0));
+        assertThat(counts(alice, eraId)).isEmpty();
     }
 
     @Test
@@ -463,10 +504,15 @@ class EraWeeksTest {
         return week.getId().toString();
     }
 
-    /** Saves the user's week starting on this Monday, with one entry on that Monday. */
+    /**
+     * Saves the user's week starting on this Monday, with one entry on that Monday and one on its Sunday. An Era that
+     * overlaps the week by a day at either end then has an entry inside its dates, so the week is listed: a week with
+     * no entry to show is left out (D-22, task 4.9).
+     */
     private WeeklyLog weekWithAnEntry(User user, LocalDate monday) {
         WeeklyLog week = weeks.save(Fixtures.week(user.getId(), monday));
         entryOn(user, week, monday);
+        entryOn(user, week, monday.plusDays(6));
         return week;
     }
 

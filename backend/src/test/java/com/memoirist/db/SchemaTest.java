@@ -29,17 +29,21 @@ class SchemaTest {
     Flyway flyway;
 
     @Test
-    void flywayAppliedV1AndTheSeedWithoutFailures() {
+    void flywayAppliedTheMigrationsAndTheSeedWithoutFailures() {
         assertThat(jdbc.sql("SELECT script FROM flyway_schema_history WHERE success ORDER BY installed_rank")
                         .query(String.class)
                         .list())
-                .containsExactly("V1__core_schema.sql", "R__seed_dev_user.sql");
+                .containsExactly(
+                        "V1__core_schema.sql",
+                        "V2__media_dimensions.sql",
+                        "V3__media_copies.sql",
+                        "R__seed_dev_user.sql");
         assertThat(jdbc.sql("SELECT count(*) FROM flyway_schema_history WHERE NOT success")
                         .query(Long.class)
                         .single())
                 .isZero();
 
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("1");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("3");
         assertThat(flyway.info().pending()).isEmpty();
     }
 
@@ -107,6 +111,8 @@ class SchemaTest {
             media,         display_order,     integer,                     NO,
             media,         file_size_bytes,   bigint,                      NO,
             media,         uploaded_at,       timestamp with time zone,    NO,
+            media,         width,             integer,                     YES,
+            media,         height,            integer,                     YES,
             entry_tags,    source,            character varying,           NO,       10
             """)
     void columnHasTheTypeTheSchemaDocSays(String table, String column, String type, String nullable, Integer length) {

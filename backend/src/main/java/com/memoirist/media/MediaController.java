@@ -49,7 +49,9 @@ class MediaController {
             summary = "Add a photo, a diary page or a voice note",
             description = "A multipart form with the file, and optionally where to put it and what it is. The"
                     + " type is the Content-Type of the file part: JPEG, PNG or WebP images, WebM, MP4 or MP3"
-                    + " audio. At most 25 MB per file and 20 items per entry.")
+                    + " audio. At most 25 MB per file and 20 items per entry. A photo or diary page may bring its"
+                    + " smaller copies (D-43): thumbnail (480 px) and screen (1600 px), each a JPEG, PNG or WebP"
+                    + " image.")
     // The form's parts are read as separate parameters (see MediaUploadForm), so springdoc is told the body's shape
     // here.
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -61,24 +63,27 @@ class MediaController {
     @ApiResponse(
             responseCode = "400",
             description = "validation-failed with fieldErrors: file (missing, empty, or the entry already has 20"
-                    + " items), purpose (not PHOTO or PAGE_SCAN), displayOrder (negative, or past the end);"
+                    + " items), purpose (not PHOTO or PAGE_SCAN), displayOrder (negative, or past the end),"
+                    + " thumbnail or screen (empty, or sent with a voice note);"
                     + " or malformed-request (a bad id, displayOrder that isn't a whole number)")
     @ApiResponse(
             responseCode = "404",
             description = "not-found: no such entry, it is another user's, or it is in Recently deleted")
     @ApiResponse(responseCode = "409", description = "entry-sealed: the entry is a sealed Loot Drop")
-    @ApiResponse(responseCode = "413", description = "payload-too-large: the file is over 25 MB")
+    @ApiResponse(responseCode = "413", description = "payload-too-large: the file or a copy is over 25 MB")
     @ApiResponse(
             responseCode = "415",
-            description = "unsupported-media-type: the file's type isn't allowed, a PAGE_SCAN isn't an image, or the"
-                    + " request isn't multipart/form-data")
+            description = "unsupported-media-type: the file's type isn't allowed, a PAGE_SCAN or a copy isn't an"
+                    + " image, or the request isn't multipart/form-data")
     @ApiResponse(responseCode = "503", description = "storage-unavailable: the file could not be stored")
     MediaResponse upload(
             @PathVariable UUID entryId,
             @Parameter(hidden = true) @RequestParam(name = "file", required = false) MultipartFile file,
+            @Parameter(hidden = true) @RequestParam(name = "thumbnail", required = false) MultipartFile thumbnail,
+            @Parameter(hidden = true) @RequestParam(name = "screen", required = false) MultipartFile screen,
             @Parameter(hidden = true) @RequestParam(name = "displayOrder", required = false) Integer displayOrder,
             @Parameter(hidden = true) @RequestParam(name = "purpose", required = false) String purpose) {
-        return media.upload(entryId, file, displayOrder, purpose);
+        return media.upload(entryId, file, thumbnail, screen, displayOrder, purpose);
     }
 
     @PutMapping("/entries/{entryId}/media/order")

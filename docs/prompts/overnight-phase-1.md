@@ -2,7 +2,7 @@
 
 Before pasting, do the checklist in [WORKFLOW.md §5 "Overnight runs"](../WORKFLOW.md#5-overnight-runs). Then start a **new session in auto mode**, run `/output-style learn-later`, and paste everything below the line.
 
-To include Sprint 4 (the React UI), change the **Scope** line. Sprint 4 needs `npm install`, which still asks for approval, and a design (`docs/design/DESIGN.md`), so it's best run on a night after you've picked one.
+Sprint 4 (the React UI) has its own prompt, [overnight-sprint-4.md](overnight-sprint-4.md): it installs the libraries with you before you sleep, because `npm install` asks for approval, and it paces itself against the usage limits.
 
 ---
 

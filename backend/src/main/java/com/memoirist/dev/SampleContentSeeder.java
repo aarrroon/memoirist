@@ -6,6 +6,7 @@ import com.memoirist.entry.EntryContentValidator;
 import com.memoirist.entry.EntryRepository;
 import com.memoirist.era.Era;
 import com.memoirist.era.EraRepository;
+import com.memoirist.media.ImageSize;
 import com.memoirist.media.Media;
 import com.memoirist.media.MediaRepository;
 import com.memoirist.storage.BucketBootstrap;
@@ -19,6 +20,7 @@ import com.memoirist.user.User;
 import com.memoirist.user.UserRepository;
 import com.memoirist.week.WeekCalendar;
 import com.memoirist.week.WeekService;
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
@@ -390,7 +392,9 @@ public class SampleContentSeeder implements ApplicationRunner {
                     PNG,
                     picture.purpose(),
                     position,
-                    picture.bytes().length));
+                    picture.bytes().length,
+                    // The same header reader an upload uses (D-17), so the sample photos get their size too.
+                    ImageSize.read(new ByteArrayInputStream(picture.bytes())).orElse(null)));
         }
     }
 

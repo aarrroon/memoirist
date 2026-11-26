@@ -384,7 +384,7 @@ flowchart TD
 **Happy path**
 1. In capture, a tag picker shows the user's tags; typing a new name creates one (`POST /tags`).
 2. The chosen tags are saved with the entry (`tagIds` on `POST` / `PUT /entries`).
-3. Tags appear on entry cards, week summaries and timeline rows. Tapping one opens the timeline filtered by it (F-16).
+3. Tags appear on entry cards, week summaries and timeline rows. Tapping one opens the timeline filtered by it (F-16). On a timeline row the tags are plain text, because the whole row is one link to the entry; the tag chips above the list filter it instead (task 4.11).
 4. A *Tags* screen lets the user rename or delete tags (`PUT` / `DELETE /tags/{id}`). Deleting a tag removes it from entries but leaves the entries alone.
 
 **Edge cases**

@@ -128,16 +128,23 @@ public class EraService {
      * One Era with the weeks its dates overlap, newest first, each with the number of its entries that fall inside
      * the Era's dates (D-22). Three small queries, whatever the number of weeks or entries: the weeks, a grouped
      * count that leaves out sealed entries (D-10) and entries in Recently deleted (D-30), and the cover.
+     *
+     * <p>A week with no entry to show is left out, as the feed leaves it out (D-22, decided 2026-11-24, task 4.9):
+     * every entry it has is outside the Era's dates, sealed or in Recently deleted. The count already leaves those
+     * out, so a week is listed exactly when it has a count. Listing it with a zero would also say that something
+     * sealed or deleted might be there.
      */
     @Transactional(readOnly = true)
     public EraDetailResponse get(UUID eraId) {
         UUID userId = currentUser.currentUserId();
         Instant now = Instant.now(clock);
         Era era = find(eraId, userId);
-        List<WeeklyLog> held = weeks.findOverlapping(userId, era.getStartDate(), era.getEndDate());
         Map<UUID, Long> counts =
                 entries.countOpenEntriesByWeek(userId, era.getStartDate(), era.getEndDate(), now).stream()
                         .collect(Collectors.toMap(EntryCountByWeek::weeklyLogId, EntryCountByWeek::entryCount));
+        List<WeeklyLog> held = weeks.findOverlapping(userId, era.getStartDate(), era.getEndDate()).stream()
+                .filter(week -> counts.getOrDefault(week.getId(), 0L) > 0)
+                .toList();
         return EraMapper.toDetail(era, covers.of(era, userId, now), held, counts);
     }
 
@@ -147,8 +154,12 @@ public class EraService {
      * columns that changed; the flush is explicit so that {@code updatedAt} in the response is the new one.
      *
      * <p>The cover is checked only when the request changes it. An Era whose cover is hidden now (its entry was sealed
-     * or deleted since) can still be edited when the request names the same photo, and a request that leaves the cover
-     * out removes it, like every other field a {@code PUT} leaves out.
+     * or deleted since) can still be edited when the request names the same photo.
+     *
+     * <p>A request that leaves the cover out keeps a hidden cover (D-36, task 4.14): the client was shown
+     * {@code cover: null} and can't send an id it was never told, so "left out" can't mean "remove it". A visible
+     * cover left out is removed, like every other field a {@code PUT} leaves out. When the Loot Drop opens or the entry
+     * is restored, the kept cover shows again.
      */
     public EraResponse update(UUID eraId, EraUpdateRequest request) {
         UUID userId = currentUser.currentUserId();
@@ -159,7 +170,8 @@ public class EraService {
         era.setStartDate(request.startDate());
         era.setEndDate(request.endDate());
         era.setSoundtrack(request.soundtrack());
-        if (!Objects.equals(request.coverMediaId(), era.getCoverMediaId())) {
+        boolean keepHiddenCover = request.coverMediaId() == null && covers.isHidden(era, userId, now);
+        if (!keepHiddenCover && !Objects.equals(request.coverMediaId(), era.getCoverMediaId())) {
             requireCover(request.coverMediaId(), userId, now);
             era.setCoverMediaId(request.coverMediaId());
         }

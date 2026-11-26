@@ -39,7 +39,7 @@ class MediaApiDescriptionTest extends MediaApiTest {
     }
 
     @Test
-    void theUploadIsAMultipartFormWithTheFileAndTwoOptionalFields() {
+    void theUploadIsAMultipartFormWithTheFileTwoOptionalCopiesAndTwoOptionalFields() {
         String body = apiDocs();
 
         String schema =
@@ -48,7 +48,7 @@ class MediaApiDescriptionTest extends MediaApiTest {
         // The form record is documentation only; these names must stay the controller's @RequestParam names.
         assertThat(JsonPath.<Map<String, Object>>read(body, "$.components.schemas.MediaUploadForm.properties")
                         .keySet())
-                .containsExactlyInAnyOrder("file", "displayOrder", "purpose");
+                .containsExactlyInAnyOrder("file", "thumbnail", "screen", "displayOrder", "purpose");
         assertThat(JsonPath.<List<String>>read(body, "$.components.schemas.MediaUploadForm.required"))
                 .containsExactly("file");
     }
@@ -75,7 +75,11 @@ class MediaApiDescriptionTest extends MediaApiTest {
                         "purpose",
                         "displayOrder",
                         "fileSizeBytes",
-                        "uploadedAt");
+                        "uploadedAt",
+                        "width",
+                        "height",
+                        "thumbnailUrl",
+                        "screenUrl");
     }
 
     @Test
