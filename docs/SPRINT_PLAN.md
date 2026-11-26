@@ -373,6 +373,15 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - Check the HEIC→JPEG behaviour on iOS if possible (D-17).
   - **Done when:** Playwright passes locally against Compose and the dev servers; CI is green.
 
+- [ ] **4.18 Smaller copies of photos** (D-43)
+  - **Read:** D-43, D-17, D-10, D-30, design.md §6.
+  - **Do:**
+    - Backend first (`/new-migration`, then the media endpoint): `V3__media_copies.sql` adds nullable object keys for the thumbnail and the screen copy on `media`. The upload takes the copies as optional parts of the same multipart request, checks each like the original (D-17), stores them next to it, and deletes them with it (media delete, erase, the 30-day sweep). `Media` responses gain a presigned URL for each copy (`@Schema(nullable = true)`, `ApiDocsContractTest`), never signed while the entry is sealed; then `npm run gen:api`.
+    - Capture and the photo dump make the copies with browser-image-compression (480 px and 1600 px on the longest side; WebP stays WebP, the rest become JPEG) and upload them with the photo.
+    - Every picture on screen uses the right size (D-43), falling back to the next size up when a copy is missing. The entry view keeps the original.
+    - Then close tasks 4.10 and 4.14: re-run their design checks and tick them.
+  - **Done when:** upload tests store and presign both copies, store none for a voice note or a photo smaller than a copy, refuse a bad copy type or size, never sign a sealed entry's copies, and remove every file with the photo; component tests show the thumbnail in a cover and a week thumbnail, the screen copy in the swipe and the original in the entry view, with the fallback; `audit.mjs` passes the `images` line on `/`, `/weeks/<id>` and an Era page, in light and dark; the slow-phone time to the first photo is measured again and reported; 4.10 and 4.14 are ticked.
+
 ---
 
 ## Phase 2: Online, with accounts

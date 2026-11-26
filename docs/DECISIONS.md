@@ -50,6 +50,7 @@ Settled choices for memoirist, and the questions still open.
 | D-40 | One design system for the frontend: one spacing scale, two typefaces at most, one accent colour | 2026-11-14 | 2026-11-24 |
 | D-41 | The design: Starlight refined, phone first, in black, white and gold | 2026-11-24 | |
 | D-42 | Page limits are enforced with a `400`, never clamped | 2026-11-24 | |
+| D-43 | Smaller copies of photos, made in the browser | 2026-11-26 | |
 
 ---
 
@@ -504,7 +505,7 @@ How it works:
 - Design rounds keep the same limits (`docs/prompts/design-round.md`), so the direction that wins can be built as drawn. The user agreed this on 2026-11-15.
 - Spotify's brand rules allow its mark in green, black or white. memoirist uses black or white, so the accent stays the only colour.
 - shadcn/ui components (D-13) are rewritten to these tokens when they are copied in.
-- Two things the audit found were left as open questions: smaller copies of photos (Q29, still open) and stored photo sizes (settled in D-17).
+- Two things the audit found were left as open questions: smaller copies of photos (settled in D-43) and stored photo sizes (settled in D-17).
 
 ## D-41 The design: Starlight refined
 memoirist's look is design 12, *Starlight refined* ([`docs/design/explorations/round-3/`](design/explorations/round-3/)), chosen by the user on 2026-11-24 after three rounds of mockups. [`docs/design/DESIGN.md`](design/DESIGN.md) holds every value; this entry says what was chosen.
@@ -540,6 +541,17 @@ memoirist's look is design 12, *Starlight refined* ([`docs/design/explorations/r
 
 ---
 
+## D-43 Smaller copies of photos, made in the browser
+- **Two copies of every photo and diary page**, besides the original: a **thumbnail** whose longest side is 480 px, and a **screen copy** whose longest side is 1600 px. The browser makes them with browser-image-compression (D-13) when it uploads the photo, after it has shrunk the original and read its date (D-34). A WebP stays WebP; any other image becomes JPEG. A photo already no bigger than a copy gets no copy of that size. Voice notes get none.
+- **One upload, one media row.** The copies travel in the same upload request as the original and are stored next to it (their own object keys on the same `media` row, nullable, D-03). Removing the photo, or erasing its entry, removes all its files (D-30). The type and size checks of D-17 apply to each file.
+- **The API returns a presigned URL for each copy**, `null` when there is none. A copy of a photo in a sealed entry is never signed, like the original (D-10).
+- **Where each is used:** the thumbnail for every small picture (Era covers in the feed and lists, week thumbnails, the cover picker, the capture tray); the screen copy for the feed's swipe and the Era page's cover; the original only in the entry view, where photos are shown whole (D-41). When a copy is missing (a photo from before this, or one from another client), the screen falls back to the next size up, ending at the original.
+- Built in task 4.18 (Sprint 4); details in API_CONTRACT and DATABASE_SCHEMA. It answers Q29.
+
+**Why:** the API served the 2 to 3 MB original even for a 32 px cover: a 3.3 MB photo took 19.2 s to appear on the slow-phone profile (task 4.5), and the design check failed in tasks 4.10 and 4.14. Making the copies in the browser needs no new dependency (the JDK can't read WebP, so the server would need an image library), keeps image work off Phase 2's small host, and reuses the library that already shrinks photos. The cost: only clients that make copies get them, so the fallback is permanent. The user chose this on 2026-11-26.
+
+---
+
 ## Open questions
 
 Decide each one before the sprint that needs it, then record it with `/record-decision`: as a new entry, or as an update to the entry it changes.
@@ -570,4 +582,3 @@ Decide each one before the sprint that needs it, then record it with `/record-de
 | Q25 | Writing time and mood: patterns such as "flat on Sunday evenings" need when an entry was really written (`created_at` is wrong for backdated and offline entries) and a mood for each entry | Sprint 8 (mood: Sprint 9) | Offline entries send a client `capturedAt`; Phase 6 adds a per-entry mood as derived AI data, with the usual seal and staleness rules |
 | Q26 | Group Loot Drop dates: if the owner moves the date later, entries added earlier still unlock on the old date; an entry already sealed for longer opens later; and withdrawing doesn't unseal | Sprint 6 | Group views hide content until the later of the entry's and the group's dates; the withdraw dialog says the entry stays sealed |
 | Q28 | Era summaries and partly covered weeks: an Era shows only the entries inside its dates (D-22), but a weekly summary covers the whole week. For a short Era, such as a weekend trip, should the Era summary read the entries inside its dates instead of whole-week summaries? | Sprint 7 | A week the Era covers only partly is read from its entries inside the Era's dates; a week it covers fully uses its weekly summary |
-| Q29 | Smaller copies of photos: the API serves each photo as it was uploaded (about 2 to 3 MB after the browser shrinks it, D-13), even for a 40 px thumbnail. A feed of those can't meet the PRD's 2-second goal on a phone: the round 2 audit measured 10 seconds to the first photo on a slow connection, with photos a fifth of that size (D-40). Make a screen-size copy and a thumbnail at upload (in the browser or on the server), or keep serving the original? | Sprint 5 | Phase 1 serves the original, which is fast on one machine. The frontend loads photos lazily and reserves their space. Sprint 4 (tasks 4.4 and 4.5) measures the time to the first photo on a throttled connection and reports it. Decide before going online |

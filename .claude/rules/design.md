@@ -86,7 +86,7 @@ One design system for the whole frontend: **one spacing scale, two typefaces at 
 - Every `<img>` has `width` and `height`, or sits in a box with a fixed `aspect-ratio`, and has `decoding="async"`. The first photo on a screen is eager with `fetchpriority="high"`; every other one has `loading="lazy"`. A list loads only the first photo of each entry until the user swipes.
 - Anything that arrives late (photos, the Opened strip, On this day) has its space reserved, so nothing jumps: layout shift stays at 0.1 or less.
 - The feed doesn't ship the editor: load capture (TipTap, dnd-kit, Vaul), the lightbox and the date picker with `React.lazy`. The feed's first JavaScript is 200 KB gzipped or less.
-- Target on the slow-phone profile: the largest thing on screen appears within 2.5 s. Photos can't meet it while the API serves originals (Q29): report the numbers, and don't work around it in the client. A photo's shape is reserved from its stored `width` and `height` (D-17, from task 4.5), with a 4:5 frame when they are `null`.
+- Target on the slow-phone profile: the largest thing on screen appears within 2.5 s. Lists and the feed use the photo's smaller copies (D-43, from task 4.18): the thumbnail for anything small, the screen copy for the swipe, the original only in the entry view. When a copy is missing, fall back to the next size up. A photo's shape is reserved from its stored `width` and `height` (D-17, from task 4.5), with a 4:5 frame when they are `null`.
 
 ## 7. Colour
 - One accent hue. It marks the primary action, links, the selected item, focus and the Loot Drop. It never colours headings, body text or decoration.

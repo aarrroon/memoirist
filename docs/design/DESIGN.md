@@ -184,5 +184,4 @@ PRD §3 words only: Journal, Timeline, Eras, You, Write, entries, weeks, *On thi
 
 ## 10. Not settled here
 
-- **Smaller copies of photos** (Q29): until it is decided, lists load originals, which is slow on a phone.
 - **A palette picker:** Dusk blue and Sunset rose (FEEDBACK.md) stay candidates for a later phase; nothing promises one.
