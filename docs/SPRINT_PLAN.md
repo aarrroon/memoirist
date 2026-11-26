@@ -316,7 +316,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:** CRUD for eras and templates, with an Era page that lists its weeks and counts only the entries inside its dates (D-22); backend: `GET /eras/{id}` leaves out weeks with no entry to show (D-22, with a test holding a sealed, a deleted and an out-of-range entry); a gallery of starter templates that adds an editable copy with one tap (D-06); settings for display name, timezone and birthday (D-33), and *Appearance* (match phone, light or dark, kept on the device, D-41); a *show first in the feed* pin on each Era (D-22).
   - **Done when:** changing the timezone changes the displayed times; Appearance switches the whole app at once and survives a reload, and *Match phone* follows the phone's setting; changing an Era's dates regroups the feed; pinning an Era moves its shared weeks under it; adding a starter template creates an editable copy; component tests pass.
 
-- [ ] **4.10 Week summary view**
+- [x] **4.10 Week summary view**
   - **Read:** D-25, USER_FLOWS F-15.
   - **Do:** tapping a week in the feed opens `/weeks/:weekId`: title, dates, Eras, counts, a few thumbnails, tags, then one bar per entry (display title, day, media icons, the Loot Drop's star if sealed, D-41). Tapping a bar opens the entry. Leave a slot at the top for the Phase 4 AI summary.
   - **Done when:** component tests cover a mixed week, a week with a sealed entry (its bar shows only the star, the day and the unlock date), and the display-title fallbacks (title → first non-heading line → *Photo* / *Diary page* / *Voice note*).
@@ -346,7 +346,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - a failed upload retried without duplicates (client ids, D-12)
     - the date suggestion for one photo, accepted and dismissed
 
-- [ ] **4.14 On this day strip and Era covers** (D-32, D-36)
+- [x] **4.14 On this day strip and Era covers** (D-32, D-36)
   - **Do:** an *On this day* row at the top of the feed over `GET /entries/on-this-day`, which moves below the first entry while an Opened row shows (D-41); Era covers as title pages in the feed's sticky headers and on Era pages; and a cover picker in the Era form. Backend first: `GET /entries/on-this-day` leaves out `dateUnknown` entries (D-32), and a `PUT /eras/{id}` that leaves out `coverMediaId` keeps a hidden cover (D-36).
   - **Done when:** component tests cover the strip with and without memories, a cover on its Era's header, and no cover while its entry is sealed; integration tests show a `dateUnknown` entry left out of On this day, and a title-only `PUT` keeping a cover whose entry is sealed (the cover comes back when it opens) while a visible cover left out is cleared.
 
@@ -373,14 +373,14 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - Check the HEIC→JPEG behaviour on iOS if possible (D-17).
   - **Done when:** Playwright passes locally against Compose and the dev servers; CI is green.
 
-- [ ] **4.18 Smaller copies of photos** (D-43)
+- [x] **4.18 Smaller copies of photos** (D-43)
   - **Read:** D-43, D-17, D-10, D-30, design.md §6.
   - **Do:**
     - Backend first (`/new-migration`, then the media endpoint): `V3__media_copies.sql` adds nullable object keys for the thumbnail and the screen copy on `media`. The upload takes the copies as optional parts of the same multipart request, checks each like the original (D-17), stores them next to it, and deletes them with it (media delete, erase, the 30-day sweep). `Media` responses gain a presigned URL for each copy (`@Schema(nullable = true)`, `ApiDocsContractTest`), never signed while the entry is sealed; then `npm run gen:api`.
     - Capture and the photo dump make the copies with browser-image-compression (480 px and 1600 px on the longest side; WebP stays WebP, the rest become JPEG) and upload them with the photo.
     - Every picture on screen uses the right size (D-43), falling back to the next size up when a copy is missing. The entry view keeps the original.
     - Then close tasks 4.10 and 4.14: re-run their design checks and tick them.
-  - **Done when:** upload tests store and presign both copies, store none for a voice note or a photo smaller than a copy, refuse a bad copy type or size, never sign a sealed entry's copies, and remove every file with the photo; component tests show the thumbnail in a cover and a week thumbnail, the screen copy in the swipe and the original in the entry view, with the fallback; `audit.mjs` passes the `images` line on `/`, `/weeks/<id>` and an Era page, in light and dark; the slow-phone time to the first photo is measured again and reported; 4.10 and 4.14 are ticked.
+  - **Done when:** upload tests store and presign both copies, store none for a voice note or a photo smaller than a copy, refuse a bad copy type or size, never sign a sealed entry's copies, and remove every file with the photo; component tests show the thumbnail in a cover and a week thumbnail, the screen copy in the swipe and the original in the entry view, with the fallback; `audit.mjs` passes the `images` line (2x or 50 KB, D-43) on `/`, `/weeks/<id>` and an Era page, in light and dark; the slow-phone time to the first photo is measured again and reported; 4.10 and 4.14 are ticked.
 
 ---
 
