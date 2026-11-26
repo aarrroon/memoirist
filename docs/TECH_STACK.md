@@ -77,7 +77,8 @@ Exact versions are pinned in `backend/build.gradle.kts`, and Gradle's own in `ba
 - **Two Jacksons:** springdoc's swagger-core puts Jackson 2 (`com.fasterxml.jackson.databind`) on the classpath. The app's JSON is Jackson 3 (`tools.jackson.databind`; the annotations stay in `com.fasterxml.jackson.annotation`), so import Jackson 3 types.
 
 ### CI (task 2.7)
-`.github/workflows/ci.yml` (D-14) has one job so far, `backend`; the frontend job joins it in task 4.17.
+`.github/workflows/ci.yml` (D-14) has two jobs, `backend` (task 2.7) and `frontend` (task 4.17), which run side by side.
+- **Frontend job (task 4.17):** checkout, Node 24 (`actions/setup-node` with `cache: npm`, keyed on `frontend/package-lock.json`), `npm ci`, then `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` in `frontend/`. Vitest runs against MSW and the API types are the committed `src/api/schema.d.ts`, so the job needs no backend. The Playwright smoke tests are not in CI: they need the whole stack (Compose, the backend in the `local` profile, Vite), and run on a developer's machine with `npx playwright test` ([DEVELOPMENT.md §4](DEVELOPMENT.md#end-to-end-tests-task-417)).
 - **When:** every push to `main` or a `phase-*` branch, every pull request whatever its base branch (the branches are stacked, so a pull request targets the branch below it, not `main`), and by hand (`workflow_dispatch`). There are no path filters: the tests read `docs/API_CONTRACT.md`, so a docs-only change can break them. A newer push to the same branch cancels the older run, except on `main`.
 - **What:** `ubuntu-latest`, then checkout, JDK 25 (Eclipse Temurin, via `actions/setup-java`), and `./gradlew build --no-daemon` in `backend/`. `build` runs `spotlessCheck` and every test. The tests start their own Postgres containers and one SeaweedFS container (pulled from Docker Hub on the first run) with Testcontainers on the runner's Docker, so CI needs no `.env`, no Compose services and no secrets. When the build fails, the test reports are kept for 7 days as an artifact.
 - **Java 25:** `build.gradle.kts` asks for a Java 25 toolchain and has no resolver that downloads one, so the job must install JDK 25 itself. A missing JDK is then a clear error, not a surprise download.
@@ -384,7 +385,7 @@ Tests use `src/test/msw/handlers.ts` (shared answers, such as the dev user for `
 - **Backend (Render):** deploy as a Docker image. The health check path is `/actuator/health`. Free instances sleep when idle (open question Q5).
 - **Database (Neon):** Postgres 17. Flyway runs on startup.
 - **Media (R2):** a private bucket; credentials come from Render environment variables.
-- **CI (GitHub Actions):** backend tests (Testcontainers on `ubuntu-latest`) from task 2.7, plus frontend lint, typecheck, unit tests and build from task 4.17. How the backend job works is in [§2 CI](#ci-task-27).
+- **CI (GitHub Actions):** backend tests (Testcontainers on `ubuntu-latest`) from task 2.7, plus frontend lint, typecheck, unit tests and build from task 4.17. How both jobs work is in [§2 CI](#ci-task-27).
 - **Installable app (D-31, task 5.8):** `vite-plugin-pwa` builds the web app manifest and a service worker that caches the app shell. Offline writing waits for Phase 5.
 - **Emails (D-32):** unlock, yearly-letter and (from Phase 4) weekly emails carry dates, counts and a link only, never entry or summary text. Scheduled sends follow Q5's job approach and are safe to repeat.
 - **Product events (D-38, task 5.11):** written by the services in the same transaction as the action they count. No third-party analytics.

@@ -46,7 +46,7 @@
 | 4.14 On this day strip and Era covers | needs attention: the design check fails its `images` line on the feed in light and dark (the Era line's 32 px cover is the original photo, 15x at 375 px and 30x at 1440 px; Q29). Every other check passes; not ticked | Sprint 4.14: Build On this day and Era covers in the feed and form [needs-attention] | `GET /entries/on-this-day` leaves out `dateUnknown` entries (D-32) and a `PUT /eras/{id}` keeps a hidden cover (D-36); the feed's *On this day* row expands in place (at the top, or below the first entry while the Opened row shows); each Era line shows its cover and links to its Era page; Edit Era has a cover picker of the Era's photos (448 frontend tests) | [4.14](build-journal/sprint-4/4.14-on-this-day-era-covers.md) |
 | 4.15 Soundtrack picker and player | done | Sprint 4.15: Add the soundtrack field and the tap-to-load player | Entries, weeks (Edit week) and Eras get one soundtrack field: a pasted Spotify link becomes its URI at once, words search through `POST /music/search`, and a `503` leaves it paste only; every soundtrack row loads Spotify's 80 px embed only after Play (0 Spotify requests before, checked in Chromium); the mark is ours, in ink (487 frontend tests) | [4.15](build-journal/sprint-4/4.15-soundtrack.md) |
 | 4.16 Loot Drop extras and the first letter | done | Sprint 4.16: Add quick unlock dates, replies and the first letter | The seal panel (capture and Extend) offers In a month, In a year and On my birthday (only once a birthday is set) as radio rows, each opening at 09:00 in the user's zone; an opened Loot Drop has Reply to past you and lists its replies, and a reply links back; the empty first-run screen ends with a skippable letter to future you, sealed for a month (513 frontend tests) | [4.16](build-journal/sprint-4/4.16-loot-drop-extras.md) |
-| 4.17 | not started | none | **Next task: 4.10 still needs the Q29 decision (so does 4.14); after it, 4.17 (End-to-end smoke test and CI: frontend)** | |
+| 4.17 End-to-end smoke test and CI: frontend | built; ticked only once the GitHub run of the new `frontend` job is green (see Needs attention) | Sprint 4.17: Add the Playwright smoke tests and the frontend CI job | Two Playwright smoke tests against the real stack at phone and laptop size (F-03 an entry with a photo, F-06 seal another, with a clean-up fixture), and a CI `frontend` job running test, lint, typecheck and build | [4.17](build-journal/sprint-4/4.17-e2e-ci-frontend.md) |
 
 **S4 Overview:** [build-journal/sprint-4/README.md](build-journal/sprint-4/README.md) (tasks 4.1 to 4.9).
 
@@ -79,6 +79,8 @@
 | 2026-11-26 10:14 | 100% | not read | 4.14 committed (needs attention: the 32 px Era cover fails the image check, Q29). Wait for the reset |
 | 2026-11-26 12:11 | 0% | 20% | The window reset. Start 4.15 (4.10 and 4.14 wait on Q29) |
 | 2026-11-26 13:06 | 44% | 25% | 4.15 done. Start 4.16 |
+| 2026-11-26 14:25 | 88% | 31% | 4.16 done. Start 4.17; it will likely stop at the 5-hour limit and resume after 17:10 |
+| 2026-11-26 17:26 | not read | not read | The 4.17 builder stopped at the limit; after the reset the workflow retried it by itself (a new builder at 17:11). Nothing to do |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
@@ -217,6 +219,10 @@
 | 132 | 4.16 | API_CONTRACT Replies (`replyIds` only) | Replies are read one by one with `GET /entries/{id}` (`useQueries`, `queryKeys.entry(id)`), locked ones dropped; a redacted target shows *a Loot Drop, sealed again*; a `404` target shows no line |
 | 133 | 4.16 | No doc gives the copy or icons | *Your reply* / *Your replies*, *In reply to <title>*, *Remove the link to <title>*, the sealed-again `400` sentence, *A letter to open in a month*, the mockup's letter line, *Write the letter*, *Skip*, *Choose the day*; `PenLine` on Reply to past you (the mockup's pencil; the no-pencil rule is for Write) and `CornerUpLeft` on the *In reply to* lines |
 | 134 | 4.16 | Screens need an empty journal and a birthday | The first-run screen and two capture views were audited through a scratch proxy on :5174 answering `GET /feed` with an empty page; the dev user's birthday was set for the seal panel screenshot and reset to `null`; a duplicate reply made for screenshots was deleted and erased |
+| 135 | 4.17 | SPRINT_PLAN 4.17 Done when ("locally") | The Playwright smoke tests run on a developer's machine only; the CI `frontend` job runs test, lint, typecheck and build. Playwright in CI needs the backend and both services, which fits the deploy check (5.6) |
+| 136 | 4.17 | D-11 | The tests run as the seeded dev user against the shared dev journal, one worker, and an `auto` fixture deletes and erases every entry they create (D-30), so the journal is left as found |
+| 137 | 4.17 | 4.16 first letter | Each test marks the first letter skipped in local storage (`memoirist.first-letter=skipped`), so the tests behave the same on an empty journal |
+| 138 | 4.17 | D-17 | HEIC is checked only as the picker's `accept` list leaving HEIC out; Chromium's iPhone emulation can't show Safari converting the photo |
 
 ### S4 Needs attention
 - **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
@@ -312,7 +318,11 @@
 - **4.16, fixed at close-out (review minor 2):** a restored draft whose reply link the user removed no longer gets the server's link back; the draft's own value wins, as for the soundtrack. New CaptureView test, seen to fail without the fix. Re-run: 513/513 tests, lint, typecheck and build pass. The journal's stale line links were corrected (review minor 3).
 - **4.16, design check on :5173:** the capture screens fail audit `images` only because the feed behind the sheet shows Era cover originals (4.14, Q29); through the empty-feed proxy they pass. The audit can't open the phone seal panel (it needs a tap), so that panel was checked by Playwright screenshots; the laptop seal box was audited.
 - **4.16, follow-up:** a skipped first letter is per browser (`localStorage`); if it should follow the account, Phase 2 needs a server field.
-- **Sprint 4 not finished:** task 4.17 is left, and 4.10 and 4.14 need the Q29 decision above. The pull request stays a draft for that reason and for 4.9.
+- **4.17, CI:** the task's "CI is green" item needs the GitHub run of the new `frontend` job, which can only happen after the push; 4.17 is ticked in a follow-up commit once that run is green (the result is in the 4.17 journal, §7).
+- **4.17, setup needed (D-17):** on a real iPhone (Safari), pick a photo in capture and check that a JPEG, not a HEIC, is uploaded. Only the `accept` list could be checked here.
+- **4.17, decision needed (docs):** D-17 (DECISIONS.md) and USER_FLOWS F-04 still say the iOS HEIC-to-JPEG conversion is verified in Sprint 4; that check now has no task. Record with `/record-decision` where it goes (for example the 5.6 deploy check or 5.8 installable app) and update both.
+- **4.17, follow-up:** the Playwright smoke tests are not in CI; add them with the deploy check (5.6), which already must pass them against the deployed app.
+- **Sprint 4 not finished:** 4.10 and 4.14 need the Q29 decision above. The pull request stays a draft for that reason and for 4.9.
 
 ### S4 Questions for the morning
 

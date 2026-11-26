@@ -1,6 +1,6 @@
 # Sprint 4: The React UI
 
-> **Tasks:** 4.1 to 4.17 ([SPRINT_PLAN](../../SPRINT_PLAN.md#sprint-4-react-ui)) · **Branch:** `phase-1-sprint-4`, stacked on `phase-1-sprint-3` · **Built:** 2026-11-24 22:17 to 2026-11-25 19:40 (Melbourne time, by the commit timestamps), in one unattended overnight run that paused three times at the usage limit · **Status:** not finished. Tasks 4.1 to 4.8 are built, reviewed and ticked. Task 4.9 is built and committed but **needs attention** (a design deviation made to pass the audit, and a full `npm test` run that times out under load), so it is not ticked. The run stopped when the weekly usage reached 90%. **The next task is 4.10 (Week summary view).** Tasks 4.10 to 4.17 are left. The last CI run on the branch (4.9's push) was green; CI builds only the backend until task 4.17 adds the frontend job.
+> **Tasks:** 4.1 to 4.17 ([SPRINT_PLAN](../../SPRINT_PLAN.md#sprint-4-react-ui)) · **Branch:** `phase-1-sprint-4`, stacked on `phase-1-sprint-3` · **Built:** 2026-11-24 22:17 to 2026-11-25 19:40 (Melbourne time, by the commit timestamps), in one unattended overnight run that paused three times at the usage limit · **Status:** not finished. Tasks 4.1 to 4.8 are built, reviewed and ticked. Task 4.9 is built and committed but **needs attention** (a design deviation made to pass the audit, and a full `npm test` run that times out under load), so it is not ticked. The run stopped when the weekly usage reached 90%. **The next task is 4.10 (Week summary view).** Tasks 4.10 to 4.17 are left. The last CI run on the branch (4.9's push) was green; Since task 4.17, CI also runs a `frontend` job (test, lint, typecheck, build).
 > **Built so far:** the `frontend/` app: generated API types and a typed client, the routes and the phone-first shell, the Journal feed with weeks filed under Eras, the entry card (swipe, caption, voice note), capture (write sheet, uploads, draft), voice recording, Loot Drops (seal, travelling star, Opened row, the Loot Drop page), and the Eras, Templates and You screens. Two backend changes came with it: photo sizes (`V2__media_dimensions.sql`, D-17) and `GET /eras/{id}` leaving out empty weeks (D-22).
 
 ## The goal
@@ -260,7 +260,7 @@ Each task broke its main rule on purpose and watched the test go red: the dev he
 The budget is 200 kB for the feed's first JavaScript (design.md §6); React Router, tailwind-merge, date-fns and Radix took most of it in 4.3, and capture and the seal panel are lazy-loaded to stay under it.
 
 ### Not covered yet
-- **No committed Playwright suite.** The browser checks were scratch scripts; task 4.17 adds the end-to-end smoke test (USER_FLOWS `F-xx` names) and the frontend CI job.
+- **The Playwright smoke tests run locally only.** Task 4.17 committed two (`frontend/e2e/f03-entry-with-photo.spec.ts`, `frontend/e2e/f06-seal-entry.spec.ts`); CI runs the frontend's test, lint, typecheck and build but not Playwright, which waits for the deploy check (5.6).
 - **Safari and iOS** were not tested (the `audio/mp4` recording path, `<use href>` with `?no-inline`).
 - **The full `npm test` run is not reliable under load** on this machine (see [Lessons](#what-recurred)).
 
@@ -278,7 +278,7 @@ cd frontend && npm run gen:api                                            # rege
 cd frontend && npm run build && npm run preview                           # the production build on :4173, for audit.mjs --slow
 node docs/design/explorations/tools/audit.mjs http://localhost:5173/      # the design check; add --dark, --slow, --out <folder>
 node docs/design/explorations/tools/audit.mjs http://localhost:5173/?write=entry   # capture opens from a link (?write=page for Diary page)
-gh run list --workflow ci.yml --branch phase-1-sprint-4 --limit 3         # CI (backend job only until 4.17)
+gh run list --workflow ci.yml --branch phase-1-sprint-4 --limit 3         # CI (backend and frontend jobs)
 ```
 
 New in this sprint:

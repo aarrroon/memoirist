@@ -96,13 +96,15 @@ cd backend
 - `./gradlew build` fails when a Java file isn't formatted (`spotlessCheck`); `./gradlew spotlessApply` fixes it. The formatter is palantir-java-format: 4-space indents, 120 columns.
 - Tests print each result as `PASSED` or `FAILED`; the full report is `build/reports/tests/test/index.html`. Each test run starts its own Postgres container (`pgvector/pgvector:pg17`) and leaves the Compose database alone. Integration tests use the `@IntegrationTest` annotation, which gives them the `test` profile and one shared app and container per run, so each extra test class costs milliseconds, not another 30-second start. `MigrationsTest` is the exception: it runs Flyway by hand and starts a second container of its own, and so does `DevProviderAbsentInProdTest` (it starts the app under the `prod` profile). Tests that store files add `@Import(SeaweedFsTestConfiguration.class)`: a SeaweedFS container on the image Compose pins (`chrislusf/seaweedfs:4.48`, pulled on the first run), shared by every such class, which costs one more app start (task 3.1). Tests that need to say what time it is add `@Import(MutableClockConfiguration.class)`: it swaps the app's clock for a `MutableClock` that a test moves with `clockAt("2026-11-01T12:30:00Z")` (the entry tests start every test at Saturday 2026-10-31 12:00 in Melbourne). That is one more app start and one more Postgres container, shared by every entry test class through `EntryApiTest` (task 3.5). The `test` profile also switches on Hibernate's statistics (`hibernate.generate_statistics` in `src/test/resources/application-test.yml`, and nowhere else), so a test can count the SQL statements a request ran: `FeedQueryCountTest` clears `Statistics`, makes one request and reads `getPrepareStatementCount()`, which is how "a page of the feed costs the same however many entries it holds" is checked (task 3.7); `EntryListQueryCountTest` does the same for the entry list (task 3.9) and `EntryOpenedQueryCountTest` for the Opened strip (task 3.10). `EntryOpenedIndexTest` goes one step further: it runs `EXPLAIN` on the SQL Hibernate really sent for the strip, over 50,000 generated rows, and checks that Postgres reads the partial index. Plain unit tests and `@WebMvcTest` slices such as `CurrentUserHttpTest` need no Docker.
 
-### Continuous integration (task 2.7)
-GitHub Actions runs `.github/workflows/ci.yml`. Its `backend` job does what you do before a commit, on a clean Linux machine:
+### Continuous integration (tasks 2.7 and 4.17)
+GitHub Actions runs `.github/workflows/ci.yml`. Its two jobs do what you do before a commit, on a clean Linux machine, side by side:
 
 | When | What runs |
 |---|---|
-| A push to `main` or to any `phase-*` branch, and every pull request (whatever branch it targets) | `cd backend && ./gradlew build --no-daemon` on `ubuntu-latest` with Eclipse Temurin 25: compile, `spotlessCheck`, every test, the jar |
-| By hand: **Actions** tab, **CI**, **Run workflow** (or `gh workflow run ci.yml --ref <branch>`) | The same job. This works once the file is on `main` |
+| A push to `main` or to any `phase-*` branch, and every pull request (whatever branch it targets) | `backend`: `cd backend && ./gradlew build --no-daemon` on `ubuntu-latest` with Eclipse Temurin 25: compile, `spotlessCheck`, every test, the jar. `frontend` (task 4.17): `npm ci`, `npm test`, `npm run lint`, `npm run typecheck` and `npm run build` in `frontend/` with Node 24 |
+| By hand: **Actions** tab, **CI**, **Run workflow** (or `gh workflow run ci.yml --ref <branch>`) | The same jobs. This works once the file is on `main` |
+
+- The frontend job needs no backend: Vitest runs against MSW and the API types are the committed `src/api/schema.d.ts`. npm's download cache is kept between runs, keyed on `frontend/package-lock.json`. It does not run the Playwright smoke tests, which need the whole stack (below).
 
 - The tests start their own Postgres containers and one SeaweedFS container (pulled from Docker Hub on the first run) with Testcontainers, using the Docker that `ubuntu-latest` already has. The job needs no `.env`, no Compose services and no secrets: the `test` profile carries its own settings.
 - The Gradle dependencies and the Gradle distribution are cached between runs (`actions/setup-java` with `cache: gradle`). Changing `build.gradle.kts`, `settings.gradle.kts` or `gradle-wrapper.properties` starts from an empty cache, so that run is slower.
@@ -122,9 +124,24 @@ npm run format          # fix formatting with Prettier
 npm run typecheck       # TypeScript
 npm run build           # type-check, then the production build in dist/
 npm run gen:api         # regenerate src/api/schema.d.ts from /v3/api-docs (backend must be running; task 4.2)
-npx playwright test     # end-to-end smoke tests — task 4.17
+npx playwright test     # end-to-end smoke tests (task 4.17): needs Compose and the backend running, see below
 ```
 Before saying frontend work is done: `npm test && npm run lint && npm run typecheck && npm run build`. For a screen, also run the design check with the dev server up: `node docs/design/explorations/tools/audit.mjs http://localhost:5173/<path>` from the repo root, and again with `--dark` (`.claude/rules/design.md`). Capture opens from a link, so it can be checked the same way: `http://localhost:5173/?write=entry` (or `?write=page` for Diary page, task 4.6). [TECH_STACK §3](TECH_STACK.md#build-task-41) says how the project is set up and why.
+
+### End-to-end tests (task 4.17)
+The Playwright smoke tests in `frontend/e2e/` drive the real app in Chromium against the real stack. Nothing is mocked. Each test is named after its flow in [USER_FLOWS.md](USER_FLOWS.md): `f03-entry-with-photo.spec.ts` (F-03) and `f06-seal-entry.spec.ts` (F-06). Each runs twice, at phone size (375×812, capture is a sheet) and laptop size (1440×900, capture is a dialog).
+
+```bash
+docker compose up -d                                                      # Postgres and SeaweedFS
+cd backend && ./gradlew bootRun --args='--spring.profiles.active=local'   # leave it running
+cd frontend && npx playwright test                                        # starts Vite on :5173 itself, or reuses one already up
+cd frontend && npx playwright test f06 --project=phone                    # one file, one size
+cd frontend && npx playwright show-report                                 # the HTML report of the last run
+```
+- `e2e/global-setup.ts` asks the backend for the dev user before any test runs, and stops the run with the commands above if it doesn't answer.
+- The tests write to the seeded dev journal (D-11), one at a time. The `journal` fixture in `e2e/fixtures.ts` records every entry a test creates and erases it afterwards (DELETE, then `POST …/erase`), so the journal is left as it was, even after a failed test. The sample content (`--memoirist.sample-content=true`) can be there or not.
+- A failed test keeps a screenshot and a trace in `frontend/test-results/`: `npx playwright show-trace <folder>/trace.zip`. Both folders are git-ignored.
+- They run on your machine, not in CI, because they need the backend and the Compose services.
 
 ## 5. Working on the code
 

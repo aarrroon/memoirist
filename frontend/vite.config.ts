@@ -1,7 +1,7 @@
-/// <reference types="vitest/config" />
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { configDefaults } from 'vitest/config';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -17,6 +17,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // e2e/ holds the Playwright smoke tests (task 4.17). Their *.spec.ts names match Vitest's default pattern, but
+    // they run in a real browser with `npx playwright test`, never in jsdom.
+    exclude: [...configDefaults.exclude, 'e2e/**'],
     // Above the 5 s findBy wait (src/test/setup.ts) plus the 10 s ones of the lazy capture and seal panels, so a
     // slow lookup fails as "Unable to find", not as a test timeout that hides which element was missing.
     testTimeout: 20_000,
