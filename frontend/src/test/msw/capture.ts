@@ -52,7 +52,9 @@ const problem = (status: number, suffix: string, fieldErrors?: Record<string, st
   );
 
 /** What each upload's form held, in the order the forms were built (uploads go one at a time). */
-const sentForms: { name: string; type: string; size: number; purpose: string }[] = [];
+/** One part of an upload as the form held it. */
+type SentPart = { name: string; type: string; size: number };
+const sentForms: (SentPart & { purpose: string; thumbnail?: SentPart; screen?: SentPart })[] = [];
 let watching = false;
 
 /** Notes the file and purpose put in each FormData, so the upload handler can see them without reading the body. */
@@ -73,6 +75,10 @@ function watchForms() {
         sentForms.push({ name: filename ?? '', type: value.type, size: value.size, purpose: '' });
       }
       const last = sentForms.at(-1);
+      // The smaller copies of D-43 (task 4.18) come after the file, in the same form.
+      if ((key === 'thumbnail' || key === 'screen') && value instanceof Blob && last) {
+        last[key] = { name: filename ?? '', type: value.type, size: value.size };
+      }
       if (key === 'purpose' && typeof value === 'string' && last) last.purpose = value;
       append.apply(this, args);
     },
@@ -187,11 +193,17 @@ export function fakeBackend() {
       // The multipart body isn't read here: under jsdom, reading a body that holds a file fails ("Premature close",
       // Vitest's bridge from jsdom's Blob to Node's). The form capture built is read from watchForms() instead.
       const file = sentForms.shift() ?? { name: '', type: '', size: 0, purpose: '' };
-      const { purpose } = file;
+      const { purpose, thumbnail, screen } = file;
       state.calls.push({
         method: 'POST',
         path: `/entries/${String(params.id)}/media`,
-        body: { purpose, name: file.name, type: file.type },
+        body: {
+          purpose,
+          name: file.name,
+          type: file.type,
+          ...(thumbnail ? { thumbnail } : {}),
+          ...(screen ? { screen } : {}),
+        },
       });
       uploads++;
       if (state.failUploads.has(uploads)) return problem(503, 'storage-unavailable');
@@ -209,6 +221,13 @@ export function fakeBackend() {
         uploadedAt: at,
         width: 960,
         height: 640,
+        // As the server answers (D-43): a URL for each copy that was sent, null for one that wasn't.
+        thumbnailUrl: thumbnail
+          ? `http://localhost:8333/memoirist/new-${mediaCount}-thumbnail.jpg?X-Amz-Signature=test`
+          : null,
+        screenUrl: screen
+          ? `http://localhost:8333/memoirist/new-${mediaCount}-screen.jpg?X-Amz-Signature=test`
+          : null,
       };
       state.entries.set(found.id, { ...found, media: [...found.media, media] });
       return HttpResponse.json(media, { status: 201 });

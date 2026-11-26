@@ -7,6 +7,7 @@ import { ListLoading, LoadError } from '../../components/LoadState';
 import { Page } from '../../components/Page';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/cn';
+import { pictureUrl } from '../../lib/media';
 import { eraLength, formatEraDates, todayIn } from '../../lib/time';
 import { EraForm } from './EraForm';
 import { eraRows } from './eraTree';
@@ -74,13 +75,26 @@ export function EraRow({ era, nested = false }: { era: Era; nested?: boolean }) 
 }
 
 /**
- * The Era's initial in a 64 px tile (48 inside another Era). Task 4.14 put the cover on the feed's 32 px Era line,
- * as DESIGN.md §4 draws it, and the audit fails it there as oversize until Q29 gives smaller copies. This list keeps
- * the initial until then: a 960 px or larger original shown at 64 px is 10 to 20 times the size it is drawn at, which
- * design.md §6 and the audit refuse. The Era page shows the cover large, where the original is the right size.
+ * The Era's cover in a 64 px tile (48 inside another Era), drawn from the photo's thumbnail (D-43, task 4.18; until
+ * then this list showed the initial, because the original was 10 to 20 times too big). Without a cover, or while its
+ * entry is sealed or in Recently deleted, the tile shows the Era's initial at the same size (design.md §10).
  */
 function EraThumb({ era, size }: { era: Era; size: 'large' | 'small' }) {
   const box = size === 'large' ? 'size-16' : 'size-12';
+  if (era.cover) {
+    // Decoration beside the Era's name, which the link already reads, so alt is empty.
+    return (
+      <img
+        src={pictureUrl(era.cover, 'thumbnail')}
+        alt=""
+        width={size === 'large' ? 64 : 48}
+        height={size === 'large' ? 64 : 48}
+        loading="lazy"
+        decoding="async"
+        className={cn(box, 'shrink-0 rounded-sm bg-surface object-cover')}
+      />
+    );
+  }
   return (
     <span
       aria-hidden

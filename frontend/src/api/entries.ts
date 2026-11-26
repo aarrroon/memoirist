@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
 import { unwrap } from './problem';
 import { queryKeys } from './queryKeys';
+import type { PhotoCopies } from '../lib/files';
 import type { components } from './schema';
 
 // The entry writes capture makes (task 4.6), as plain async functions. Capture's save is one flow of several
@@ -40,12 +41,14 @@ export async function deleteEntry(id: string): Promise<void> {
 
 /**
  * POST /entries/{id}/media as multipart. No `displayOrder`: the server appends, and capture puts the final order
- * with reorderMedia afterwards (API_CONTRACT §Media). A diary page goes up as PAGE_SCAN (D-20).
+ * with reorderMedia afterwards (API_CONTRACT §Media). A diary page goes up as PAGE_SCAN (D-20). A photo's smaller
+ * copies (D-43, task 4.18) travel in the same request as the parts `thumbnail` and `screen`, each only when made.
  */
 export async function uploadMedia(
   entryId: string,
   file: Blob,
   purpose: MediaPurpose,
+  copies: PhotoCopies = {},
 ): Promise<Media> {
   return unwrap(
     await api.POST('/api/v1/entries/{entryId}/media', {
@@ -57,6 +60,8 @@ export async function uploadMedia(
       bodySerializer: () => {
         const form = new FormData();
         form.append('file', file, file instanceof File ? file.name : 'photo');
+        if (copies.thumbnail) form.append('thumbnail', copies.thumbnail, copies.thumbnail.name);
+        if (copies.screen) form.append('screen', copies.screen, copies.screen.name);
         form.append('purpose', purpose);
         return form;
       },

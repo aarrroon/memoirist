@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { brunswick, detailOf, eraOf, eraWeek, grampians, sampleEras } from '../../test/msw/eras';
+import { photo, withCopies } from '../../test/msw/feed';
 import { feedQuery } from '../../api/feed';
 import { server } from '../../test/msw/server';
 import { renderApp } from '../../test/render';
@@ -89,6 +90,72 @@ describe('Eras list', () => {
     });
     expect((bodies[0] as { id: string }).id).toMatch(/^[0-9a-f-]{36}$/);
     await waitFor(() => expect(router.state.location.pathname).toMatch(/^\/eras\/[0-9a-f-]{36}$/));
+  });
+});
+
+describe('Era covers use the smaller copies (D-43, task 4.18)', () => {
+  test('the list draws a cover from its thumbnail, and an Era with no cover keeps its initial', async () => {
+    const cover = withCopies(photo('media-cover', 'entry-cover'));
+    server.use(
+      http.get('*/api/v1/eras', () =>
+        HttpResponse.json([
+          { ...grampians, cover },
+          // The server sends cover: null while the cover's entry is sealed or in Recently deleted (D-36).
+          { ...brunswick, cover: null },
+        ]),
+      ),
+    );
+    renderApp('/eras');
+
+    const gramp = await screen.findByRole('link', { name: /Grampians Long Weekend/ });
+    const tile = gramp.querySelector('img')!;
+    expect(tile).toHaveAttribute('src', cover.thumbnailUrl);
+    expect(tile).toHaveAttribute('loading', 'lazy');
+    expect(tile).toHaveAttribute('alt', '');
+    const bru = screen.getByRole('link', { name: /The Brunswick Years/ });
+    expect(bru.querySelector('img')).toBeNull();
+    expect(bru).toHaveTextContent(/^TThe Brunswick Years/);
+  });
+
+  test('a cover without a thumbnail falls back to the next size up, never down', async () => {
+    const screenOnly = withCopies(photo('media-cover', 'entry-cover'), ['screen']);
+    server.use(
+      http.get('*/api/v1/eras', () => HttpResponse.json([{ ...grampians, cover: screenOnly }])),
+    );
+    renderApp('/eras');
+    const gramp = await screen.findByRole('link', { name: /Grampians Long Weekend/ });
+    expect(gramp.querySelector('img')).toHaveAttribute('src', screenOnly.screenUrl);
+  });
+
+  test('the Era page draws its cover from the screen copy, or the original when it has none', async () => {
+    const cover = withCopies(photo('media-cover', 'entry-cover'));
+    server.use(
+      http.get('*/api/v1/eras/era-bru', () =>
+        HttpResponse.json(detailOf({ ...brunswick, cover }, weeks)),
+      ),
+    );
+    const { unmount } = renderApp('/eras/era-bru');
+    await screen.findByRole('heading', { level: 1, name: 'The Brunswick Years' });
+    expect(document.querySelector('img[fetchpriority="high"]')).toHaveAttribute(
+      'src',
+      cover.screenUrl,
+    );
+    unmount();
+
+    const old = photo('media-old', 'entry-old');
+    server.use(
+      http.get('*/api/v1/eras/era-bru', () =>
+        HttpResponse.json(detailOf({ ...brunswick, cover: old }, weeks)),
+      ),
+    );
+    renderApp('/eras/era-bru');
+    await screen.findByRole('heading', { level: 1, name: 'The Brunswick Years' });
+    await waitFor(() =>
+      expect(document.querySelector('img[fetchpriority="high"]')).toHaveAttribute(
+        'src',
+        old.fileUrl,
+      ),
+    );
   });
 });
 

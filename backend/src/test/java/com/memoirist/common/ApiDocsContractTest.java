@@ -234,6 +234,13 @@ class ApiDocsContractTest extends RecentlyDeletedApiTest {
                 .isTrue();
         assertThat(allowsNull(map(properties(schemas, "MediaResponse").get("height")), schemas))
                 .isTrue();
+        // A photo with no smaller copy, and every voice note, has null for that copy (D-43, task 4.18).
+        assertThat(allowsNull(map(properties(schemas, "MediaResponse").get("thumbnailUrl")), schemas))
+                .isTrue();
+        assertThat(allowsNull(map(properties(schemas, "MediaResponse").get("screenUrl")), schemas))
+                .isTrue();
+        assertThat(allowsNull(map(properties(schemas, "MediaResponse").get("fileUrl")), schemas))
+                .isFalse();
     }
 
     private static Map<String, Object> properties(Map<String, Object> schemas, String name) {
@@ -402,6 +409,17 @@ class ApiDocsContractTest extends RecentlyDeletedApiTest {
                 schemas);
         assertThat(photo).containsEntry("width", null);
         assertThat(JsonPath.<Integer>read(sized, "$.width")).isEqualTo(64);
+        // And a photo with both copies (D-43): the copy URLs are strings, where the others above are null.
+        Map<String, Object> copied = uploadPhotoWithCopies(user, open);
+        check(
+                problems,
+                "POST /entries/{id}/media with copies",
+                copied,
+                answerSchema(docs, "post", "/api/v1/entries/{entryId}/media", "201"),
+                schemas);
+        assertThat(photo).containsEntry("thumbnailUrl", null).containsEntry("screenUrl", null);
+        assertThat(copied.get("thumbnailUrl")).isInstanceOf(String.class);
+        assertThat(copied.get("screenUrl")).isInstanceOf(String.class);
 
         assertThat(problems).as("where the API and /v3/api-docs disagree").isEmpty();
         // The data really covered the cases the checks are for.

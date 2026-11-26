@@ -61,7 +61,8 @@ public interface MediaRepository extends Repository<Media, UUID> {
     List<Media> findByEntryIdAndEntryUserIdOrderByDisplayOrderAsc(UUID entryId, UUID userId);
 
     /**
-     * The object keys of an entry's media, in carousel order, and nothing else. Used to erase an entry (D-30), where
+     * The object keys of every file of an entry's media, in carousel order, and nothing else: each original, then its
+     * thumbnail and screen copy when it has them (D-43). Used to erase an entry (D-30), where
      * loading the {@link Media} entities themselves would do harm: see {@code EntryErasure}.
      *
      * <p><b>Native SQL on purpose.</b> The same query in JPQL ({@code where m.entry.id = :entryId}) still joins
@@ -69,9 +70,30 @@ public interface MediaRepository extends Repository<Media, UUID> {
      * so for an entry in Recently deleted it found no keys at all, and an erase deleted the rows and left every file
      * behind without any error. Hibernate never rewrites a native query. Like the Recently deleted lookups in
      * {@code EntryRepository}, this one reads rows that the entry's restriction would hide.
+     *
+     * <p>The copies are unrolled with a {@code LATERAL VALUES} list, so one row gives up to three keys and the
+     * {@code NULL}s (a copy the photo doesn't have) are dropped; the second sort key keeps the original before its
+     * copies.
      */
-    @Query(value = "SELECT object_key FROM media WHERE entry_id = :entryId ORDER BY display_order", nativeQuery = true)
+    // TODO(human) PRACTICE: Write the native query that returns every stored file of an entry's media as one column
+    //   of keys: each row's object_key, then its thumbnail_key and screen_key when they are set (D-43), in carousel
+    //   order. A row with no copies gives one key, a photo with both gives three, and a NULL never comes back.
+    // Hint: three columns into one is an "unpivot". UNION ALL of three SELECTs works but reads the table three times
+    //   and needs its own ORDER BY trick; Postgres can turn each row into several with CROSS JOIN LATERAL (VALUES ...).
+    //   Keep it native: JPQL would join entries and its @SQLRestriction would hide an entry in Recently deleted, so an
+    //   erase would find no keys and leak every file (see above). MediaCopiesTest's erasingTheEntryRemovesEvery...
+    //   and theThirtyDaySweepRemovesEveryCopy fail if a key is lost.
+    // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+    @Query(value = """
+                    SELECT stored.object_key
+                    FROM media m
+                    CROSS JOIN LATERAL (VALUES (0, m.object_key), (1, m.thumbnail_key), (2, m.screen_key))
+                        AS stored(position, object_key)
+                    WHERE m.entry_id = :entryId AND stored.object_key IS NOT NULL
+                    ORDER BY m.display_order, stored.position
+                    """, nativeQuery = true)
     List<String> findObjectKeysByEntryId(@Param("entryId") UUID entryId);
+    // └── END ANSWER ▲ ──
 
     /** How many photos and voice notes the entry has. The caller has already checked that the entry is the user's. */
     long countByEntryId(UUID entryId);

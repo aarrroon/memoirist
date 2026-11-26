@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Week } from '../../api/feed';
 import { useDeleteEntry, useSeal } from '../../api/lootDrops';
 import type { ReactNode } from 'react';
-import { entry, photo, sealedEntry, week } from '../../test/msw/feed';
+import { entry, photo, sealedEntry, week, withCopies } from '../../test/msw/feed';
 import { server } from '../../test/msw/server';
 import { grampiansWeek } from '../../test/msw/week';
 import { renderApp } from '../../test/render';
@@ -112,6 +112,34 @@ describe('week summary', () => {
       'Sunrise at the Pinnacle, Saturday 24 October, 4 photos, 1 voice note',
       'Diary page, Saturday 24 October, 1 photo',
       'Voice note, Sunday 25 October, 1 voice note',
+    ]);
+  });
+
+  test('each tile is the photo’s thumbnail, falling back to the next size up (D-43)', async () => {
+    const both = withCopies(photo('p-both', 'e-1', 0));
+    const screenOnly = withCopies(photo('p-screen', 'e-1', 1), ['screen']);
+    const old = photo('p-old', 'e-1', 2);
+    serveWeek(
+      week(
+        'week-copies',
+        '2026-11-16',
+        '2026-11-22',
+        [],
+        [
+          entry('e-1', '2026-11-17', { title: 'Three photos', media: [both, screenOnly, old] }),
+          sealedEntry('e-sealed', '2026-11-18', '2027-01-01T22:00:00Z'),
+        ],
+      ),
+    );
+    renderApp('/weeks/week-copies');
+
+    const tiles = within(
+      await screen.findByRole('list', { name: 'Photos this week' }),
+    ).getAllByRole('img');
+    expect(tiles.map((tile) => tile.getAttribute('src'))).toEqual([
+      both.thumbnailUrl,
+      screenOnly.screenUrl,
+      old.fileUrl,
     ]);
   });
 

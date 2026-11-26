@@ -12,6 +12,7 @@ import { StarMark } from '../../components/TravellingStar';
 import { Button } from '../../components/ui/button';
 import { entryDisplayTitle } from '../../lib/displayTitle';
 import { fileProblem, isImageType, MAX_FILES } from '../../lib/files';
+import { pictureUrl } from '../../lib/media';
 import { readPhotoDay, usableDay } from '../../lib/photoDate';
 import { canRecord } from '../../lib/recording';
 import { captionForSave, insertTemplateHeadings, isBlankDoc } from '../../lib/templateDoc';
@@ -107,7 +108,8 @@ const nextKey = () => `item-${++itemCount}`;
 const uploadedItem = (m: Entry['media'][number]): TrayItem => ({
   key: nextKey(),
   file: null,
-  previewUrl: m.fileUrl,
+  // The tray tile is 72 px: the thumbnail, falling back to the next size up (D-43). A voice note has no copy.
+  previewUrl: pictureUrl(m, 'thumbnail'),
   mediaType: m.mediaType,
   purpose: m.purpose === 'PAGE_SCAN' ? 'PAGE_SCAN' : 'PHOTO',
   status: 'uploaded',

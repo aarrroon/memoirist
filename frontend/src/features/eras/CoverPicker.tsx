@@ -2,12 +2,13 @@ import { useState, type ReactNode } from 'react';
 import { COVER_WEEKS_STEP, useEraPhotos, type CoverChoice, type EraDetail } from '../../api/eras';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/cn';
+import { pictureUrl } from '../../lib/media';
 import { formatDay } from '../../lib/time';
 
 /**
  * The cover picker in Edit Era (task 4.14, D-36): one radio group of square tiles, *No cover* first, then the photos
  * of the Era's own entries, newest week first, read six weeks at a time. Arrow keys move between tiles, as in any
- * radio group. The photos are the originals while Q29 stands, so every tile is lazy.
+ * radio group. Each tile draws the photo's thumbnail (D-43), and every tile is lazy.
  *
  * A cover the user can't see (its entry sealed or in Recently deleted) is not here at all: the Era says `cover: null`,
  * so *No cover* starts selected, and saving that leaves the field out, which the server reads as "keep it" (D-36).
@@ -58,7 +59,7 @@ export function CoverPicker({
             }
           >
             <img
-              src={photo.fileUrl}
+              src={pictureUrl(photo, 'thumbnail')}
               alt=""
               width={photo.width ?? 120}
               height={photo.height ?? 120}

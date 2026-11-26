@@ -354,7 +354,7 @@ export interface paths {
         put?: never;
         /**
          * Add a photo, a diary page or a voice note
-         * @description A multipart form with the file, and optionally where to put it and what it is. The type is the Content-Type of the file part: JPEG, PNG or WebP images, WebM, MP4 or MP3 audio. At most 25 MB per file and 20 items per entry.
+         * @description A multipart form with the file, and optionally where to put it and what it is. The type is the Content-Type of the file part: JPEG, PNG or WebP images, WebM, MP4 or MP3 audio. At most 25 MB per file and 20 items per entry. A photo or diary page may bring its smaller copies (D-43): thumbnail (480 px) and screen (1600 px), each a JPEG, PNG or WebP image.
          */
         post: operations["upload"];
         delete?: never;
@@ -582,6 +582,8 @@ export interface components {
             width: number | null;
             /** Format: int32 */
             height: number | null;
+            thumbnailUrl: string | null;
+            screenUrl: string | null;
         };
         WeekEraResponse: {
             /** Format: uuid */
@@ -732,6 +734,10 @@ export interface components {
         MediaUploadForm: {
             /** Format: binary */
             file: string;
+            /** Format: binary */
+            thumbnail?: string;
+            /** Format: binary */
+            screen?: string;
             /** Format: int32 */
             displayOrder?: number;
             /**
@@ -2196,7 +2202,7 @@ export interface operations {
                     "application/json": components["schemas"]["MediaResponse"];
                 };
             };
-            /** @description validation-failed with fieldErrors: file (missing, empty, or the entry already has 20 items), purpose (not PHOTO or PAGE_SCAN), displayOrder (negative, or past the end); or malformed-request (a bad id, displayOrder that isn't a whole number) */
+            /** @description validation-failed with fieldErrors: file (missing, empty, or the entry already has 20 items), purpose (not PHOTO or PAGE_SCAN), displayOrder (negative, or past the end), thumbnail or screen (empty, or sent with a voice note); or malformed-request (a bad id, displayOrder that isn't a whole number) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2223,7 +2229,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description payload-too-large: the file is over 25 MB */
+            /** @description payload-too-large: the file or a copy is over 25 MB */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -2232,7 +2238,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description unsupported-media-type: the file's type isn't allowed, a PAGE_SCAN isn't an image, or the request isn't multipart/form-data */
+            /** @description unsupported-media-type: the file's type isn't allowed, a PAGE_SCAN or a copy isn't an image, or the request isn't multipart/form-data */
             415: {
                 headers: {
                     [name: string]: unknown;

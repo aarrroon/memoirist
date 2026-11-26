@@ -44,12 +44,13 @@ class MigrationsTest {
         MigrateResult result = flyway(schema, SCHEMA_ONLY).migrate();
 
         // The versioned migrations, and nothing repeatable: the seed lives in a location prod never loads.
-        assertThat(result.migrationsExecuted).isEqualTo(2);
+        assertThat(result.migrationsExecuted).isEqualTo(3);
         assertThat(jdbc().sql("SELECT count(*) FROM %s.users".formatted(schema))
                         .query(Long.class)
                         .single())
                 .isZero();
-        assertThat(appliedScripts(schema)).containsExactly("V1__core_schema.sql", "V2__media_dimensions.sql");
+        assertThat(appliedScripts(schema))
+                .containsExactly("V1__core_schema.sql", "V2__media_dimensions.sql", "V3__media_copies.sql");
     }
 
     @Test
@@ -59,9 +60,13 @@ class MigrationsTest {
         MigrateResult result = flyway(schema, SCHEMA_ONLY, DEV_SEED).migrate();
 
         // The versioned migrations first, then the repeatable seed, whatever the file names sort like.
-        assertThat(result.migrationsExecuted).isEqualTo(3);
+        assertThat(result.migrationsExecuted).isEqualTo(4);
         assertThat(appliedScripts(schema))
-                .containsExactly("V1__core_schema.sql", "V2__media_dimensions.sql", "R__seed_dev_user.sql");
+                .containsExactly(
+                        "V1__core_schema.sql",
+                        "V2__media_dimensions.sql",
+                        "V3__media_copies.sql",
+                        "R__seed_dev_user.sql");
         assertThat(jdbc().sql("SELECT email FROM %s.users WHERE id = :id".formatted(schema))
                         .param("id", DEV_USER_ID)
                         .query(String.class)

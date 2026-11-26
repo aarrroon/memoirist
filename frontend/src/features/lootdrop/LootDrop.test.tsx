@@ -3,7 +3,16 @@ import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { EntrySummary } from '../../api/lootDrops';
-import { doc, entry, page, sampleWeeks, sealedEntry, week } from '../../test/msw/feed';
+import {
+  doc,
+  entry,
+  page,
+  photo,
+  sampleWeeks,
+  sealedEntry,
+  week,
+  withCopies,
+} from '../../test/msw/feed';
 import { server } from '../../test/msw/server';
 import { renderApp } from '../../test/render';
 
@@ -257,6 +266,14 @@ describe('an opened Loot Drop', SLOW, () => {
       }),
     );
     expect(sent.filter((call) => call.path.endsWith('mark-seen'))).toHaveLength(1);
+  });
+
+  test('the entry view shows the original photo, shown whole, even when it has copies (D-43)', async () => {
+    const copied = withCopies(photo('p-whole', 'entry-plain'));
+    entryApi(entry('entry-plain', '2026-11-20', { title: 'Plain', media: [copied] }));
+    renderApp('/entries/entry-plain');
+    expect(await screen.findByRole('heading', { name: 'Plain' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Photo' })).toHaveAttribute('src', copied.fileUrl);
   });
 
   test('an entry that was never sealed is not marked seen', async () => {

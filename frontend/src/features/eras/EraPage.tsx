@@ -4,6 +4,7 @@ import { useEra, useEras, type EraDetail, type EraWeek } from '../../api/eras';
 import { useMe } from '../../api/users';
 import { ListLoading, LoadError } from '../../components/LoadState';
 import { Button } from '../../components/ui/button';
+import { pictureUrl } from '../../lib/media';
 import { eraLength, formatEraDates, formatWeekRange, todayIn } from '../../lib/time';
 import { SoundtrackPlayer } from '../music/SoundtrackPlayer';
 import { EraForm } from './EraForm';
@@ -49,13 +50,14 @@ function EraView({ era }: { era: EraDetail }) {
   return (
     <section className="flex flex-col gap-8">
       <title>{`${era.title} · memoirist`}</title>
-      {/* DESIGN.md §4 puts the cover beside the band on a laptop, but at half the column (about 320 px) the 960 px
-          original the API serves is 3x the width it is drawn at, over design.md §6's 2x limit. Until Q29 gives a
-          screen-size copy, the cover stays above the band at every width (unattended 4.9 fix; the user to confirm). */}
+      {/* The cover is the photo's screen copy (D-43, task 4.18). DESIGN.md §4 puts it beside the band on a laptop, but
+          at half the column (about 320 px) even the 1600 px screen copy is 5x the width it is drawn at, over
+          design.md §6's 2x limit, so the cover stays above the band at every width (unattended 4.9 fix, kept in
+          4.18; the user to confirm). */}
       <div className="-mx-4 flex flex-col md:mx-0">
         {era.cover && (
           <img
-            src={era.cover.fileUrl}
+            src={pictureUrl(era.cover, 'screen')}
             alt=""
             width={era.cover.width ?? 1500}
             height={era.cover.height ?? 1000}

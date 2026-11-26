@@ -10,6 +10,7 @@ import { ListLoading, LoadError } from '../../components/LoadState';
 import { StarMark } from '../../components/TravellingStar';
 import { Button } from '../../components/ui/button';
 import { entryDisplayTitle } from '../../lib/displayTitle';
+import { pictureUrl } from '../../lib/media';
 import {
   barDay,
   dayIn,
@@ -201,7 +202,7 @@ function Stat({ figure, label }: { figure: number; label: string }) {
 /**
  * Up to ten pictures, five across in equal square tiles (DESIGN.md §6). They are a picture of the week, not a way in:
  * the bars below open the entries, so the tiles add no Tab stops. The first one is the screen's first photo, so it
- * loads at once; the rest are lazy (design.md §6).
+ * loads at once; the rest are lazy (design.md §6). Each tile draws the photo's thumbnail (D-43, task 4.18).
  */
 function Thumbnails({ thumbnails }: { thumbnails: Thumbnail[] }) {
   return (
@@ -209,7 +210,7 @@ function Thumbnails({ thumbnails }: { thumbnails: Thumbnail[] }) {
       {thumbnails.map(({ media, entry }, index) => (
         <li key={media.id}>
           <img
-            src={media.fileUrl}
+            src={pictureUrl(media, 'thumbnail')}
             alt={`${media.purpose === 'PAGE_SCAN' ? 'Diary page' : 'Photo'} from ${entryDisplayTitle(entry) ?? formatDay(entry.entryDate)}`}
             width={media.width ?? 96}
             height={media.height ?? 96}

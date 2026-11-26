@@ -129,7 +129,9 @@ function OpenEntry({ entry, zone, now }: { entry: Entry; zone: string; now: Date
         )}
         {entry.replyToEntryId && <AnswersLink entryId={entry.replyToEntryId} />}
       </div>
-      {photos.length > 0 && <Swipe photos={photos} eagerPhotoId={photos[0]?.id ?? null} />}
+      {photos.length > 0 && (
+        <Swipe photos={photos} eagerPhotoId={photos[0]?.id ?? null} size="original" />
+      )}
       {hasText(entry.contentJson) && (
         <RichText document={entry.contentJson} className="text-read" />
       )}

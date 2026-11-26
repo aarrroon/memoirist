@@ -455,7 +455,7 @@ All three are Phase 1.
 - A cover shows only while its entry is neither sealed (D-10) nor in Recently deleted (D-30); otherwise the Era has no cover. Removing the photo clears the cover.
 - Choosing a photo from a sealed entry as the cover is `400`; one from an entry in Recently deleted is `404`, like every other request about that entry (D-30).
 - **Editing an Era never loses a hidden cover.** A `PUT /eras/{id}` that leaves out `coverMediaId` keeps the stored cover while that cover is hidden (its entry sealed or in Recently deleted), because the client can't see its id and must not learn it (D-10). A visible cover that is left out is cleared, as with any full replace. The user chose this on 2026-11-24; built in task 4.14.
-- **On an Era's page the cover sits above the title band at every width**, on a laptop as on a phone (DESIGN.md §4). Side by side, the cover is drawn small while the original photo is served (Q29), which wastes data and fails the image-size check. The user chose this on 2026-11-25, after task 4.9.
+- **On an Era's page the cover sits above the title band at every width**, on a laptop as on a phone (DESIGN.md §4). Side by side, the cover would be drawn small, so even its screen copy (D-43) would waste data and fail the image-size check. The user chose this on 2026-11-25, after task 4.9.
 - The cover can be chosen whenever the Era is edited. From Phase 4, closing an Era offers it too (D-28).
 
 **Why:** chapters you can see make the journal feel like a book from day one (R-20, R-48). The user chose covers now and the closing ritual with the AI on 2026-10-28.

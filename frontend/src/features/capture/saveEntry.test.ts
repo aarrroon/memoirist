@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ApiProblem } from '../../api/problem';
 import { fakeBackend } from '../../test/msw/capture';
 import { server } from '../../test/msw/server';
@@ -215,5 +215,70 @@ describe('saveEntry', () => {
         (c) => c.method === 'POST' && (c.body as { id: string }).id === 'client-2',
       )?.body,
     ).not.toHaveProperty('dateUnknown');
+  });
+});
+
+// Task 4.18 (D-43): the smaller copies go up in the same request as the photo. jsdom can't decode a picture, so the
+// browser's createImageBitmap is stood in for with the size the photo would decode to.
+describe('saveEntry with smaller copies', () => {
+  const decodesTo = (width: number, height: number) => {
+    const decode = vi.fn(() => Promise.resolve({ width, height, close: () => undefined }));
+    vi.stubGlobal('createImageBitmap', decode);
+    return decode;
+  };
+  afterEach(() => vi.unstubAllGlobals());
+
+  test('a big photo goes up with a thumbnail and a screen copy, as JPEGs', async () => {
+    decodesTo(2560, 1920);
+    await saveEntry(input({ items: [photo('a')] }), noop);
+
+    expect(backend.state.calls[1]?.body).toMatchObject({
+      name: 'a.jpg',
+      thumbnail: { name: 'a-thumbnail.jpg', type: 'image/jpeg' },
+      screen: { name: 'a-screen.jpg', type: 'image/jpeg' },
+    });
+    // The fake server, like the real one, keeps a URL for each copy on the photo it stored.
+    const stored = backend.state.entries.get('client-1')?.media[0];
+    expect(stored?.thumbnailUrl).toContain('-thumbnail.jpg');
+    expect(stored?.screenUrl).toContain('-screen.jpg');
+  });
+
+  test('a photo between the sizes gets only a thumbnail; a small one gets none', async () => {
+    decodesTo(1200, 900);
+    await saveEntry(input({ clientId: 'client-mid', items: [photo('mid')] }), noop);
+    const mid = backend.state.calls.find((c) => c.path === '/entries/client-mid/media')?.body;
+    expect(mid).toMatchObject({ thumbnail: { name: 'mid-thumbnail.jpg' } });
+    expect(mid).not.toHaveProperty('screen');
+
+    decodesTo(480, 320);
+    await saveEntry(input({ clientId: 'client-small', items: [photo('small')] }), noop);
+    const small = backend.state.calls.find((c) => c.path === '/entries/client-small/media')?.body;
+    expect(small).not.toHaveProperty('thumbnail');
+    expect(small).not.toHaveProperty('screen');
+  });
+
+  test('a voice note gets no copies and is never decoded', async () => {
+    const decode = decodesTo(2560, 1920);
+    const voice: TrayItem = {
+      ...photo('v'),
+      file: new File([new Uint8Array(100)], 'v.webm', { type: 'audio/webm' }),
+      mediaType: 'audio/webm',
+    };
+    await saveEntry(input({ items: [voice] }), noop);
+    expect(backend.state.calls[1]?.body).not.toHaveProperty('thumbnail');
+    expect(decode).not.toHaveBeenCalled();
+  });
+
+  test('a retry after a failed upload makes the copies only once', async () => {
+    const decode = decodesTo(2560, 1920);
+    const item = photo('again');
+    backend.state.failUploads.add(1);
+    const first = await saveEntry(input({ items: [item] }), noop);
+    expect(first.failed).toBe(1);
+
+    await saveEntry(input({ items: [item] }), noop);
+    expect(decode).toHaveBeenCalledTimes(1);
+    const uploads = backend.state.calls.filter((c) => c.path.endsWith('/media'));
+    expect(uploads.at(-1)?.body).toMatchObject({ thumbnail: { name: 'again-thumbnail.jpg' } });
   });
 });

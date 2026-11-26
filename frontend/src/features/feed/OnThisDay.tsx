@@ -11,8 +11,8 @@ import { yearsAgo, type IsoDate } from '../../lib/time';
  * in place and the chevron turns down. With nothing from this day it draws nothing at all, so an empty strip never
  * hints that something sealed or deleted is waiting (D-10).
  *
- * The tile shows what the first memory holds as an icon, not its photo: a summary carries no file URL (D-24), and a
- * 40 px tile of the original photo would be far over the size it is drawn at (Q29).
+ * The tile shows what the first memory holds as an icon, not its photo: a summary carries no file URL (D-24), and
+ * even the 480 px thumbnail (D-43) would be far over a 40 px tile.
  */
 export function OnThisDay({ rows, today }: { rows: readonly EntrySummary[]; today: IsoDate }) {
   const [open, setOpen] = useState(false);

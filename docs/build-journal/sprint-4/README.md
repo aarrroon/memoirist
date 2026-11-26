@@ -1,6 +1,6 @@
 # Sprint 4: The React UI
 
-> **Tasks:** 4.1 to 4.17 ([SPRINT_PLAN](../../SPRINT_PLAN.md#sprint-4-react-ui)) · **Branch:** `phase-1-sprint-4`, stacked on `phase-1-sprint-3` · **Built:** 2026-11-24 22:17 to 2026-11-26 17:45 (Melbourne time, by the commit timestamps), in one unattended run over two nights that paused at the usage limit several times · **Status:** every task is built and committed. Fifteen of seventeen are ticked. **4.10 and 4.14 need attention:** both pass every check except the design audit's `images` line, because the week thumbnails and the feed's 32 px Era cover are the original photos (Q29, open). They wait on your Q29 decision. CI on the last push ([run 45770403437](https://github.com/aarrroon/memoirist/actions/runs/45770403437)) was green on both the backend and frontend jobs.
+> **Tasks:** 4.1 to 4.17 ([SPRINT_PLAN](../../SPRINT_PLAN.md#sprint-4-react-ui)) · **Branch:** `phase-1-sprint-4`, stacked on `phase-1-sprint-3` · **Built:** 2026-11-24 22:17 to 2026-11-26 17:45 (Melbourne time, by the commit timestamps), in one unattended run over two nights that paused at the usage limit several times · **Status:** every task is built and committed. Fifteen of seventeen are ticked. **4.10 and 4.14 need attention:** both pass every check except the design audit's `images` line, because the week thumbnails and the feed's 32 px Era cover were the original photos. Task 4.18 added D-43's copies (your answer to Q29), but even the 480 px thumbnail is 3.7x to 15x the width of those tiles against the audit's 2x limit, so 4.10, 4.14 and 4.18 wait on one more decision: a smaller tile copy, or an audit that accepts the smallest copy. CI on the last push ([run 45770403437](https://github.com/aarrroon/memoirist/actions/runs/45770403437)) was green on both the backend and frontend jobs.
 > **Built:** the whole Phase 1 frontend in `frontend/`: generated API types and a typed client, the routes and the phone-first shell, the Journal feed with weeks filed under Eras, On this day and the Opened row, the entry card, capture (write sheet, uploads, draft, voice notes, photo dump, diary pages, soundtracks), Loot Drops (seal with quick dates, the travelling star, replies, the first letter), the Eras, Era, Templates, You, Week, Timeline, Tags and Recently deleted screens, two Playwright smoke tests and a frontend CI job. Backend changes came with it: photo sizes (`V2__media_dimensions.sql`, D-17), `GET /eras/{id}` leaving out empty weeks (D-22), On this day leaving out `dateUnknown` entries (D-32) and a `PUT /eras/{id}` keeping a hidden cover (D-36).
 
 ## The goal
@@ -11,6 +11,7 @@ Sprint 3 finished the Phase 1 API: 37 endpoints, documented in `/v3/api-docs`. S
 - **4.9** builds the Eras, Templates and You screens; **4.10** the week summary; **4.11** the Timeline and Tags; **4.12** Recently deleted (and lazy-loads every inner screen).
 - **4.13** adds the photo dump and photo dates; **4.14** On this day and Era covers; **4.15** soundtracks; **4.16** quick unlock dates, replies and the first letter.
 - **4.17** adds the end-to-end smoke tests and the frontend CI job.
+- **4.18** stores and serves smaller copies of photos (D-43, the answer to Q29).
 
 What a user gets, against the README's Phase 1 list: entries with text, photos, voice notes and diary-page photos; optional titles, tags, templates (with a starter gallery) and Spotify soundtracks; the photo dump; weeks filed automatically and joining Eras by date, with Era covers; Loot Drops sealed until a future date, with quick unlock dates, replies and a first letter; a feed with *On this day*, a week summary and an all-entries timeline; Recently deleted for 30 days. Local only, as the seeded dev user. That is the whole Phase 1 list; the two open items are how photos are drawn small (Q29), not missing features.
 
@@ -36,6 +37,7 @@ CLAUDE.md's frontend rules get their enforcement here. Generated types only: `np
 | **4.15** Soundtracks | 4.6's capture; 4.9's Era form; 4.10's week | `lib/spotify.ts` (pasted links to URIs), `useMusicSearch` (`skipToken`, no retry, paste only after `503`), `SoundtrackField` and the tap-to-load `SoundtrackPlayer` (0 Spotify requests before Play), *Edit week* in place of *Rename week* |
 | **4.16** Loot Drop extras | 4.8's seal panel and Loot Drop page; 4.6's capture | Quick dates (`quickDays`, `nextBirthday`, `addMonthsClamped` in `lib/time.ts`), Reply to past you (`useUiStore.replyTo`, `useReplies`), the first letter on the empty first-run screen (capture kind `letter`, `lib/firstLetter.ts`) |
 | **4.17** E2E and CI | Every screen above; the real stack | `frontend/e2e/` (F-03 and F-06 at 375 and 1440 px, a clean-up fixture, a global setup that checks the backend) and the CI `frontend` job (test, lint, typecheck, build) |
+| **4.18** Smaller copies of photos | 4.5's swipe and stored sizes; 4.6's upload; 4.10's and 4.14's tiles | `V3__media_copies.sql` (`thumbnail_key`, `screen_key`), the upload's `thumbnail` and `screen` parts, `thumbnailUrl` and `screenUrl`, `makeCopies` in `lib/files.ts`, `pictureUrl` in `lib/media.ts` |
 
 Each task leaned on something the one before it proved:
 - 4.8's `afterSeal` (write the server's redacted answer over the cached entry) became the rule for every later cache family: 4.10 found the week page missing from it (blocker), 4.11 added the Timelines, 4.12 Recently deleted, 4.14 On this day.
@@ -64,6 +66,7 @@ Each task leaned on something the one before it proved:
 | 4.15 Soundtrack picker and player | [`b5d97cc`](https://github.com/aarrroon/memoirist/commit/b5d97cc08d6038c14f69da0293593bbad1bca701) | [4.15 Soundtrack picker and player](4.15-soundtrack.md) | Pass with notes: 10 minor; the doubled *Spotify* name and stale comments fixed; the stored-title question left for you |
 | 4.16 Loot Drop extras and the first letter | [`cb967ef`](https://github.com/aarrroon/memoirist/commit/cb967ef646ad9d1b0a0da574b50e54b74ad190d1) | [4.16 Loot Drop extras and the first letter](4.16-loot-drop-extras.md) | Pass with notes: 3 minor; a removed reply link coming back from a draft fixed; F-01's wording left for you |
 | 4.17 End-to-end smoke test and CI: frontend | [`011911e`](https://github.com/aarrroon/memoirist/commit/011911e0301c2e3b35af10325127026d8d94d635), [`0963651`](https://github.com/aarrroon/memoirist/commit/096365104b1150c762abd366a24bd825baeee8c9) (green CI, ticked) | [4.17 End-to-end smoke test and CI: frontend](4.17-e2e-ci-frontend.md) | Pass with notes twice: 7 findings; 1 major ("CI is green" claimed before any push) fixed by pushing and quoting run 45770081824 |
+| 4.18 Smaller copies of photos | `Sprint 4.18: Store and serve smaller copies of photos [needs-attention]` | [4.18 Smaller copies of photos](4.18-photo-copies.md) | Changes needed twice: 2 blockers (the 480 px thumbnail still fails the `images` line on small tiles, so 4.10, 4.14 and 4.18 stay unticked) **wait for your decision**; the minors fixed, `useWebWorker: false` listed for your approval |
 
 The sprint's other commits are docs and setup: `6e32149` (the overnight prompt), `25f3c62` (the Sprint 4 decisions D-17, D-22, D-26, D-32, D-36, D-42), `85206fd` (the Sprint 4 libraries, D-13), `7343a9b` (the overnight report), and `9084ce0` and `c54089d` (the first wrap-up after 4.9).
 
@@ -365,6 +368,10 @@ Each pair is 375 px, light then dark, against the local backend with its sample 
 
 4.17 built no screen.
 
+**4.18 Eras list:** each Era's cover as a thumbnail, the initial kept when there is none.
+
+<img src="screens/4.18-eras-light.png" width="240" alt="Eras list, light"> <img src="screens/4.18-eras-dark.png" width="240" alt="Eras list, dark">
+
 ## Test strategy
 ### The layers
 | Layer | Tool | What it proves | Where |
@@ -399,6 +406,7 @@ Each task broke its main rule on purpose and watched the test go red: the dev he
 | 4.15 | 487 | 169.0 kB as the task measured it |
 | 4.16 | 513 | entry chunk 169.7 kB |
 | 4.17 | 513 (+ 2 Playwright tests × 2 sizes) | unchanged |
+| 4.18 | 536 | index 169.8 kB |
 
 The budget is 200 kB for the feed's first JavaScript (design.md §6). 4.12's numbers count the entry chunk plus the shared chunks it imports and preloads; later tasks quoted Vite's entry chunk, so compare like with like.
 

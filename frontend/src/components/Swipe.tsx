@@ -10,6 +10,7 @@ import {
 } from 'react';
 import type { Media } from '../api/feed';
 import { cn } from '../lib/cn';
+import { pictureUrl, type PictureSize } from '../lib/media';
 import { frameRatio } from '../lib/photoFrame';
 
 // The swipe (task 4.5, DESIGN.md §4 Swipe, D-41): an entry's photos in one row that scrolls sideways and snaps to
@@ -20,7 +21,7 @@ import { frameRatio } from '../lib/photoFrame';
 //   cropped to it. Its space is reserved from the stored size before any photo arrives (D-17, layout shift <= 0.1).
 // - Only the first photo on the screen loads at once, with high priority; every other is lazy. A photo after the
 //   first gets its file only once the reader starts to swipe, then always one ahead of the one shown, so a feed
-//   of busy days asks for one photo per entry (design.md §6, Q29).
+//   of busy days asks for one photo per entry (design.md §6, D-43).
 // - The dots are decoration (aria-hidden). The swipe is a group labelled "Photos, 4 photos" that takes focus, so
 //   the arrow keys move it, and each photo has its own alt text.
 
@@ -39,9 +40,12 @@ const prefersReducedMotion = () =>
 export function Swipe({
   photos,
   eagerPhotoId,
+  size,
 }: {
   photos: readonly Media[];
   eagerPhotoId: string | null;
+  /** Which copy to draw (D-43): the feed uses the screen copy; the entry view the original, shown whole. */
+  size: PictureSize;
 }) {
   const count = photos.length;
   const [viewport, embla] = useEmblaCarousel({
@@ -152,7 +156,7 @@ export function Swipe({
                 >
                   {index <= loadUpTo && (
                     <img
-                      src={photo.fileUrl}
+                      src={pictureUrl(photo, size)}
                       alt={altText(photo, index, count)}
                       width={photo.width ?? undefined}
                       height={photo.height ?? undefined}

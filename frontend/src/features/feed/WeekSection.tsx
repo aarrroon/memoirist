@@ -3,6 +3,7 @@ import { Fragment, type ReactNode } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Link } from 'react-router';
 import type { Media, WeekEra } from '../../api/feed';
+import { pictureUrl } from '../../lib/media';
 import { formatWeekRange, isWithin, todayIn } from '../../lib/time';
 import { FeedEntry } from './FeedEntry';
 import type { PlacedWeek } from './grouping';
@@ -140,10 +141,10 @@ function EraLink({
   return (
     <Link to={`/eras/${era.id}`} className="flex min-h-11 min-w-0 items-center gap-3">
       {cover ? (
-        // Decoration beside the Era's name, so alt is empty. Lazy like every photo but the first (design.md §6):
-        // it is the original photo while Q29 stands, so the audit reports it as oversize.
+        // Decoration beside the Era's name, so alt is empty. Lazy like every photo but the first (design.md §6),
+        // and the photo's thumbnail, not the original (D-43, task 4.18).
         <img
-          src={cover.fileUrl}
+          src={pictureUrl(cover, 'thumbnail')}
           alt=""
           width={32}
           height={32}

@@ -11,7 +11,13 @@ import {
 } from '../../api/entries';
 import { ApiProblem, problemMessage } from '../../api/problem';
 import type { JSONContent } from '@tiptap/react';
-import { fileProblem, isImageType, shrinkPhoto } from '../../lib/files';
+import {
+  fileProblem,
+  isImageType,
+  makeCopies,
+  shrinkPhoto,
+  type PhotoCopies,
+} from '../../lib/files';
 
 // Capture's save, one flow of several requests (frontend.md, Capture and media; D-12, D-23):
 //   create the entry (with the client's own id) or replace it (with the version last read)
@@ -101,6 +107,22 @@ async function preparedFile(file: File, purpose: MediaPurpose): Promise<File> {
   return ready;
 }
 
+// A retry makes a photo's copies only once (D-43): they are kept with the file as it is sent.
+const copiesOf = new WeakMap<File, PhotoCopies>();
+
+/** The smaller copies of the file as it is sent (D-43, task 4.18), made once; none for a voice note. A copy that
+ *  would fail the 25 MB check is left out, and the screens fall back to the next size up. */
+async function preparedCopies(file: File): Promise<PhotoCopies> {
+  const kept = copiesOf.get(file);
+  if (kept) return kept;
+  const made = await makeCopies(file);
+  const usable: PhotoCopies = {};
+  if (made.thumbnail && !fileProblem(made.thumbnail)) usable.thumbnail = made.thumbnail;
+  if (made.screen && !fileProblem(made.screen)) usable.screen = made.screen;
+  copiesOf.set(file, usable);
+  return usable;
+}
+
 /** Updates one tray item while the save runs, so each thumbnail shows its own progress. */
 export type ItemUpdate = (key: string, patch: Partial<TrayItem>) => void;
 
@@ -108,7 +130,8 @@ export type ItemUpdate = (key: string, patch: Partial<TrayItem>) => void;
 // create (POST with `id: input.clientId`) or replace (PUT with the version), delete removed photos, upload every item
 // that isn't uploaded yet (one at a time, in tray order, reporting 'uploading', then 'uploaded' with its mediaId or
 // 'failed' with problemMessage; since task 4.13 each file is first shrunk for its purpose with preparedFile, and one
-// still over 25 MB fails on its item without being sent), then PUT the order of every uploaded item when there are two
+// still over 25 MB fails on its item without being sent; since task 4.18 its smaller copies, from preparedCopies, go
+// in the same upload, D-43), then PUT the order of every uploaded item when there are two
 // or more. A create also sends `dateUnknown: true` when the fields ask for it (D-34), never a PUT. The order must
 // name exactly the entry's media, so start from the media list in the create or PUT answer, not the tray alone.
 // If the entry holds no media and has no title, caption or tags, delete it and return entry: null. When an upload
@@ -171,7 +194,8 @@ export async function saveEntry(input: SaveInput, onItem: ItemUpdate): Promise<S
         onItem(item.key, { status: 'failed', error: tooBig });
         continue;
       }
-      const media = await uploadMedia(entry.id, file, item.purpose);
+      // The thumbnail and the screen copy are made from the file as it is sent, and go up with it (D-43).
+      const media = await uploadMedia(entry.id, file, item.purpose, await preparedCopies(file));
       onItem(item.key, { status: 'uploaded', mediaId: media.id, error: null });
       order.push(media.id);
     } catch (error) {

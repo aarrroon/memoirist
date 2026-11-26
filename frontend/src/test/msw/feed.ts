@@ -18,7 +18,10 @@ export function era(
   return { id, title, startDate, endDate, pinnedInFeed };
 }
 
-/** A photo. The sample pictures are 960 × 640 (backend dev/PlaceholderImages); pass null for one with no size. */
+/**
+ * A photo. The sample pictures are 960 × 640 (backend dev/PlaceholderImages); pass null for one with no size. It has
+ * no smaller copies, as a photo from before task 4.18 (D-43); `withCopies` gives it both.
+ */
 export function photo(
   id: string,
   entryId: string,
@@ -36,6 +39,24 @@ export function photo(
     uploadedAt: at,
     width: size?.width ?? null,
     height: size?.height ?? null,
+    thumbnailUrl: null,
+    screenUrl: null,
+  };
+}
+
+/** The photo with a thumbnail and a screen copy, each at its own signed URL (D-43), or only the ones named. */
+export function withCopies(
+  media: Media,
+  copies: ('thumbnail' | 'screen')[] = ['thumbnail', 'screen'],
+): Media {
+  return {
+    ...media,
+    thumbnailUrl: copies.includes('thumbnail')
+      ? `http://localhost:8333/memoirist/${media.id}-thumbnail.jpg?X-Amz-Signature=test`
+      : null,
+    screenUrl: copies.includes('screen')
+      ? `http://localhost:8333/memoirist/${media.id}-screen.jpg?X-Amz-Signature=test`
+      : null,
   };
 }
 

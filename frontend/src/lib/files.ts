@@ -52,7 +52,9 @@ export async function shrinkPhoto(file: File, purpose: PicturePurpose = 'PHOTO')
   try {
     const shrunk = await imageCompression(file, {
       ...SETTINGS[purpose],
-      useWebWorker: true,
+      // Not in a worker (task 4.18): browser-image-compression's worker loads the library from cdn.jsdelivr.net,
+      // and no page calls another company's server (design.md §6).
+      useWebWorker: false,
       fileType: file.type,
     });
     // Never send a bigger file than the one picked: a small PNG can grow when it is re-encoded.
@@ -62,4 +64,74 @@ export async function shrinkPhoto(file: File, purpose: PicturePurpose = 'PHOTO')
   } catch {
     return file;
   }
+}
+
+// Smaller copies (D-43, task 4.18). When a photo or diary page uploads, the browser also makes a thumbnail and a
+// screen copy and sends them in the same request; the server keeps them on the photo's own row. Making them here
+// needs no image library on the server (the JDK can't read WebP) and keeps the work off Phase 2's small host.
+
+/** The longest side of each copy, in pixels (D-43). */
+export const COPY_SIZES = { thumbnail: 480, screen: 1600 } as const;
+export type CopySize = keyof typeof COPY_SIZES;
+
+/** The copies that travel with one upload; a size the photo already fits in is left out. */
+export type PhotoCopies = Partial<Record<CopySize, File>>;
+
+/**
+ * The copies a picture of this size needs: one for each size its longest side is bigger than. A photo no bigger than a
+ * copy gets no copy of that size (D-43), and a size that can't be read (0, NaN, from a broken file) gets none, so the
+ * screens fall back to the original.
+ */
+export function copiesNeeded(width: number, height: number): CopySize[] {
+  const longest = Math.max(width, height);
+  if (!Number.isFinite(longest) || longest <= 0) return [];
+  return (Object.keys(COPY_SIZES) as CopySize[]).filter((size) => longest > COPY_SIZES[size]);
+}
+
+/** A WebP stays WebP; anything else becomes JPEG (D-43): a PNG photo's copy would be several times bigger as PNG. */
+export const copyType = (type: string) => (type === 'image/webp' ? 'image/webp' : 'image/jpeg');
+
+/** The picture's size in pixels as the browser decodes it, or null when it can't (jsdom, a broken file). */
+async function pictureSize(file: Blob): Promise<{ width: number; height: number } | null> {
+  if (typeof createImageBitmap !== 'function') return null;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const size = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return size;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Makes the copies of a photo that is about to upload: call it with the file as it is sent (already shrunk, so its
+ * rotation is applied and the copies match it). A copy that fails is left out, and the screens use the next size up.
+ */
+export async function makeCopies(file: File): Promise<PhotoCopies> {
+  if (!isImageType(file.type)) return {};
+  const size = await pictureSize(file);
+  if (!size) return {};
+  const type = copyType(file.type);
+  const base = file.name.replace(/\.[^.]*$/, '');
+  const copies: PhotoCopies = {};
+  for (const name of copiesNeeded(size.width, size.height)) {
+    try {
+      const copy = await imageCompression(file, {
+        maxWidthOrHeight: COPY_SIZES[name],
+        initialQuality: 0.82,
+        fileType: type,
+        // On the page's own thread: the library's worker loads its script from cdn.jsdelivr.net, and the app calls
+        // no other company's server (design.md §6). The file is already at most 2560 px, so this is quick.
+        useWebWorker: false,
+      });
+      copies[name] = new File([copy], `${base}-${name}.${type === 'image/webp' ? 'webp' : 'jpg'}`, {
+        type,
+        lastModified: file.lastModified,
+      });
+    } catch {
+      // No copy of this size: the screens fall back to the next size up (D-43).
+    }
+  }
+  return copies;
 }

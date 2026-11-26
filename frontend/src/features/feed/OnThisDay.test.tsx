@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { EntrySummary } from '../../api/lootDrops';
 import { eraOf } from '../../test/msw/eras';
-import { photo } from '../../test/msw/feed';
+import { photo, withCopies } from '../../test/msw/feed';
 import { server } from '../../test/msw/server';
 import { renderApp } from '../../test/render';
 
@@ -175,6 +175,24 @@ describe('Era covers on the feed', () => {
     expect(document.querySelectorAll('img[src*="media-cover"]')).toHaveLength(
       screen.getAllByRole('link', { name: 'New job' }).length,
     );
+  });
+
+  test('the Era line draws the cover from its thumbnail, not the original (D-43)', async () => {
+    const cover = withCopies(photo('media-cover', 'entry-cover'));
+    server.use(
+      http.get('*/api/v1/eras', () =>
+        HttpResponse.json([eraOf('era-job', 'New job', '2026-11-09', null, { cover })]),
+      ),
+    );
+    renderApp('/');
+    await screen.findByRole('heading', { name: 'Quiet day' });
+
+    const job = screen.getAllByRole('link', { name: 'New job' })[0]!;
+    const img = await within(job).findByRole('presentation');
+    expect(img).toHaveAttribute('src', cover.thumbnailUrl);
+    // Neither the original nor the screen copy is asked for anywhere on the feed for this 32 px tile.
+    expect(document.querySelectorAll('img[src*="media-cover.png"]')).toHaveLength(0);
+    expect(document.querySelectorAll('img[src*="media-cover-screen"]')).toHaveLength(0);
   });
 
   test('until the Eras arrive the line shows the initial in the same tile', async () => {

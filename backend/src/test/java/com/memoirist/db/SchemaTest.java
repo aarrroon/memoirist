@@ -33,13 +33,17 @@ class SchemaTest {
         assertThat(jdbc.sql("SELECT script FROM flyway_schema_history WHERE success ORDER BY installed_rank")
                         .query(String.class)
                         .list())
-                .containsExactly("V1__core_schema.sql", "V2__media_dimensions.sql", "R__seed_dev_user.sql");
+                .containsExactly(
+                        "V1__core_schema.sql",
+                        "V2__media_dimensions.sql",
+                        "V3__media_copies.sql",
+                        "R__seed_dev_user.sql");
         assertThat(jdbc.sql("SELECT count(*) FROM flyway_schema_history WHERE NOT success")
                         .query(Long.class)
                         .single())
                 .isZero();
 
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("2");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("3");
         assertThat(flyway.info().pending()).isEmpty();
     }
 

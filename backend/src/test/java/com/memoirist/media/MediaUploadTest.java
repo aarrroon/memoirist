@@ -62,7 +62,9 @@ class MediaUploadTest extends MediaApiTest {
                         "fileSizeBytes",
                         "uploadedAt",
                         "width",
-                        "height");
+                        "height",
+                        "thumbnailUrl",
+                        "screenUrl");
         assertThat(media)
                 .containsEntry("entryId", entryId)
                 .containsEntry("mediaType", "image/jpeg")

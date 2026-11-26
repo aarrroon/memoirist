@@ -14,6 +14,9 @@ import org.springframework.stereotype.Component;
  * {@code EntryMapperIsTheOnlyPathTest} fails if another class builds a {@code MediaResponse}.
  *
  * <p>It reads nothing lazy: the entry's id is passed in, so mapping a row costs no query.
+ *
+ * <p>The smaller copies (D-43) are signed here too, by the same rule: the caller has already decided the user may see
+ * the photo, so its copies follow the original. A copy the row doesn't have is {@code null}, never a URL to nothing.
  */
 @Component
 public class MediaMapper {
@@ -35,6 +38,12 @@ public class MediaMapper {
                 media.getFileSizeBytes(),
                 media.getUploadedAt(),
                 media.getWidth(),
-                media.getHeight());
+                media.getHeight(),
+                signedOrNull(media.getThumbnailKey()),
+                signedOrNull(media.getScreenKey()));
+    }
+
+    private String signedOrNull(String objectKey) {
+        return objectKey == null ? null : storage.presignGet(objectKey);
     }
 }

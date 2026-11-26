@@ -87,7 +87,7 @@ function EntryBody({
 
   return (
     <>
-      {photos.length > 0 && <Swipe photos={photos} eagerPhotoId={eagerPhotoId} />}
+      {photos.length > 0 && <Swipe photos={photos} eagerPhotoId={eagerPhotoId} size="screen" />}
 
       {/* Task 4.12: the text, with the entry's more-actions menu at its top right (F-09). */}
       <div className="flex items-start gap-2">

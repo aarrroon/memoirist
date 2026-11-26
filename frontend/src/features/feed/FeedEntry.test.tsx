@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, test } from 'vitest';
 import type { Entry } from '../../api/feed';
-import { doc, entry, photo, sealedEntry, voiceNote } from '../../test/msw/feed';
+import { doc, entry, photo, sealedEntry, voiceNote, withCopies } from '../../test/msw/feed';
 import { FeedEntry } from './FeedEntry';
 
 // One entry in the feed (task 4.5): the swipe, the caption drawn from its TipTap JSON and the voice note row,
@@ -44,6 +44,18 @@ describe('an entry with photos only', () => {
     ]);
     // D-24: with nothing written, the entry is named by its first media item.
     expect(screen.getByText('Photo', { selector: 'p' })).toBeInTheDocument();
+  });
+
+  test('the swipe draws the screen copy, or the original when there is none, never the thumbnail (D-43)', () => {
+    const copied = withCopies(photo('p', 'e'));
+    const { unmount } = show(entry('e', '2026-11-24', { media: [copied] }), 'p');
+    expect(screen.getByRole('img', { name: 'Photo' })).toHaveAttribute('src', copied.screenUrl);
+    unmount();
+
+    // A photo between the two sizes has a thumbnail and no screen copy: the swipe goes up to the original.
+    const thumbOnly = withCopies(photo('p', 'e'), ['thumbnail']);
+    show(entry('e', '2026-11-24', { media: [thumbOnly] }), 'p');
+    expect(screen.getByRole('img', { name: 'Photo' })).toHaveAttribute('src', thumbOnly.fileUrl);
   });
 
   test('a diary page is named as one (D-20)', () => {
