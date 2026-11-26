@@ -44,7 +44,8 @@
 | 4.12 Recently deleted screen | done | Sprint 4.12: Lazy-load inner screens and build Recently deleted | Every screen but the Journal loads on first visit (feed's first JS 199.43 → 190.53 kB gzip); `/recently-deleted` over `GET /entries/deleted` with the erase day, Restore and Erase now (asks first); one delete question from a feed entry's new more-actions menu, an open entry and the Loot Drop page; a 404 on delete refreshes the feed; count on You and a Timeline row (404 frontend tests) | [4.12](build-journal/sprint-4/4.12-recently-deleted.md) |
 | 4.13 Photo dump and photo dates | done | Sprint 4.13: Build the photo dump and read photo dates | Photo dump reads each photo's EXIF date with exifr before shrinking and files one backdated entry per day (20 photos at most each; a retry reuses the client id, D-12), undated photos into one `dateUnknown` entry with a *Date unknown, fix it* badge on its feed card; capture offers a photo's own date; photos are shrunk at upload, a diary page more gently (433 frontend tests) | [4.13](build-journal/sprint-4/4.13-photo-dump.md) |
 | 4.14 On this day strip and Era covers | needs attention: the design check fails its `images` line on the feed in light and dark (the Era line's 32 px cover is the original photo, 15x at 375 px and 30x at 1440 px; Q29). Every other check passes; not ticked | Sprint 4.14: Build On this day and Era covers in the feed and form [needs-attention] | `GET /entries/on-this-day` leaves out `dateUnknown` entries (D-32) and a `PUT /eras/{id}` keeps a hidden cover (D-36); the feed's *On this day* row expands in place (at the top, or below the first entry while the Opened row shows); each Era line shows its cover and links to its Era page; Edit Era has a cover picker of the Era's photos (448 frontend tests) | [4.14](build-journal/sprint-4/4.14-on-this-day-era-covers.md) |
-| 4.15 to 4.17 | not started | none | **Next task: 4.10 still needs the Q29 decision (so does 4.14); after it, 4.15 (Soundtrack picker and player)** | |
+| 4.15 Soundtrack picker and player | done | Sprint 4.15: Add the soundtrack field and the tap-to-load player | Entries, weeks (Edit week) and Eras get one soundtrack field: a pasted Spotify link becomes its URI at once, words search through `POST /music/search`, and a `503` leaves it paste only; every soundtrack row loads Spotify's 80 px embed only after Play (0 Spotify requests before, checked in Chromium); the mark is ours, in ink (487 frontend tests) | [4.15](build-journal/sprint-4/4.15-soundtrack.md) |
+| 4.16 to 4.17 | not started | none | **Next task: 4.10 still needs the Q29 decision (so does 4.14); after it, 4.16 (Loot Drop extras and the first letter)** | |
 
 **S4 Overview:** [build-journal/sprint-4/README.md](build-journal/sprint-4/README.md) (tasks 4.1 to 4.9).
 
@@ -74,6 +75,8 @@
 | 2026-11-26 06:13 | 50% | 3% | 4.11 done (it stopped at the limit and resumed by itself). The weekly window reset. Start 4.12 (with lazy-loaded routes first: the feed chunk is 199.42 of 200 kB) |
 | 2026-11-26 08:08 | 34% | 10% | 4.12 done (7% weekly; the feed's first JS is now 190.53 kB). Start 4.13 |
 | 2026-11-26 09:20 | 70% | 15% | 4.13 done. Start 4.14 (backend work; it may stop at the 5-hour limit and resume after 12:10) |
+| 2026-11-26 10:14 | 100% | not read | 4.14 committed (needs attention: the 32 px Era cover fails the image check, Q29). Wait for the reset |
+| 2026-11-26 12:11 | 0% | 20% | The window reset. Start 4.15 (4.10 and 4.14 wait on Q29) |
 
 ### S4 Assumptions
 | # | Task | From | Assumption |
@@ -191,6 +194,17 @@
 | 111 | 4.14 | design.md §6 (late content reserves its space) | The feed waits for `GET /entries/on-this-day` before its first paint (a failure counts as nothing), as for the Opened row; it doesn't wait for `GET /eras`, since the initial fills the same 32 px tile |
 | 112 | 4.14 | No doc gives the copy | Strip rows read the display title over *N years ago* (*Entry* when nothing names it); the picker says *Cover*, *A photo from this Era opens it, here and in your journal.*, *No cover*, *Finding photos…*, *No photos in this Era yet.*, *Show more photos*; tiles are *Photo from <day>* and *The cover now* |
 | 113 | 4.14 | 4.4 ("/eras until Era pages exist") | The feed's Era line and *Also in* chips now link to `/eras/<id>` |
+| 114 | 4.15 | DESIGN.md §4 Soundtrack row vs D-35 | A stored soundtrack's row says *Song / Album / Playlist on Spotify*, not its title: only the URI is stored, and fetching the title would contact Spotify before the tap. The title shows only in the field right after a search pick |
+| 115 | 4.15 | PRD Privacy (line 197), design.md §6 vs `MusicResult.imageUrl` | Search results show no cover art (it is on `i.scdn.co`); each row has a lucide icon by kind (`Music`, `Disc3`, `ListMusic`), the title, then *Song · Bon Iver* |
+| 116 | 4.15 | D-35 (small Spotify quota); no doc says when to search | Search runs on Enter or *Search*, not while typing; one field takes a full Spotify link as soon as it is pasted and searches for other text |
+| 117 | 4.15 | 4.2's global retry policy (5xx twice) | The music search query has `retry: false`; after `503 music-search-unavailable` the field stays paste only (*Soundtrack: Spotify link*) until it mounts again; other errors keep search on |
+| 118 | 4.15 | No doc gives the player's size or focus | Spotify's compact 80 px embed for every kind, `lg` corners, added only on Play; Play is removed and focus moves into the iframe; `sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"` (checked in Chromium only) |
+| 119 | 4.15 | design.md §7 | Spotify's embed draws its own colours (green included) inside the iframe; §7 is applied to our mark only, since the player is third-party content the user asked for |
+| 120 | 4.15 | USER_FLOWS F-12 vs DESIGN.md §6 (*Rename week*) | *Rename week* became *Edit week*: one dialog with Name and Soundtrack, sent as one full-replace `PUT`. DESIGN.md not edited |
+| 121 | 4.15 | design.md §5 and §9 | The Spotify mark is Simple Icons' Spotify path (CC0), as the round 3 mockup used, kept in `src/assets/spotify-mark.svg` and placed with `<use>` in `currentColor` (ink, or on-band on the Era band); decorative (`aria-hidden`) since the text says *on Spotify* |
+| 122 | 4.15 | D-23 (draft) | The capture draft has an optional soundtrack, validated with the server's URI regex; a restored pre-4.15 draft of a saved entry takes the entry's own soundtrack; a soundtrack alone doesn't make an entry saveable but counts as unsaved for the close prompt |
+| 123 | 4.15 | No doc gives the copy | *Soundtrack*, *Paste a Spotify link, or search for a song, album or playlist.*, *Copy it from Spotify's Share menu.*, the short-link and wrong-kind messages, *Nothing found. Try other words, or paste a link.*, *Searching…*; Play and Remove labelled *Play the song on Spotify* and *Remove the soundtrack, <name>* |
+| 124 | 4.15 | Local dev data for screenshots | Sample soundtracks set through the API: *Quiet day* (track `4uLU6hMCjMI75M1A2tKUQC`, the contract's example), the week of 23–29 Nov (album) and the *New job* Era (playlist). The first feed entry gains a 44 px row, so the feed's first photo moves to 1094 px (was 1042) |
 
 ### S4 Needs attention
 - **4.2:** without a backend, the Vite proxy answers `502` with an empty body, which maps to the general *Something went wrong* message (kind `unknown`, after 2 retries, about 3.8 s) rather than the *Can't reach memoirist* one. A later task could map a non-problem `502`/`504` to `network` if the wording matters.
@@ -272,7 +286,17 @@
 - **4.14, decision needed (docs):** D-36 covers only a *left-out* `coverMediaId`; the code and API_CONTRACT also keep a hidden cover on an explicit `null`, so a hidden cover can be replaced but not removed (assumption 110). Confirm, then `/record-decision` to reword D-36.
 - **4.14, decision needed (docs):** D-36 says the feed shows the cover as the Era's title page above its weeks; the build follows DESIGN.md §4 and shows it only in the 32 px sticky Era line (assumption 107). Confirm and reword D-36.
 - **4.14, local data:** the local dev journal now holds three extra entries dated 26 November (2025 with a photo, 2022 text, 2024 marked `dateUnknown`), and *New job* has a cover. They were added for the screenshots.
-- **Sprint 4 not finished:** tasks 4.15 to 4.17 are left, and 4.10 and 4.14 need the Q29 decision above. The pull request stays a draft for that reason and for 4.9.
+- **4.15, decision needed (design vs D-35):** DESIGN.md §4 draws a stored soundtrack as "**Holocene**, Bon Iver", but D-35 stores only the URI, so rows read "**Song** on Spotify". Either amend DESIGN.md §4 (record with `/record-decision`), or add a stored title column or a server lookup. No Q-x records it yet (review minor 1).
+- **4.15, approval needed (docs):** *Rename week* is now *Edit week* (name and soundtrack). DESIGN.md §6's screen table and USER_FLOWS F-15 step 4 still say rename (review minor 2).
+- **4.15, approval needed (design):** on the Era title band the Spotify mark is `--on-band` (white in light mode), not `--ink` as design.md §7 says, to stay readable on the band. Confirm, and add a line to DESIGN.md §4 Title band (review minor 3).
+- **4.15, follow-up (design.md §8):** search result rows are tappable rows with no chevron. Add a 20 px `ChevronRight`, or record result lists as a pattern in DESIGN.md (review minor 4).
+- **4.15, follow-up (tests):** no `Eras.test.tsx` case changes or removes an Era's soundtrack through the form and checks the full `PUT` body; the week has one (review minor 7).
+- **4.15, follow-up (screens):** no screenshot of the week page itself or of the feed's soundtrack row; both passed the audit (review minor 9).
+- **4.15, fixed at close-out:** the Spotify mark is now decorative (`aria-hidden`), so a screen reader no longer hears "Spotify" twice; a stale add-bar comment and four journal line anchors were corrected. Re-run: 487/487 tests, lint, typecheck and build pass. The audit wasn't re-run (no visible change).
+- **4.15, setup needed:** for real song search, create a Spotify developer app at developer.spotify.com (the account needs Premium for the app to keep working, D-35), put `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` in `.env` (names already in `.env.example`) and restart bootRun. Without them `POST /music/search` answers `503` and the field is paste only, which is what was tested.
+- **4.15, not checked:** the sandboxed embed was checked in Chromium only, not Safari or Firefox.
+- **4.15, local data:** the local dev journal now has soundtracks on *Quiet day* (the contract's example track, which is Rick Astley), the week of 23–29 November and the *New job* Era. The feed's first photo moves to 1094 px (was 1042).
+- **Sprint 4 not finished:** tasks 4.16 and 4.17 are left, and 4.10 and 4.14 need the Q29 decision above. The pull request stays a draft for that reason and for 4.9.
 
 ### S4 Questions for the morning
 

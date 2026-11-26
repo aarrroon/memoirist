@@ -195,15 +195,15 @@ describe('week summary', () => {
     expect(screen.getByText('23–29 Nov 2026')).toBeVisible();
   });
 
-  test('Rename week sends the whole week back: the new title and the soundtrack it had (D-26)', async () => {
+  test('Edit week sends the whole week back: the new title and the soundtrack it had (D-26)', async () => {
     const user = userEvent.setup();
     const sent = serveWeek({
       ...grampiansWeek,
       soundtrack: 'spotify:track:4uLU6hMCjMI75M1A2tKUQC',
     });
     renderApp('/weeks/week-gramp');
-    await user.click(await screen.findByRole('button', { name: 'Rename week' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Rename week' });
+    await user.click(await screen.findByRole('button', { name: 'Edit week' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit week' });
     const field = within(dialog).getByLabelText('Name');
     expect(field).toHaveValue('Grampians Trip Week');
     await user.clear(field);
@@ -222,15 +222,44 @@ describe('week summary', () => {
       },
     ]);
     // Focus goes back to the button that opened the dialog.
-    expect(screen.getByRole('button', { name: 'Rename week' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Edit week' })).toHaveFocus();
+  });
+
+  test('a week with every entry sealed still shows its own soundtrack, and Edit week changes it (D-35)', async () => {
+    const user = userEvent.setup();
+    const allSealed: Week = {
+      ...grampiansWeek,
+      soundtrack: 'spotify:album:4uLU6hMCjMI75M1A2tKUQC',
+      entries: grampiansWeek.entries.filter((e) => e.isLocked),
+    };
+    expect(allSealed.entries.length).toBeGreaterThan(0);
+    const sent = serveWeek(allSealed);
+    renderApp('/weeks/week-gramp');
+    expect(await screen.findByRole('button', { name: 'Play the album on Spotify' })).toBeVisible();
+    expect(document.querySelector('iframe')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Edit week' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit week' });
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Remove the soundtrack, album on Spotify' }),
+    );
+    await user.click(within(dialog).getByLabelText('Soundtrack'));
+    await user.paste('https://open.spotify.com/track/0000000000000000000001?si=x');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByRole('button', { name: 'Play the song on Spotify' })).toBeVisible();
+    expect(sent[0]!.body).toEqual({
+      title: 'Grampians Trip Week',
+      soundtrack: 'spotify:track:0000000000000000000001',
+    });
   });
 
   test('an empty name clears the title, and the week is called by its dates again', async () => {
     const user = userEvent.setup();
     const sent = serveWeek(grampiansWeek);
     renderApp('/weeks/week-gramp');
-    await user.click(await screen.findByRole('button', { name: 'Rename week' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Rename week' });
+    await user.click(await screen.findByRole('button', { name: 'Edit week' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit week' });
     await user.clear(within(dialog).getByLabelText('Name'));
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
     expect(await screen.findByRole('heading', { level: 1, name: '19–25 Oct 2026' })).toBeVisible();

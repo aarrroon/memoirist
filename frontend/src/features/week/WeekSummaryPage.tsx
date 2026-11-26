@@ -4,7 +4,7 @@ import { Link, Navigate, useParams } from 'react-router';
 import type { Entry, Week, WeekEra } from '../../api/feed';
 import { ApiProblem, problemMessage } from '../../api/problem';
 import { useMe } from '../../api/users';
-import { useRenameWeek, useSetWeekClosed, useWeek } from '../../api/weeks';
+import { useEditWeek, useSetWeekClosed, useWeek } from '../../api/weeks';
 import { Field, FormDialog } from '../../components/FormDialog';
 import { ListLoading, LoadError } from '../../components/LoadState';
 import { StarMark } from '../../components/TravellingStar';
@@ -19,10 +19,12 @@ import {
   isWithin,
   todayIn,
 } from '../../lib/time';
+import { SoundtrackField } from '../music/SoundtrackField';
+import { SoundtrackPlayer } from '../music/SoundtrackPlayer';
 import { mediaCounts, summarise, type Thumbnail } from './summary';
 
 // A week's summary, at /weeks/:weekId (task 4.10, D-25, F-15, DESIGN.md §6 `#week`): its name, dates and Eras, a
-// stats row, a few thumbnails, the tags used that week, then one bar per entry in day order. Rename week and Close
+// stats row, a few thumbnails, the tags used that week, then one bar per entry in day order. Edit week and Close
 // week (F-12) sit at the foot. Everything comes from GET /weekly-logs/{id}; sealed Loot Drops arrive redacted
 // (D-10) and are drawn as a star, the day and the opening date only, never counted.
 
@@ -91,6 +93,9 @@ function WeekView({ week, zone }: { week: Week; zone: string }) {
           )}
           {week.isClosed && (datesInHeading && week.eras.length === 0 ? 'Closed' : ' · Closed')}
         </p>
+        {/* The week's own soundtrack (D-35, task 4.15). It belongs to the week, not to an entry, so it shows even when
+            every entry is sealed (API_CONTRACT §Weekly logs). */}
+        {week.soundtrack && <SoundtrackPlayer uri={week.soundtrack} />}
       </header>
 
       {/* Phase 4 (F-22, D-28): the AI-written summary of a closed week goes here, at the top of the view (D-25).
@@ -150,7 +155,7 @@ function WeekView({ week, zone }: { week: Week; zone: string }) {
 
       <div className="flex flex-col items-start gap-2">
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setRenaming(true)}>Rename week</Button>
+          <Button onClick={() => setRenaming(true)}>Edit week</Button>
           <Button
             variant="quiet"
             disabled={setClosed.isPending}
@@ -166,7 +171,7 @@ function WeekView({ week, zone }: { week: Week; zone: string }) {
           </p>
         )}
       </div>
-      {renaming && <RenameWeek week={week} onClose={() => setRenaming(false)} />}
+      {renaming && <EditWeek week={week} onClose={() => setRenaming(false)} />}
     </section>
   );
 }
@@ -287,10 +292,14 @@ function SealedBar({
 
 const TITLE_ERROR = 'A week’s name is at most 200 characters.';
 
-/** Rename week (F-12): one field. Left empty, the week is called by its dates again. */
-function RenameWeek({ week, onClose }: { week: Week; onClose: () => void }) {
+/**
+ * Edit week (F-12): its name and its soundtrack (D-35, task 4.15). A name left empty calls the week by its dates
+ * again. Both go on every save, since the PUT is a full replace (D-26).
+ */
+function EditWeek({ week, onClose }: { week: Week; onClose: () => void }) {
   const [title, setTitle] = useState(week.title ?? '');
-  const rename = useRenameWeek(week);
+  const [soundtrack, setSoundtrack] = useState(week.soundtrack);
+  const rename = useEditWeek(week);
   const fieldError =
     title.trim().length > 200 ||
     (rename.error instanceof ApiProblem && rename.error.fieldErrors?.title)
@@ -302,12 +311,12 @@ function RenameWeek({ week, onClose }: { week: Week; onClose: () => void }) {
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title="Rename week"
+      title="Edit week"
       pending={rename.isPending}
       error={rename.isError && !fieldError ? problemMessage(rename.error) : null}
       onSubmit={() => {
         if (title.trim().length > 200) return;
-        rename.mutate(title, { onSuccess: onClose });
+        rename.mutate({ title, soundtrack }, { onSuccess: onClose });
       }}
     >
       <Field
@@ -319,6 +328,7 @@ function RenameWeek({ week, onClose }: { week: Week; onClose: () => void }) {
         autoComplete="off"
         error={fieldError}
       />
+      <SoundtrackField value={soundtrack} onChange={setSoundtrack} />
     </FormDialog>
   );
 }

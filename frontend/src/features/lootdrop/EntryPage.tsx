@@ -15,6 +15,7 @@ import { hasText } from '../../lib/tiptap';
 import { formatDay, formatShortDay, openedLabel } from '../../lib/time';
 import { useNow } from '../../lib/useNow';
 import { DeleteEntryDialog } from '../deleted/DeleteEntryDialog';
+import { SoundtrackPlayer } from '../music/SoundtrackPlayer';
 import { LootDropPage } from './LootDropPage';
 import { useUnlockWatch } from './useUnlockWatch';
 
@@ -121,6 +122,8 @@ function OpenEntry({ entry, zone, now }: { entry: Entry; zone: string; now: Date
           name={notes.length > 1 ? `voice note ${index + 1} of ${notes.length}` : 'voice note'}
         />
       ))}
+      {/* Task 4.15 (D-35): Spotify loads only when Play is tapped. */}
+      {entry.soundtrack && <SoundtrackPlayer uri={entry.soundtrack} />}
       {entry.tags.length > 0 && (
         <ul aria-label="Tags" className="flex flex-wrap gap-x-4">
           {entry.tags.map((tag) => (

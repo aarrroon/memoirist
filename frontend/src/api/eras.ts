@@ -16,7 +16,7 @@ export type Era = components['schemas']['EraResponse'];
 export type EraDetail = components['schemas']['EraDetailResponse'];
 export type EraWeek = components['schemas']['EraWeekResponse'];
 
-/** What the Era form edits (task 4.9; the cover since task 4.14). The soundtrack (task 4.15) isn't in the form. */
+/** What the Era form edits (task 4.9; the cover since task 4.14, the soundtrack since task 4.15). */
 export interface EraFields {
   title: string;
   description: string;
@@ -30,6 +30,8 @@ export interface EraFields {
    * never told. Only an edit has it; a new Era has no photos of its own to choose from yet.
    */
   coverMediaId?: string | null;
+  /** A Spotify URI, or null for none (D-35). Sent on every PUT: one left out is cleared (D-26). */
+  soundtrack: string | null;
 }
 
 // The user's Eras, latest start first (GET /eras), and one Era with its weeks (GET /eras/{id}, D-22). An Era is
@@ -65,6 +67,7 @@ function body(fields: EraFields) {
     ...(fields.endDate ? { endDate: fields.endDate } : {}),
     pinnedInFeed: fields.pinnedInFeed,
     ...(fields.coverMediaId ? { coverMediaId: fields.coverMediaId } : {}),
+    ...(fields.soundtrack ? { soundtrack: fields.soundtrack } : {}),
   };
 }
 
@@ -98,17 +101,14 @@ export function useCreateEra() {
 export function useUpdateEra(era: Era | EraDetail) {
   const invalidate = useInvalidateEras();
   return useMutation({
-    // PUT is a full replace (D-26), so the field the form doesn't edit goes back as it is: the soundtrack. The cover
-    // is the form's own (task 4.14): the picker starts from the cover shown, and a hidden one, which the client can't
-    // see, is kept by the server when the field is left out (D-36).
+    // PUT is a full replace (D-26): every field is the form's, the soundtrack too since task 4.15. The cover picker
+    // starts from the cover shown, and a hidden one, which the client can't see, is kept by the server when the field
+    // is left out (D-36).
     mutationFn: async (fields: EraFields) =>
       unwrap(
         await api.PUT('/api/v1/eras/{eraId}', {
           params: { path: { eraId: era.id } },
-          body: {
-            ...body(fields),
-            ...(era.soundtrack ? { soundtrack: era.soundtrack } : {}),
-          },
+          body: body(fields),
         }),
       ),
     onSuccess: invalidate,

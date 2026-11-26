@@ -50,7 +50,8 @@ export interface EntryFields {
   title: string | null;
   contentJson: JSONContent | null;
   tagIds: string[];
-  /** Capture doesn't edit these yet (tasks 4.15 and 4.16), but a PUT must send them back or they are cleared. */
+  /** The soundtrack is capture's since task 4.15; the reply isn't edited yet (4.16). A PUT must send both, or they are
+   *  cleared. */
   soundtrack: string | null;
   replyToEntryId: string | null;
   /** A photo dump's undated photos (D-34, task 4.13). Sent on create only: the server clears the mark when a PUT

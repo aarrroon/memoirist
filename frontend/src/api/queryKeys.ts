@@ -49,5 +49,8 @@ export const queryKeys = {
   deleted: () => [...all, 'deleted'] as const,
   deletedList: () => [...all, 'deleted', 'list'] as const,
   deletedCount: () => [...all, 'deleted', 'count'] as const,
+  // Task 4.15. One music search (POST /music/search, D-35) per set of words. The words stay in memory only: the
+  // query cache is never persisted, and the request carries them in its body, never in a URL (API_CONTRACT §Music).
+  musicSearch: (words: string) => [...all, 'music-search', words] as const,
 };
 // └── END ANSWER ▲ ──

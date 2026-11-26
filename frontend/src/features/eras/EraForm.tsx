@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from '../../components/ui/dialog';
 import { EARLIEST_DAY } from '../../lib/time';
+import { SoundtrackField } from '../music/SoundtrackField';
 import { CoverPicker } from './CoverPicker';
 
 type FieldName = 'title' | 'startDate' | 'endDate' | 'description';
@@ -63,6 +64,7 @@ function initial(era?: Era | EraDetail): EraFields {
     pinnedInFeed: era?.pinnedInFeed ?? false,
     // The cover shown now, or none. A hidden cover reads as none here and is kept by the server (D-36).
     coverMediaId: era?.cover?.id ?? null,
+    soundtrack: era?.soundtrack ?? null,
   };
 }
 
@@ -270,6 +272,8 @@ function EraFieldsDialog({
           onChange={(coverMediaId) => set({ coverMediaId })}
         />
       )}
+      {/* Task 4.15 (D-35): paste a Spotify link or search for one. */}
+      <SoundtrackField value={fields.soundtrack} onChange={(soundtrack) => set({ soundtrack })} />
     </FormDialog>
   );
 }

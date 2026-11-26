@@ -326,3 +326,25 @@ describe('a sealed Loot Drop (D-10)', () => {
     expect(screen.queryByRole('group')).not.toBeInTheDocument();
   });
 });
+
+describe('the soundtrack row (task 4.15, D-35)', () => {
+  test('an open entry shows its soundtrack as a placeholder row, with nothing from Spotify on the page', () => {
+    show(
+      entry('e', '2026-11-24', {
+        title: 'Night drive',
+        soundtrack: 'spotify:track:4uLU6hMCjMI75M1A2tKUQC',
+      }),
+    );
+    expect(screen.getByRole('button', { name: 'Play the song on Spotify' })).toBeVisible();
+    expect(document.querySelector('iframe')).toBeNull();
+  });
+
+  test('a sealed Loot Drop shows no soundtrack row, even if one reached the client (D-10)', () => {
+    show({
+      ...sealedEntry('s', '2026-11-24', '2027-11-24T22:00:00Z'),
+      soundtrack: 'spotify:track:4uLU6hMCjMI75M1A2tKUQC',
+    });
+    expect(screen.queryByRole('button', { name: /on Spotify/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/on Spotify/)).not.toBeInTheDocument();
+  });
+});

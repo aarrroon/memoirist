@@ -5,6 +5,7 @@ import { useMe } from '../../api/users';
 import { ListLoading, LoadError } from '../../components/LoadState';
 import { Button } from '../../components/ui/button';
 import { eraLength, formatEraDates, formatWeekRange, todayIn } from '../../lib/time';
+import { SoundtrackPlayer } from '../music/SoundtrackPlayer';
 import { EraForm } from './EraForm';
 import { EraRow } from './ErasPage';
 import { erasInside } from './eraTree';
@@ -78,6 +79,8 @@ function EraView({ era }: { era: EraDetail }) {
             {era.pinnedInFeed && ' · Shown first in the feed'}
           </p>
           {era.description && <p className="text-body whitespace-pre-line">{era.description}</p>}
+          {/* Its soundtrack (DESIGN.md §4 Title band, D-35, task 4.15), in the band's own ink. */}
+          {era.soundtrack && <SoundtrackPlayer uri={era.soundtrack} onBand />}
           <div className="flex divide-x divide-on-band-2">
             <Stat
               figure={era.weeklyLogs.length}

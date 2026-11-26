@@ -135,6 +135,37 @@ describe('capture', { timeout: 15_000 }, () => {
     expect(readDraft()).toBeNull();
   });
 
+  test('Song brings the soundtrack field into focus; a pasted link is saved as its URI and kept in the draft (D-35)', async () => {
+    const { user, sheet } = await openCapture();
+    await user.type(
+      within(sheet).getByRole('textbox', { name: 'Title (optional)' }),
+      'Night drive',
+    );
+
+    await user.click(within(sheet).getByRole('button', { name: 'Song' }));
+    const field = within(sheet).getByLabelText('Soundtrack');
+    expect(field).toHaveFocus();
+    await user.paste('https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC?si=share');
+    expect(
+      await within(sheet).findByRole('button', {
+        name: 'Remove the soundtrack, song on Spotify',
+      }),
+    ).toBeVisible();
+    // The draft holds it, so a reload doesn't lose it (D-23).
+    await waitFor(() =>
+      expect(localStorage.getItem('memoirist.capture-draft')).toContain(
+        'spotify:track:4uLU6hMCjMI75M1A2tKUQC',
+      ),
+    );
+
+    await user.click(saveButton(sheet));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(sentEntry()?.body).toMatchObject({
+      title: 'Night drive',
+      soundtrack: 'spotify:track:4uLU6hMCjMI75M1A2tKUQC',
+    });
+  });
+
   test('does not save a template prompt left empty, and keeps one that was answered (D-06)', async () => {
     writeDraft({
       ...baseDraft,

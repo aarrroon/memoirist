@@ -8,12 +8,13 @@ import { hasText } from '../../lib/tiptap';
 import { entryDisplayTitle } from '../../lib/displayTitle';
 import { dayLabel, dayParts, formatDay } from '../../lib/time';
 import { DateUnknownBadge } from './DateUnknownBadge';
+import { SoundtrackPlayer } from '../music/SoundtrackPlayer';
 import { EntryMenu } from './EntryMenu';
 import { SealedCard } from './SealedCard';
 
 // One entry in the feed (tasks 4.4 and 4.5, DESIGN.md §4 Feed, D-41): the day line, the swipe of its photos,
-// then 12 px below the title, the caption (three lines, drawn from its TipTap JSON), its voice notes and its tags.
-// The soundtrack row is task 4.15.
+// then 12 px below the title, the caption (three lines, drawn from its TipTap JSON), its voice notes, its soundtrack
+// (task 4.15: a placeholder row until Play is tapped, D-35) and its tags.
 
 /** D-24's label for an entry with no title and no caption: what its first media item is. An entry with nothing
  *  at all can't be saved (D-23), and D-24 names no label for it, so it shows none. */
@@ -107,6 +108,8 @@ function EntryBody({
               name={notes.length > 1 ? `voice note ${index + 1} of ${notes.length}` : 'voice note'}
             />
           ))}
+          {/* A sealed entry never gets here, and the server sends its soundtrack as null anyway (D-10). */}
+          {entry.soundtrack && <SoundtrackPlayer uri={entry.soundtrack} />}
           {entry.tags.length > 0 && (
             // Each tag opens the timeline filtered by it (DESIGN.md §4 Feed; the filter is task 4.11). Every link is
             // at least 44 × 44 px (design.md §9), so a short tag such as "Trip" keeps a blank tail; that is why they

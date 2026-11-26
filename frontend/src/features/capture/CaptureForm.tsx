@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { JSONContent } from '@tiptap/react';
-import { Image, Mic, Tag } from 'lucide-react';
+import { Image, Mic, Music, Tag } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -37,6 +37,7 @@ import { EntryEditor } from './Editor';
 import { useEntryEditor } from './editorSetup';
 import { MediaTray } from './MediaTray';
 import { picturesFirst, saveEntry, type SaveResult, type TrayItem } from './saveEntry';
+import { SoundtrackField } from '../music/SoundtrackField';
 import { TagPicker } from './TagPicker';
 import { TemplateChip } from './TemplateChip';
 import { useRecorder, type Recording } from './useRecorder';
@@ -136,11 +137,12 @@ export function CaptureForm({
   const [tagIds, setTagIds] = useState(start.tagIds);
   const [items, setItems] = useState<TrayItem[]>([]);
   const [removedMediaIds, setRemovedMediaIds] = useState<string[]>([]);
-  // What the server last said about fields capture doesn't edit, sent back on every PUT (D-26).
-  const [kept, setKept] = useState<{ soundtrack: string | null; replyToEntryId: string | null }>({
-    soundtrack: null,
-    replyToEntryId: null,
-  });
+  // The soundtrack (D-35, task 4.15): a Spotify URI or null, sent on every save, since a PUT without it clears it.
+  const [soundtrack, setSoundtrack] = useState<string | null>(start.soundtrack ?? null);
+  const songRef = useRef<HTMLElement | null>(null);
+  // What the server last said about the field capture doesn't edit (the reply, task 4.16), sent back on every PUT
+  // (D-26).
+  const [kept, setKept] = useState<{ replyToEntryId: string | null }>({ replyToEntryId: null });
 
   const [fieldErrors, setFieldErrors] = useState<FieldMessages>({});
   const [message, setMessage] = useState<string | null>(null);
@@ -183,6 +185,7 @@ export function CaptureForm({
     items.some((i) => i.status !== 'uploaded') ||
     removedMediaIds.length > 0 ||
     tagIds.length > 0 ||
+    soundtrack !== null ||
     templateId !== null ||
     entryDate !== todayIn(zone);
 
@@ -192,6 +195,7 @@ export function CaptureForm({
   // are on the server, not in the draft, so read them back into the tray, where they can be seen, moved and removed.
   // The typed text and the version stay the draft's, so a change made elsewhere still meets 409 entry-stale.
   const restoredId = restored?.entryId ?? null;
+  const restoredSoundtrack = restored?.soundtrack;
   const restoring = useRef(false);
   // Save waits for this read: until it answers, `kept` is empty, and a PUT would clear the soundtrack and the reply
   // (D-26). A sealed entry keeps Save off for good (D-10). Review 2 fix, task 4.6.
@@ -214,7 +218,9 @@ export function CaptureForm({
           setRestore('sealed');
           return;
         }
-        setKept({ soundtrack: latest.soundtrack, replyToEntryId: latest.replyToEntryId });
+        setKept({ replyToEntryId: latest.replyToEntryId });
+        // A draft from before task 4.15 holds no soundtrack, so the entry's own is kept; a newer draft's choice wins.
+        if (restoredSoundtrack === undefined) setSoundtrack(latest.soundtrack);
         setItems((list) => [...latest.media.map(uploadedItem), ...list]);
         setRestore('done');
       })
@@ -230,7 +236,7 @@ export function CaptureForm({
         setMessage(problemMessage(error));
         setRestore('done');
       });
-  }, [restoredId, queryClient]);
+  }, [restoredId, restoredSoundtrack, queryClient]);
   const canSave = hasContent && restore === 'done';
 
   // The draft follows the form, a moment after the typing stops (D-23).
@@ -249,12 +255,25 @@ export function CaptureForm({
         title,
         content,
         tagIds,
+        soundtrack,
         savedAt,
       });
       setDraftSavedAt(savedAt);
     }, 400);
     return () => clearTimeout(id);
-  }, [dirty, kindOfDraft, clientId, saved, entryDate, templateId, prompts, title, content, tagIds]);
+  }, [
+    dirty,
+    kindOfDraft,
+    clientId,
+    saved,
+    entryDate,
+    templateId,
+    prompts,
+    title,
+    content,
+    tagIds,
+    soundtrack,
+  ]);
 
   // Object URLs hold the picked files in memory until they are revoked.
   const urls = useRef(new Set<string>());
@@ -383,7 +402,7 @@ export function CaptureForm({
             title: title.trim() === '' ? null : title.trim(),
             contentJson: caption,
             tagIds,
-            soundtrack: kept.soundtrack,
+            soundtrack,
             replyToEntryId: kept.replyToEntryId,
           },
           items,
@@ -438,7 +457,7 @@ export function CaptureForm({
       if (sealError && savedEntry) {
         // Saved, not sealed: the next Save or Seal it replaces this entry instead of making another (D-12).
         setSaved({ id: savedEntry.id, version: savedEntry.version });
-        setKept({ soundtrack: savedEntry.soundtrack, replyToEntryId: savedEntry.replyToEntryId });
+        setKept({ replyToEntryId: savedEntry.replyToEntryId });
         setSealError(`Saved, but ${lowerFirst(sealProblem(sealError))}`);
         return;
       }
@@ -458,7 +477,7 @@ export function CaptureForm({
         return;
       }
       setSaved({ id: entry.id, version: entry.version });
-      setKept({ soundtrack: entry.soundtrack, replyToEntryId: entry.replyToEntryId });
+      setKept({ replyToEntryId: entry.replyToEntryId });
       setSealOpen(false);
       setMessage(
         (failed === 1
@@ -525,7 +544,8 @@ export function CaptureForm({
         return;
       }
       setSaved({ id: latest.id, version: latest.version });
-      setKept({ soundtrack: latest.soundtrack, replyToEntryId: latest.replyToEntryId });
+      setKept({ replyToEntryId: latest.replyToEntryId });
+      setSoundtrack(latest.soundtrack);
       setEntryDate(latest.entryDate);
       setTemplateId(latest.templateId);
       setTitle(latest.title ?? '');
@@ -661,6 +681,8 @@ export function CaptureForm({
         onOpenChange={setTagsOpen}
         error={fieldErrors.tagIds}
       />
+      {/* Task 4.15 (D-35): paste a Spotify link or search for one. The phone's Song button brings focus here. */}
+      <SoundtrackField value={soundtrack} onChange={setSoundtrack} focusRef={songRef} />
       {/* Laptop: the Seal as Loot Drop box on the first screen, in the right column (DESIGN.md §4 Write, D-41). Save
           stays the one primary button, so Seal it is secondary here. */}
       {layout === 'dialog' && (
@@ -762,8 +784,8 @@ export function CaptureForm({
         />
       )}
 
-      {/* The add bar (DESIGN.md §4 Write): fixed at the foot of the phone sheet. Voice (4.7) shows when this browser can
-          record; Song (4.15) joins when its task builds it. */}
+      {/* The add bar (DESIGN.md §4 Write): fixed at the foot of the phone sheet. Photo, Voice, Tag, Song and Seal. Voice
+          (4.7) shows when this browser can record; Song (4.15) brings the soundtrack field into view. */}
       {layout === 'sheet' && (
         <div className="grid h-16 shrink-0 grid-cols-5 border-t border-line">
           <button
@@ -793,8 +815,21 @@ export function CaptureForm({
             <Tag size={20} aria-hidden className="text-ink" />
             Tag
           </button>
+          {/* Song (task 4.15): the soundtrack field is in the sheet, under the tags; this brings it into view with
+              focus, the text field or, when a song is chosen, its Remove button. */}
+          <button
+            type="button"
+            onClick={() => {
+              songRef.current?.scrollIntoView({ block: 'center' });
+              songRef.current?.focus();
+            }}
+            className="col-start-4 flex flex-col items-center justify-center gap-1 text-meta text-ink-2 focus-visible:-outline-offset-2"
+          >
+            <Music size={20} aria-hidden className="text-ink" />
+            Song
+          </button>
           {/* Seal, in the accent with the star mark, so sealing is on the first screen (DESIGN.md §4 Write). It sits
-              in the fifth column whatever is missing before it; Song (4.15) takes the fourth. */}
+              in the fifth column whatever is missing before it. */}
           <button
             type="button"
             ref={sealTrigger}

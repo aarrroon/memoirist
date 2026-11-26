@@ -350,7 +350,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:** an *On this day* row at the top of the feed over `GET /entries/on-this-day`, which moves below the first entry while an Opened row shows (D-41); Era covers as title pages in the feed's sticky headers and on Era pages; and a cover picker in the Era form. Backend first: `GET /entries/on-this-day` leaves out `dateUnknown` entries (D-32), and a `PUT /eras/{id}` that leaves out `coverMediaId` keeps a hidden cover (D-36).
   - **Done when:** component tests cover the strip with and without memories, a cover on its Era's header, and no cover while its entry is sealed; integration tests show a `dateUnknown` entry left out of On this day, and a title-only `PUT` keeping a cover whose entry is sealed (the cover comes back when it opens) while a visible cover left out is cleared.
 
-- [ ] **4.15 Soundtrack picker and player** (D-35)
+- [x] **4.15 Soundtrack picker and player** (D-35)
   - **Do:** a soundtrack field on entries, weeks and Eras: paste a Spotify link (turned into a URI), or search through `POST /music/search` when it's available. Spotify's player shows as a placeholder until tapped, and only then loads.
   - **Done when:** component tests cover pasting a link, picking a search result, search being unavailable (paste only), and no request to Spotify before the player is tapped.
 

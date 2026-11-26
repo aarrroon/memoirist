@@ -23,6 +23,9 @@ export interface Draft {
   /** The editor's TipTap document (D-05), or null before anything was typed. */
   content: Record<string, unknown> | null;
   tagIds: string[];
+  /** The Spotify URI picked (D-35, task 4.15), or null. Absent from a draft written before 4.15, which then takes the
+   *  entry's own soundtrack when it is read back. */
+  soundtrack?: string | null;
   /** When it was last written, for "Draft saved 7:41 pm". */
   savedAt: string;
 }
@@ -50,6 +53,12 @@ const DraftSchema = z.object({
   title: z.string().max(150),
   content: z.looseObject({ type: z.literal('doc') }).nullable(),
   tagIds: z.array(id).max(20),
+  // Task 4.15: exactly what the server stores (D-35), so a tampered draft can't send anything else.
+  soundtrack: z
+    .string()
+    .regex(/^spotify:(track|album|playlist):[A-Za-z0-9]{22}$/)
+    .nullable()
+    .optional(),
   savedAt: z.iso.datetime(),
 }) satisfies z.ZodType<Draft>;
 // └── END ANSWER ▲ ──

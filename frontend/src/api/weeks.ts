@@ -39,21 +39,28 @@ function useAfterWeekChange() {
   };
 }
 
-export function useRenameWeek(week: Week) {
+/** What Edit week changes (F-12): the name and, since task 4.15, the soundtrack (D-35). */
+export interface WeekFields {
+  title: string;
+  /** A Spotify URI, or null for none. */
+  soundtrack: string | null;
+}
+
+export function useEditWeek(week: Week) {
   const after = useAfterWeekChange();
   return useMutation({
-    // PUT is a full replace (D-26): the soundtrack goes back as it is, or the rename would clear it (task 3.14).
-    // A blank title clears the name, and the week is called by its dates again. The generated request type has no
-    // null (the record's fields lack @Schema(nullable = true)), so "none" is a field left out, which this full
-    // replace reads as null (API_CONTRACT, Weekly logs).
-    mutationFn: async (title: string) => {
+    // PUT is a full replace (D-26): both fields go every time, or the one left out is cleared (task 3.14). A blank
+    // title clears the name, and the week is called by its dates again. The generated request type has no null (the
+    // record's fields lack @Schema(nullable = true)), so "none" is a field left out, which this full replace reads as
+    // null (API_CONTRACT, Weekly logs).
+    mutationFn: async ({ title, soundtrack }: WeekFields) => {
       const name = title.trim();
       return unwrap(
         await api.PUT('/api/v1/weekly-logs/{logId}', {
           params: { path: { logId: week.id } },
           body: {
             ...(name ? { title: name } : {}),
-            ...(week.soundtrack ? { soundtrack: week.soundtrack } : {}),
+            ...(soundtrack ? { soundtrack } : {}),
           },
         }),
       );
