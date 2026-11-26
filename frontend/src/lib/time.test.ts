@@ -35,6 +35,12 @@ import {
   yearsAgo,
   erasureDay,
   formatDayMonth,
+  addMonthsClamped,
+  nextBirthday,
+  quickDays,
+  quickDayLabel,
+  formatLongDay,
+  type QuickDay,
 } from './time';
 
 // Plain unit tests with fixed instants (frontend.md: plain Vitest for lib/). Every instant is written in UTC, so
@@ -440,5 +446,58 @@ describe('On this day (task 4.14, D-32)', () => {
     expect(yearsAgo('2026-01-01', '2026-11-24')).toBeNull();
     expect(yearsAgo('2027-11-24', '2026-11-24')).toBeNull();
     expect(yearsAgo('', '2026-11-24')).toBeNull();
+  });
+});
+
+describe('quick unlock dates (task 4.16, D-33)', () => {
+  test('in a month and in a year keep the day, inside the month they land in', () => {
+    expect(addMonthsClamped('2026-10-28', 1)).toBe('2026-11-28');
+    expect(addMonthsClamped('2026-12-15', 1)).toBe('2027-01-15');
+    expect(addMonthsClamped('2027-01-31', 1)).toBe('2027-02-28');
+    expect(addMonthsClamped('2028-01-31', 1)).toBe('2028-02-29');
+    expect(addMonthsClamped('2028-02-29', 12)).toBe('2029-02-28');
+    expect(addMonthsClamped('2026-11-26', 12)).toBe('2027-11-26');
+  });
+
+  test('the next birthday is always after today', () => {
+    expect(nextBirthday('1994-08-12', '2026-08-11')).toBe('2026-08-12');
+    expect(nextBirthday('1994-08-12', '2026-08-12')).toBe('2027-08-12');
+    expect(nextBirthday('1994-08-12', '2026-08-13')).toBe('2027-08-12');
+    expect(nextBirthday('1990-01-01', '2026-12-31')).toBe('2027-01-01');
+  });
+
+  test('a 29 February birthday opens on the 29th in a leap year and the 28th otherwise', () => {
+    expect(nextBirthday('2000-02-29', '2026-11-26')).toBe('2027-02-28');
+    expect(nextBirthday('2000-02-29', '2027-11-26')).toBe('2028-02-29');
+  });
+
+  test('offers the birthday only once one is set, and only days that can be picked', () => {
+    const today = '2026-11-26';
+    expect(quickDays(today, null, '2026-11-27', '2126-11-25').map((q) => q.key)).toEqual([
+      'month',
+      'year',
+    ]);
+    expect(quickDays(today, '1994-08-12', '2026-11-27', '2126-11-25')).toEqual([
+      { key: 'month', label: 'In a month', day: '2026-12-26' },
+      { key: 'year', label: 'In a year', day: '2027-11-26' },
+      { key: 'birthday', label: 'On my birthday', day: '2027-08-12' },
+    ]);
+    // Extending a seal that opens in March 2027: only days after it are offered (D-10).
+    expect(quickDays(today, '1994-08-12', '2027-03-02', '2126-11-25').map((q) => q.key)).toEqual([
+      'year',
+      'birthday',
+    ]);
+  });
+
+  test('each quick day opens at 9:00 am in the user’s zone', () => {
+    const [month, year] = quickDays('2026-11-26', null, '2026-11-27', '2126-11-25');
+    // Melbourne is +11 in December and November: 22:00 UTC the day before.
+    expect(unlockInstant((month as QuickDay).day, MELBOURNE)).toBe('2026-12-25T22:00:00.000Z');
+    expect(unlockInstant((year as QuickDay).day, MELBOURNE)).toBe('2027-11-25T22:00:00.000Z');
+  });
+
+  test('writes a quick date with its weekday and year, and a long day for a sentence', () => {
+    expect(quickDayLabel('2026-11-28')).toBe('Sat 28 Nov 2026');
+    expect(formatLongDay('2026-11-28')).toBe('28 November 2026');
   });
 });

@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { api } from './client';
 import { getEntry, type Entry } from './entries';
 import { ApiProblem, unwrap } from './problem';
@@ -34,6 +40,26 @@ export function useEntry(entryId: string) {
   return useQuery({
     queryKey: queryKeys.entry(entryId),
     queryFn: ({ signal }) => getEntry(entryId, signal),
+  });
+}
+
+/**
+ * The replies to an opened Loot Drop (task 4.16, D-33), read one by one from its `replyIds` (oldest first) under each
+ * entry's own key, so a reply opened afterwards is already in the cache. A reply sealed since is left out: a sealed
+ * entry is never listed by name (D-10). `pending` counts the ones still on their way, so the list keeps their space.
+ */
+export function useReplies(ids: readonly string[]) {
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: queryKeys.entry(id),
+      queryFn: ({ signal }: { signal: AbortSignal }) => getEntry(id, signal),
+    })),
+    combine: (results) => ({
+      replies: results.flatMap((result) =>
+        result.data && !result.data.isLocked ? [result.data] : [],
+      ),
+      pending: results.filter((result) => result.isPending).length,
+    }),
   });
 }
 

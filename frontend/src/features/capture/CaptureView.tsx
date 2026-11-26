@@ -25,7 +25,14 @@ import { PhotoDump } from './PhotoDump';
 
 const LAPTOP = '(min-width: 64rem)';
 
-export default function CaptureView({ kind }: { kind: CaptureKind }) {
+export default function CaptureView({
+  kind,
+  replyTo = null,
+}: {
+  kind: CaptureKind;
+  /** The opened Loot Drop a reply answers (task 4.16, D-33). */
+  replyTo?: string | null;
+}) {
   const close = useUiStore((s) => s.closeCapture);
   const me = useMe();
   // Chosen once, when capture opens. Following the width live would swap the sheet for the dialog when a tablet turns
@@ -71,6 +78,8 @@ export default function CaptureView({ kind }: { kind: CaptureKind }) {
     <CaptureForm
       kind={kind}
       zone={me.data.timezone}
+      birthday={me.data.birthday}
+      replyTo={replyTo}
       titleId={titleId}
       layout={isLaptop ? 'dialog' : 'sheet'}
       onRequestClose={requestClose}

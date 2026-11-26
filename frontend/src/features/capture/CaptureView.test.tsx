@@ -398,6 +398,40 @@ describe('capture', { timeout: 15_000 }, () => {
     });
   });
 
+  test('a restored draft whose reply link was removed keeps it removed, even if the server still has it (D-23)', async () => {
+    vi.useRealTimers();
+    backend.state.entries.set(
+      'entry-reply',
+      entry('entry-reply', '2026-11-24', {
+        title: 'Saved as a reply',
+        version: 2,
+        weeklyLogId: 'week-this',
+        replyToEntryId: 'loot-drop-opened',
+      }),
+    );
+    writeDraft({
+      ...baseDraft,
+      clientId: 'entry-reply',
+      entryId: 'entry-reply',
+      entryVersion: 2,
+      title: 'Saved as a reply',
+      replyToEntryId: null,
+    });
+    const { user, sheet } = await openCapture();
+
+    await waitFor(() => expect(saveButton(sheet)).toBeEnabled());
+    expect(within(sheet).queryByText(/^In reply to/)).not.toBeInTheDocument();
+    await user.click(saveButton(sheet));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    // A PUT is a full replace, so leaving the field out unlinks the reply (D-26).
+    const put = backend.state.calls.filter((c) => c.method === 'PUT').at(-1)?.body as {
+      title: string;
+      replyToEntryId?: string;
+    };
+    expect(put.title).toBe('Saved as a reply');
+    expect(put.replyToEntryId).toBeUndefined();
+  });
+
   test('a restored draft whose entry was deleted elsewhere saves as a new entry with a new id (D-12)', async () => {
     vi.useRealTimers();
     writeDraft({
@@ -464,7 +498,8 @@ describe('sealing from capture', { timeout: 15_000 }, () => {
   async function sealFor(sheet: HTMLElement, user: ReturnType<typeof userEvent.setup>) {
     await user.click(within(sheet).getByRole('button', { name: 'Seal' }));
     const panel = await screen.findByRole('dialog', { name: 'Seal as Loot Drop' }, LAZY);
-    await user.click(within(panel).getByRole('button', { name: 'Pick a date' }));
+    await user.click(within(panel).getByRole('radio', { name: 'Pick a date' }));
+    await user.click(within(panel).getByRole('button', { name: 'Choose the day' }));
     // Today can't be picked: a Loot Drop opens on a later day (F-06).
     expect(await screen.findByRole('button', { name: /November 24th, 2026/ })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: /November 30th, 2026/ }));

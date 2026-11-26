@@ -6,7 +6,16 @@ import { PROMPT_LEVEL } from '../../lib/templateDoc';
 // The toolbar and the editable text (task 4.6). The editor itself is set up in editorSetup.ts (D-05).
 
 /** The toolbar (bold, italic, heading, list: 44 px icon buttons between hairlines) and the text itself. */
-export function EntryEditor({ editor, error }: { editor: Editor; error?: string }) {
+export function EntryEditor({
+  editor,
+  error,
+  hint = 'What happened?',
+}: {
+  editor: Editor;
+  error?: string;
+  /** The line drawn over the empty editor: the first letter (task 4.16) begins 'Dear future me…'. */
+  hint?: string;
+}) {
   const [current, setCurrent] = useState(0);
   // useEditorState re-renders only when these answers change, not on every keystroke (TipTap 3).
   const state = useEditorState({
@@ -87,7 +96,7 @@ export function EntryEditor({ editor, error }: { editor: Editor; error?: string 
           // StarterKit has no placeholder, and only StarterKit and Link are allowed, so the hint is drawn over the
           // empty editor and hidden from screen readers (the editor has its own label).
           <p aria-hidden className="pointer-events-none absolute top-0 left-0 text-body text-ink-2">
-            What happened?
+            {hint}
           </p>
         )}
         <EditorContent editor={editor} />

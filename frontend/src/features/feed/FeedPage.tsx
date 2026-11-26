@@ -72,7 +72,7 @@ export function FeedPage() {
         <FeedLoading />
       );
   } else if (weeks.length === 0) {
-    body = <FeedEmpty />;
+    body = <FeedEmpty zone={me.data.timezone} now={now} />;
   } else {
     const hasOpened = (opened.data?.length ?? 0) > 0;
     const memories = onThisDay.data && onThisDay.data.length > 0 && (

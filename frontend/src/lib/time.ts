@@ -250,6 +250,85 @@ export function openingParts(instant: string | Date, zone: string): { day: strin
   return { day: format(at, 'EEEE d MMMM yyyy'), time: format(at, 'h:mm aaa') };
 }
 
+// ---------- Quick unlock dates (task 4.16, D-33) ----------
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** Days in a month of a year (month 1–12), Gregorian: what makes 31 January plus a month the 28th or 29th. */
+function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/**
+ * The same day `months` later, kept inside the month it lands in: 31 January in a month is 28 February (29 in a
+ * leap year), and 29 February in a year is 28 February. Calendar days only: no zone can move them.
+ */
+export function addMonthsClamped(day: IsoDate, months: number): IsoDate {
+  const [year, month, date] = day.split('-').map(Number) as [number, number, number];
+  const index = year * 12 + (month - 1) + months;
+  const toYear = Math.floor(index / 12);
+  const toMonth = (index % 12) + 1;
+  return `${toYear}-${pad2(toMonth)}-${pad2(Math.min(date, daysInMonth(toYear, toMonth)))}`;
+}
+
+// TODO(human) PRACTICE: Write nextBirthday(birthday, today): the next day, strictly after `today`, that has the
+// birthday's month and day. It is the "On my birthday" quick date in the seal panel (D-33), so it can never be today:
+// a Loot Drop opens on a later day (F-06). Both are ISO days ("1994-08-12"); the birthday's year doesn't matter.
+// Hint: compare ISO strings, they sort like dates. Someone born on 29 February needs a day in a common year: pick one
+// and say why (yearsAgo, task 4.14, shows the 29th on the 28th). time.test.ts covers the day before, the day itself,
+// the day after, New Year's Eve and both leap cases. new Date("1994-08-12") is midnight UTC, which is the 11th on a
+// browser west of Greenwich: work on the string's parts instead.
+// ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
+export function nextBirthday(birthday: IsoDate, today: IsoDate): IsoDate {
+  const [, month, date] = birthday.split('-').map(Number) as [number, number, number];
+  const year = Number(today.slice(0, 4));
+  // 29 February falls on 28 February in a common year, so the letter opens before the birthday month ends.
+  const inYear = (y: number) =>
+    `${y}-${pad2(month)}-${pad2(Math.min(date, daysInMonth(y, month)))}`;
+  const thisYear = inYear(year);
+  return thisYear > today ? thisYear : inYear(year + 1);
+}
+// └── END ANSWER ▲ ──
+
+export type QuickDayKey = 'month' | 'year' | 'birthday';
+
+export interface QuickDay {
+  key: QuickDayKey;
+  label: string;
+  day: IsoDate;
+}
+
+/**
+ * The seal panel's one-tap dates (D-33, DESIGN.md §4 Seal panel): in a month, in a year, and on the next birthday
+ * once one is set in Settings. Each opens at 09:00 on its day in the user's zone (unlockInstant), like a picked day.
+ * A date outside what can be picked is left out: extending a seal offers only days after the current opening (D-10).
+ */
+export function quickDays(
+  today: IsoDate,
+  birthday: IsoDate | null,
+  earliest: IsoDate,
+  latest: IsoDate,
+): QuickDay[] {
+  const all: QuickDay[] = [
+    { key: 'month', label: 'In a month', day: addMonthsClamped(today, 1) },
+    { key: 'year', label: 'In a year', day: addMonthsClamped(today, 12) },
+  ];
+  if (birthday) {
+    all.push({ key: 'birthday', label: 'On my birthday', day: nextBirthday(birthday, today) });
+  }
+  return all.filter(({ day }) => day >= earliest && day <= latest);
+}
+
+/** "Sat 28 Nov 2026": a quick date's own day under its label (DESIGN.md §4 Seal panel), always with the year. */
+export function quickDayLabel(day: IsoDate): string {
+  return format(calendarDay(day), 'EEE d MMM yyyy');
+}
+
+/** "28 November 2026": the first letter's opening day in a sentence (task 4.16, DESIGN.md §6 `#empty`). */
+export function formatLongDay(day: IsoDate): string {
+  return format(calendarDay(day), 'd MMMM yyyy');
+}
+
 /** "Opened today", "Opened yesterday" or "Opened 3 Nov 2026", in the user's zone (DESIGN.md §4, Opened Loot Drop). */
 export function openedLabel(instant: string | Date, zone: string, now: Date = new Date()): string {
   const ago = daysBetween(dayIn(instant, zone), todayIn(zone, now));

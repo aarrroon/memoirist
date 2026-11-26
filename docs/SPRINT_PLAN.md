@@ -354,7 +354,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
   - **Do:** a soundtrack field on entries, weeks and Eras: paste a Spotify link (turned into a URI), or search through `POST /music/search` when it's available. Spotify's player shows as a placeholder until tapped, and only then loads.
   - **Done when:** component tests cover pasting a link, picking a search result, search being unavailable (paste only), and no request to Spotify before the player is tapped.
 
-- [ ] **4.16 Loot Drop extras and the first letter** (D-33)
+- [x] **4.16 Loot Drop extras and the first letter** (D-33)
   - **Read:** USER_FLOWS F-01, F-06 and F-07.
   - **Do:**
     - Suggested unlock dates in the seal dialog: in a month, in a year, and on the next birthday once a birthday is set.

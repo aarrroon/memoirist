@@ -26,6 +26,8 @@ export interface Draft {
   /** The Spotify URI picked (D-35, task 4.15), or null. Absent from a draft written before 4.15, which then takes the
    *  entry's own soundtrack when it is read back. */
   soundtrack?: string | null;
+  /** The opened Loot Drop this entry answers (task 4.16, D-33), or null. Absent from a draft written before 4.16. */
+  replyToEntryId?: string | null;
   /** When it was last written, for "Draft saved 7:41 pm". */
   savedAt: string;
 }
@@ -41,7 +43,7 @@ const id = z.string().min(1).max(64);
 // `satisfies z.ZodType<Draft>` makes the compiler say when the schema and the interface drift apart.
 // ┌── ANSWER ▼ (delete or fold this block, write your own, then compare) ──
 const DraftSchema = z.object({
-  kind: z.enum(['entry', 'dump', 'page']),
+  kind: z.enum(['entry', 'dump', 'page', 'letter']),
   clientId: id,
   entryId: id.nullable(),
   entryVersion: z.number().int().nonnegative().nullable(),
@@ -59,6 +61,8 @@ const DraftSchema = z.object({
     .regex(/^spotify:(track|album|playlist):[A-Za-z0-9]{22}$/)
     .nullable()
     .optional(),
+  // Task 4.16: the Loot Drop a reply answers. The server checks it again on save (D-33).
+  replyToEntryId: id.nullable().optional(),
   savedAt: z.iso.datetime(),
 }) satisfies z.ZodType<Draft>;
 // └── END ANSWER ▲ ──

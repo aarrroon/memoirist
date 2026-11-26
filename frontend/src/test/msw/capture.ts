@@ -112,7 +112,18 @@ export function fakeBackend() {
       if (replay) return HttpResponse.json(replay);
       const entryDate = (body.entryDate as string | undefined) ?? '2026-11-24';
       const tagIds = (body.tagIds as string[] | undefined) ?? [];
+      // A reply (task 4.16, D-33), checked as the server checks it: one of the user's own Loot Drops that has opened.
+      const replyTo = (body.replyToEntryId as string | undefined) ?? null;
+      const target = replyTo ? state.entries.get(replyTo) : undefined;
+      if (replyTo && !target) return problem(404, 'not-found');
+      if (target && (target.isLocked || target.unlockDate === null)) {
+        return problem(400, 'validation-failed', {
+          replyToEntryId: 'must be one of your Loot Drops that has opened',
+        });
+      }
+      if (target) state.entries.set(target.id, { ...target, replyIds: [...target.replyIds, id] });
       const created = entry(id, entryDate, {
+        replyToEntryId: replyTo,
         weeklyLogId: `week-${weekOf(entryDate).start}`,
         title: (body.title as string | undefined) ?? null,
         contentJson: (body.contentJson as Entry['contentJson'] | undefined) ?? null,

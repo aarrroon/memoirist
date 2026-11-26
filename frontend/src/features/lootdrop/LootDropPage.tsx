@@ -35,10 +35,13 @@ const SealPanel = lazy(() => import('./SealPanel'));
 export function LootDropPage({
   entry,
   zone,
+  birthday,
   now,
 }: {
   entry: Pick<Entry, 'id' | 'entryDate' | 'unlockDate'>;
   zone: string;
+  /** For the seal panel's On my birthday (task 4.16, D-33). */
+  birthday: IsoDate | null;
   now: Date;
 }) {
   const navigate = useNavigate();
@@ -113,6 +116,7 @@ export function LootDropPage({
             action="Extend the seal"
             returnFocus={extendButton}
             zone={zone}
+            birthday={birthday}
             earliest={earliest}
             latest={latestSealDay(zone, now)}
             busy={seal.isPending}

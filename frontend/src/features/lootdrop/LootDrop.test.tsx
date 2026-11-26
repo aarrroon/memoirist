@@ -104,7 +104,8 @@ describe('the Loot Drop page', SLOW, () => {
     await user.click(await screen.findByRole('button', { name: 'Extend the seal' }));
 
     const panel = await screen.findByRole('dialog', { name: 'Extend the seal' }, LAZY);
-    await user.click(within(panel).getByRole('button', { name: 'Pick a date' }));
+    await user.click(within(panel).getByRole('radio', { name: 'Pick a date' }));
+    await user.click(within(panel).getByRole('button', { name: 'Choose the day' }));
     // The current opening day and every day before it can't be picked: a seal only moves later (D-10).
     expect(await screen.findByRole('button', { name: /January 25th, 2027/ })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: /January 28th, 2027/ }));
@@ -136,7 +137,8 @@ describe('the Loot Drop page', SLOW, () => {
     renderApp('/entries/entry-sealed');
     await user.click(await screen.findByRole('button', { name: 'Extend the seal' }));
     const panel = await screen.findByRole('dialog', { name: 'Extend the seal' }, LAZY);
-    await user.click(within(panel).getByRole('button', { name: 'Pick a date' }));
+    await user.click(within(panel).getByRole('radio', { name: 'Pick a date' }));
+    await user.click(within(panel).getByRole('button', { name: 'Choose the day' }));
     await user.click(await screen.findByRole('button', { name: /January 28th, 2027/ }));
     await user.click(within(panel).getByRole('button', { name: 'Extend the seal' }));
     await user.click(
@@ -160,7 +162,8 @@ describe('the Loot Drop page', SLOW, () => {
     renderApp('/entries/entry-sealed');
     await user.click(await screen.findByRole('button', { name: 'Extend the seal' }));
     const panel = await screen.findByRole('dialog', { name: 'Extend the seal' }, LAZY);
-    await user.click(within(panel).getByRole('button', { name: 'Pick a date' }));
+    await user.click(within(panel).getByRole('radio', { name: 'Pick a date' }));
+    await user.click(within(panel).getByRole('button', { name: 'Choose the day' }));
     await user.click(await screen.findByRole('button', { name: /January 30th, 2027/ }));
     await user.click(within(panel).getByRole('button', { name: 'Extend the seal' }));
     await user.click(
@@ -179,7 +182,8 @@ describe('the Loot Drop page', SLOW, () => {
     renderApp('/entries/entry-sealed');
     await user.click(await screen.findByRole('button', { name: 'Extend the seal' }));
     const panel = await screen.findByRole('dialog', { name: 'Extend the seal' }, LAZY);
-    await user.click(within(panel).getByRole('button', { name: 'Pick a date' }));
+    await user.click(within(panel).getByRole('radio', { name: 'Pick a date' }));
+    await user.click(within(panel).getByRole('button', { name: 'Choose the day' }));
     await user.click(await screen.findByRole('button', { name: /January 28th, 2027/ }));
     await user.click(within(panel).getByRole('button', { name: 'Extend the seal' }));
     await user.click(

@@ -1,5 +1,5 @@
 import { CalendarDays } from 'lucide-react';
-import { useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { DayPicker } from 'react-day-picker';
 import { StarMark } from '../../components/TravellingStar';
 import { Button } from '../../components/ui/button';
@@ -18,19 +18,27 @@ import {
   countdown,
   fromPickerDate,
   openingParts,
+  quickDayLabel,
+  quickDays,
+  todayIn,
   toPickerDate,
   unlockInstant,
   type IsoDate,
+  type QuickDayKey,
 } from '../../lib/time';
 import { pickerClasses } from '../../components/ui/calendar';
 
 // Choosing when a Loot Drop opens (task 4.8, F-06, D-23, DESIGN.md §4 Write): pick a day, read back the moment it
 // opens (09:00 on that day in the user's zone), press Seal it, then confirm in a question that repeats the date, the
-// time and how far away it is, which catches 2072 typed for 2027 (F-06). Task 4.16 adds the quick dates (in a month,
-// in a year, on my birthday) above the day chip, as radio rows. Capture and the Loot Drop page's Extend both use it.
+// time and how far away it is, which catches 2072 typed for 2027 (F-06). Task 4.16 (D-33) puts the quick dates above
+// the day picker as radio rows: In a month, In a year, On my birthday (only once a birthday is set), and Pick a date,
+// which brings out the day chip. A quick date is still only a day: it opens at 09:00 and still asks first (D-10).
+// Capture and the Loot Drop page's Extend both use it.
 
 export interface SealFormProps {
   zone: string;
+  /** The user's birthday from Settings (users.birthday), or null: no birthday, no "On my birthday" (F-06). */
+  birthday: IsoDate | null;
   /** The first day that can be picked: tomorrow, or the day after the current opening day when extending (D-10). */
   earliest: IsoDate;
   /** The last: the day before the 100-year limit (time.ts, latestSealDay). */
@@ -50,6 +58,7 @@ export interface SealFormProps {
 
 export function SealForm({
   zone,
+  birthday,
   earliest,
   latest,
   onSeal,
@@ -59,45 +68,75 @@ export function SealForm({
   action = 'Seal it',
   disabled = false,
 }: SealFormProps) {
-  const [day, setDay] = useState<IsoDate | null>(null);
+  const [choice, setChoice] = useState<QuickDayKey | 'pick' | null>(null);
+  const [picked, setPicked] = useState<IsoDate | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [picking, setPicking] = useState(false);
   const sealButton = useRef<HTMLButtonElement>(null);
+  const name = useId();
+  // Worked out from today in the user's zone on every render, so a panel left open past midnight moves with the day.
+  const quick = quickDays(todayIn(zone), birthday, earliest, latest);
+  const day =
+    choice === 'pick' ? picked : (quick.find((option) => option.key === choice)?.day ?? null);
   const opens = day ? openingParts(unlockInstant(day, zone), zone) : null;
 
   return (
     <div className="flex flex-col gap-4">
-      <Popover open={picking} onOpenChange={setPicking}>
-        <PopoverTrigger asChild>
-          <Chip
-            selected={day !== null}
-            className="self-start"
-            aria-label={day ? `Opening day: ${chipDay(day, zone)}. Change it` : 'Pick a date'}
-          >
-            <CalendarDays size={16} aria-hidden />
-            {day ? chipDay(day, zone) : 'Pick a date'}
-          </Chip>
-        </PopoverTrigger>
-        <PopoverContent aria-label="Pick the day it opens" className="relative p-2">
-          <DayPicker
-            mode="single"
-            autoFocus
-            weekStartsOn={1}
-            captionLayout="dropdown"
-            selected={day ? toPickerDate(day) : undefined}
-            defaultMonth={toPickerDate(day ?? earliest)}
-            startMonth={toPickerDate(earliest)}
-            endMonth={toPickerDate(latest)}
-            disabled={[{ before: toPickerDate(earliest) }, { after: toPickerDate(latest) }]}
-            onSelect={(picked) => {
-              if (!picked) return;
-              setDay(fromPickerDate(picked));
-              setPicking(false);
-            }}
-            classNames={pickerClasses}
+      <fieldset className="flex flex-col">
+        <legend className="sr-only">When it opens</legend>
+        {quick.map((option) => (
+          <RadioRow
+            key={option.key}
+            name={name}
+            checked={choice === option.key}
+            onChoose={() => setChoice(option.key)}
+            label={option.label}
+            detail={quickDayLabel(option.day)}
           />
-        </PopoverContent>
-      </Popover>
+        ))}
+        <RadioRow
+          name={name}
+          checked={choice === 'pick'}
+          onChoose={() => setChoice('pick')}
+          label="Pick a date"
+        />
+      </fieldset>
+
+      {choice === 'pick' && (
+        <Popover open={picking} onOpenChange={setPicking}>
+          <PopoverTrigger asChild>
+            <Chip
+              selected={picked !== null}
+              className="self-start"
+              aria-label={
+                picked ? `Opening day: ${chipDay(picked, zone)}. Change it` : 'Choose the day'
+              }
+            >
+              <CalendarDays size={16} aria-hidden />
+              {picked ? chipDay(picked, zone) : 'Choose the day'}
+            </Chip>
+          </PopoverTrigger>
+          <PopoverContent aria-label="Pick the day it opens" className="relative p-2">
+            <DayPicker
+              mode="single"
+              autoFocus
+              weekStartsOn={1}
+              captionLayout="dropdown"
+              selected={picked ? toPickerDate(picked) : undefined}
+              defaultMonth={toPickerDate(picked ?? earliest)}
+              startMonth={toPickerDate(earliest)}
+              endMonth={toPickerDate(latest)}
+              disabled={[{ before: toPickerDate(earliest) }, { after: toPickerDate(latest) }]}
+              onSelect={(chosen) => {
+                if (!chosen) return;
+                setPicked(fromPickerDate(chosen));
+                setPicking(false);
+              }}
+              classNames={pickerClasses}
+            />
+          </PopoverContent>
+        </Popover>
+      )}
 
       <div className="flex flex-col" aria-live="polite">
         <p className="text-small text-ink-2">Opens</p>
@@ -203,4 +242,45 @@ export function SealConfirm({
 
 function Line({ muted = false, children }: { muted?: boolean; children: ReactNode }) {
   return <span className={muted ? 'block text-ink-2' : 'block text-ink'}>{children}</span>;
+}
+
+/**
+ * One radio row (DESIGN.md §4 Controls, Radios): the whole row is the label and at least 44 px tall; the radio is
+ * a 20 px ring in `--control` with an `--accent` dot when chosen. The input itself is the native one, kept for
+ * screen readers and the arrow keys, and drawn by the ring beside it; focus shows on the ring (DESIGN.md §8).
+ */
+function RadioRow({
+  name,
+  checked,
+  onChoose,
+  label,
+  detail,
+}: {
+  name: string;
+  checked: boolean;
+  onChoose: () => void;
+  label: string;
+  detail?: string;
+}) {
+  return (
+    <label className="flex min-h-11 cursor-pointer items-center gap-4 border-b border-line py-3 first-of-type:border-t">
+      <input
+        type="radio"
+        name={name}
+        checked={checked}
+        onChange={onChoose}
+        className="peer sr-only"
+      />
+      <span
+        aria-hidden
+        className={`flex size-5 shrink-0 items-center justify-center rounded-full border-2 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent ${checked ? 'border-accent' : 'border-control'}`}
+      >
+        {checked && <span className="size-2.5 rounded-full bg-accent" />}
+      </span>
+      <span className="flex flex-col">
+        <span className="text-body font-strong">{label}</span>
+        {detail && <span className="text-small text-ink-2">{detail}</span>}
+      </span>
+    </label>
+  );
 }

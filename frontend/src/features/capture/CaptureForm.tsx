@@ -1,23 +1,26 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { JSONContent } from '@tiptap/react';
-import { Image, Mic, Music, Tag } from 'lucide-react';
+import { CornerUpLeft, Image, Mic, Music, Tag, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { getEntry, type Entry } from '../../api/entries';
-import { afterSeal, sealEntry } from '../../api/lootDrops';
+import { afterSeal, sealEntry, useEntry } from '../../api/lootDrops';
 import { ApiProblem, problemMessage } from '../../api/problem';
 import { queryKeys } from '../../api/queryKeys';
 import { StarMark } from '../../components/TravellingStar';
 import { Button } from '../../components/ui/button';
+import { entryDisplayTitle } from '../../lib/displayTitle';
 import { fileProblem, isImageType, MAX_FILES } from '../../lib/files';
 import { readPhotoDay, usableDay } from '../../lib/photoDate';
 import { canRecord } from '../../lib/recording';
 import { captionForSave, insertTemplateHeadings, isBlankDoc } from '../../lib/templateDoc';
 import {
   addDays,
+  addMonthsClamped,
   chipDay,
   formatClock,
+  formatLongDay,
   formatWeekRange,
   isWithin,
   latestSealDay,
@@ -28,7 +31,7 @@ import {
 } from '../../lib/time';
 import type { CaptureKind } from '../../stores/ui';
 import SealPanel from '../lootdrop/SealPanel';
-import { SealForm } from '../lootdrop/SealForm';
+import { SealConfirm, SealForm } from '../lootdrop/SealForm';
 import { sealProblem } from '../lootdrop/sealProblem';
 import { DateChip } from './DateChip';
 import { DateSuggestion } from './DateSuggestion';
@@ -59,11 +62,17 @@ type SaveOutcome = SaveResult & {
 const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
 
 /** Which fields the API named in a 400 (API_CONTRACT §Entries), shown beside each one. */
-type FieldMessages = Partial<Record<'title' | 'entryDate' | 'contentJson' | 'tagIds', string>>;
+type FieldMessages = Partial<
+  Record<'title' | 'entryDate' | 'contentJson' | 'tagIds' | 'replyToEntryId', string>
+>;
 
 export interface CaptureFormProps {
   kind: CaptureKind;
   zone: string;
+  /** For the seal's On my birthday (task 4.16, D-33); null hides it. */
+  birthday: IsoDate | null;
+  /** The opened Loot Drop that *Reply to past you* answers (task 4.16, D-33), or null. */
+  replyTo?: string | null;
   /** The Cancel button, Escape and the scrim all ask the frame; the frame asks here whether to confirm first. */
   onRequestClose: (dirty: boolean) => void;
   /** Closes for good, after a save or a discard. */
@@ -109,6 +118,8 @@ const uploadedItem = (m: Entry['media'][number]): TrayItem => ({
 export function CaptureForm({
   kind,
   zone,
+  birthday,
+  replyTo = null,
   onRequestClose,
   onDone,
   onDirtyChange,
@@ -140,9 +151,11 @@ export function CaptureForm({
   // The soundtrack (D-35, task 4.15): a Spotify URI or null, sent on every save, since a PUT without it clears it.
   const [soundtrack, setSoundtrack] = useState<string | null>(start.soundtrack ?? null);
   const songRef = useRef<HTMLElement | null>(null);
-  // What the server last said about the field capture doesn't edit (the reply, task 4.16), sent back on every PUT
-  // (D-26).
-  const [kept, setKept] = useState<{ replyToEntryId: string | null }>({ replyToEntryId: null });
+  // The Loot Drop this entry answers (task 4.16, D-33), sent on every save, since a PUT without it unlinks it (D-26).
+  // Reply to past you names it; otherwise it comes from the draft or from what the server last said.
+  const [kept, setKept] = useState<{ replyToEntryId: string | null }>({
+    replyToEntryId: replyTo ?? start.replyToEntryId ?? null,
+  });
 
   const [fieldErrors, setFieldErrors] = useState<FieldMessages>({});
   const [message, setMessage] = useState<string | null>(null);
@@ -196,6 +209,7 @@ export function CaptureForm({
   // The typed text and the version stay the draft's, so a change made elsewhere still meets 409 entry-stale.
   const restoredId = restored?.entryId ?? null;
   const restoredSoundtrack = restored?.soundtrack;
+  const restoredReply = restored?.replyToEntryId;
   const restoring = useRef(false);
   // Save waits for this read: until it answers, `kept` is empty, and a PUT would clear the soundtrack and the reply
   // (D-26). A sealed entry keeps Save off for good (D-10). Review 2 fix, task 4.6.
@@ -218,7 +232,13 @@ export function CaptureForm({
           setRestore('sealed');
           return;
         }
-        setKept({ replyToEntryId: latest.replyToEntryId });
+        // Reply to past you, pressed with a saved draft waiting, makes that draft the reply (task 4.16).
+        // A draft from before task 4.16 holds no link, so the entry's own is kept; a newer draft's choice wins, even a
+        // link the user removed (null), as the soundtrack does below (D-23, review 1 of task 4.16).
+        setKept({
+          replyToEntryId:
+            replyTo ?? (restoredReply === undefined ? latest.replyToEntryId : restoredReply),
+        });
         // A draft from before task 4.15 holds no soundtrack, so the entry's own is kept; a newer draft's choice wins.
         if (restoredSoundtrack === undefined) setSoundtrack(latest.soundtrack);
         setItems((list) => [...latest.media.map(uploadedItem), ...list]);
@@ -236,7 +256,7 @@ export function CaptureForm({
         setMessage(problemMessage(error));
         setRestore('done');
       });
-  }, [restoredId, restoredSoundtrack, queryClient]);
+  }, [restoredId, restoredSoundtrack, restoredReply, replyTo, queryClient]);
   const canSave = hasContent && restore === 'done';
 
   // The draft follows the form, a moment after the typing stops (D-23).
@@ -256,6 +276,7 @@ export function CaptureForm({
         content,
         tagIds,
         soundtrack,
+        replyToEntryId: kept.replyToEntryId,
         savedAt,
       });
       setDraftSavedAt(savedAt);
@@ -273,6 +294,7 @@ export function CaptureForm({
     content,
     tagIds,
     soundtrack,
+    kept.replyToEntryId,
   ]);
 
   // Object URLs hold the picked files in memory until they are revoked.
@@ -447,6 +469,10 @@ export function CaptureForm({
             queryClient.invalidateQueries({ queryKey: queryKeys.timelines() }),
           ]));
       void queryClient.invalidateQueries({ queryKey: queryKeys.tags() });
+      // Task 4.16 (D-33): the Loot Drop lists its replies, so its page reads them again.
+      if (kept.replyToEntryId) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.entry(kept.replyToEntryId) });
+      }
       if (sealed && entry) {
         clearDraft();
         setSealOpen(false);
@@ -572,11 +598,40 @@ export function CaptureForm({
     setPrompts((list) => [...list, ...template.subheadings.filter((p) => !list.includes(p))]);
   };
 
-  const heading = kindOfDraft === 'page' ? 'Diary page' : 'New entry';
+  // The first letter (task 4.16, D-33): written today, sealed for a month, so its only seal is the Seal it in the
+  // top bar, which asks first like every seal (D-10). The quick seal controls are left out.
+  const letter = kindOfDraft === 'letter';
+  const letterDay = addMonthsClamped(todayIn(zone), 1);
+  const [confirmingLetter, setConfirmingLetter] = useState(false);
+  const submitButton = useRef<HTMLButtonElement>(null);
+
+  const heading = letter
+    ? 'Letter to future you'
+    : kept.replyToEntryId
+      ? 'Reply to past you'
+      : kindOfDraft === 'page'
+        ? 'Diary page'
+        : 'New entry';
   const failedCount = items.filter((i) => i.status === 'failed').length;
 
   const writing = (
     <div className="flex flex-col gap-4">
+      {letter && (
+        <p className="text-small text-ink-2">
+          It opens on {formatLongDay(letterDay)} at 9:00 am. Until then nobody can read it, you
+          included.
+        </p>
+      )}
+      {kept.replyToEntryId && (
+        <ReplyLink
+          entryId={kept.replyToEntryId}
+          error={fieldErrors.replyToEntryId}
+          onRemove={() => {
+            setKept({ replyToEntryId: null });
+            setFieldErrors((errors) => ({ ...errors, replyToEntryId: undefined }));
+          }}
+        />
+      )}
       <div className="flex flex-wrap gap-2">
         <DateChip
           day={entryDate}
@@ -617,7 +672,11 @@ export function CaptureForm({
         />
         {fieldErrors.title && <p className="text-small text-danger">{fieldErrors.title}</p>}
       </div>
-      <EntryEditor editor={editor} error={fieldErrors.contentJson} />
+      <EntryEditor
+        editor={editor}
+        error={fieldErrors.contentJson}
+        hint={letter ? 'Dear future me…' : undefined}
+      />
     </div>
   );
 
@@ -625,6 +684,7 @@ export function CaptureForm({
   // save under way (uploads included) keeps it unavailable (F-06).
   const sealForm = {
     zone,
+    birthday,
     earliest: addDays(todayIn(zone), 1),
     latest: latestSealDay(zone),
     busy: save.isPending,
@@ -685,7 +745,7 @@ export function CaptureForm({
       <SoundtrackField value={soundtrack} onChange={setSoundtrack} focusRef={songRef} />
       {/* Laptop: the Seal as Loot Drop box on the first screen, in the right column (DESIGN.md §4 Write, D-41). Save
           stays the one primary button, so Seal it is secondary here. */}
-      {layout === 'dialog' && (
+      {layout === 'dialog' && !letter && (
         <section
           aria-labelledby={sealTitleId}
           className="flex flex-col gap-4 rounded-lg bg-surface p-4"
@@ -708,7 +768,9 @@ export function CaptureForm({
       className="flex min-h-0 flex-1 flex-col"
       onSubmit={(event) => {
         event.preventDefault();
-        if (canSave && !save.isPending) save.mutate(null);
+        if (!canSave || save.isPending) return;
+        if (letter) setConfirmingLetter(true);
+        else save.mutate(null);
       }}
     >
       {/* The 56 px bar: Cancel, the heading over "Draft saved 7:41 pm", and the one primary button, Save. */}
@@ -733,13 +795,14 @@ export function CaptureForm({
           </p>
         </div>
         <Button
+          ref={submitButton}
           type="submit"
           variant="primary"
           className="justify-self-end"
           disabled={!canSave || save.isPending}
           aria-disabled={!canSave || save.isPending}
         >
-          {failedCount > 0 && saved ? 'Try again' : 'Save'}
+          {failedCount > 0 && saved ? 'Try again' : letter ? 'Seal it' : 'Save'}
         </Button>
       </div>
 
@@ -753,6 +816,11 @@ export function CaptureForm({
               Load the latest version
             </Button>
           </div>
+        )}
+        {letter && sealError && (
+          <p role="alert" className="text-body">
+            {sealError}
+          </p>
         )}
         {message && !stale && (
           <p role="alert" className="text-body">
@@ -773,7 +841,7 @@ export function CaptureForm({
       </div>
 
       {/* The seal panel opens from the bottom over the sheet (task 4.8). */}
-      {layout === 'sheet' && (
+      {layout === 'sheet' && !letter && (
         <SealPanel
           open={sealOpen}
           onOpenChange={setSealOpen}
@@ -829,20 +897,70 @@ export function CaptureForm({
             Song
           </button>
           {/* Seal, in the accent with the star mark, so sealing is on the first screen (DESIGN.md §4 Write). It sits
-              in the fifth column whatever is missing before it. */}
-          <button
-            type="button"
-            ref={sealTrigger}
-            onClick={() => setSealOpen(true)}
-            disabled={!canSave || save.isPending}
-            className="col-start-5 flex flex-col items-center justify-center gap-1 text-meta text-accent focus-visible:-outline-offset-2 disabled:text-ink-2"
-          >
-            <StarMark size={20} />
-            Seal
-          </button>
+              in the fifth column whatever is missing before it. The first letter's seal is Seal it, in the top bar. */}
+          {!letter && (
+            <button
+              type="button"
+              ref={sealTrigger}
+              onClick={() => setSealOpen(true)}
+              disabled={!canSave || save.isPending}
+              className="col-start-5 flex flex-col items-center justify-center gap-1 text-meta text-accent focus-visible:-outline-offset-2 disabled:text-ink-2"
+            >
+              <StarMark size={20} />
+              Seal
+            </button>
+          )}
         </div>
       )}
+
+      {/* The first letter's question (task 4.16): the same one every seal asks, a month from today (D-33, D-10). */}
+      {letter && (
+        <SealConfirm
+          open={confirmingLetter}
+          onOpenChange={setConfirmingLetter}
+          zone={zone}
+          day={letterDay}
+          action="Seal it"
+          onConfirm={() => save.mutate(letterDay)}
+          returnFocus={submitButton}
+        />
+      )}
     </form>
+  );
+}
+
+/**
+ * What a reply answers, in capture (task 4.16, D-33): "In reply to Letter to future me", with Remove to make it an
+ * ordinary entry. The Loot Drop is read with useEntry, so it shares the page's cache; a sealed one (sealed again
+ * since) shows no title, as the server sends none (D-10).
+ */
+function ReplyLink({
+  entryId,
+  error,
+  onRemove,
+}: {
+  entryId: string;
+  error?: string;
+  onRemove: () => void;
+}) {
+  const target = useEntry(entryId);
+  const name = target.data ? (entryDisplayTitle(target.data) ?? 'a Loot Drop') : 'a Loot Drop';
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between gap-4">
+        <p className="flex min-w-0 items-center gap-2 text-small text-ink-2">
+          <CornerUpLeft size={16} aria-hidden className="shrink-0" />
+          <span className="truncate">
+            In reply to <span className="font-strong text-ink">{name}</span>
+          </span>
+        </p>
+        <Button variant="quiet" className="-mr-3 min-w-11 shrink-0" onClick={onRemove}>
+          <X size={16} aria-hidden />
+          <span className="sr-only">Remove the link to {name}</span>
+        </Button>
+      </div>
+      {error && <p className="text-small text-danger">{error}</p>}
+    </div>
   );
 }
 
@@ -855,6 +973,10 @@ function fieldMessages(problem: ApiProblem): FieldMessages {
     else if (name === 'entryDate') out.entryDate = sentence('entryDate', text);
     else if (name === 'contentJson') out.contentJson = 'Something in the text can’t be saved.';
     else if (name === 'tagIds') out.tagIds = 'An entry holds 20 tags at most.';
+    // Task 4.16 (D-33): the Loot Drop was sealed again since Reply was pressed. The server's words never show.
+    else if (name === 'replyToEntryId')
+      out.replyToEntryId =
+        'That Loot Drop is sealed again, so this can’t answer it. Remove the link to save it.';
   }
   return out;
 }

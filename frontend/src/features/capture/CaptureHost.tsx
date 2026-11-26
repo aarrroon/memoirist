@@ -9,12 +9,14 @@ import { useUiStore, type CaptureKind } from '../../stores/ui';
 const CaptureView = lazy(() => import('./CaptureView'));
 const CaptureToaster = lazy(() => import('./CaptureToaster'));
 
-const KINDS: readonly CaptureKind[] = ['entry', 'dump', 'page'];
+// 'letter' too (task 4.16), so the design check can load the first letter's capture.
+const KINDS: readonly CaptureKind[] = ['entry', 'dump', 'page', 'letter'];
 const isKind = (value: string | null): value is CaptureKind =>
   value !== null && (KINDS as readonly string[]).includes(value);
 
 export function CaptureHost() {
   const capture = useUiStore((s) => s.capture);
+  const replyTo = useUiStore((s) => s.replyTo);
   const openCapture = useUiStore((s) => s.openCapture);
   const [params, setParams] = useSearchParams();
   // The toast after a save outlives the sheet, so its host stays mounted once capture has been used.
@@ -40,7 +42,7 @@ export function CaptureHost() {
 
   return (
     <Suspense fallback={null}>
-      {capture !== null && <CaptureView kind={capture} />}
+      {capture !== null && <CaptureView kind={capture} replyTo={replyTo} />}
       {used && <CaptureToaster />}
     </Suspense>
   );
