@@ -366,7 +366,7 @@ The phases follow D-31: groups come before the AI biographer, and the phone extr
     - a reply showing what it answers
     - skipping the first letter
 
-- [ ] **4.17 End-to-end smoke test and CI: frontend**
+- [x] **4.17 End-to-end smoke test and CI: frontend**
   - **Do:**
     - A Playwright smoke test: create an entry with a photo, then seal another.
     - A CI frontend job (lint, typecheck, test, build).
