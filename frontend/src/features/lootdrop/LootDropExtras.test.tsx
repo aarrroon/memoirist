@@ -178,7 +178,8 @@ describe('Reply to past you (D-33, F-07)', SLOW, () => {
 
     // The Loot Drop lists its reply, read again after the save.
     const replies = await screen.findByRole('region', { name: 'Your reply' });
-    const link = within(replies).getByRole('link', { name: /Dear past me/ });
+    // The region appears with its loading row first; each reply arrives from its own GET, so wait for the link.
+    const link = await within(replies).findByRole('link', { name: /Dear past me/ });
     const replyId = (created?.body as { id: string }).id;
     expect(link).toHaveAttribute('href', `/entries/${replyId}`);
 
