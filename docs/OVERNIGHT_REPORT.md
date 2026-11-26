@@ -50,6 +50,8 @@
 
 **S4 Overview:** [build-journal/sprint-4/README.md](build-journal/sprint-4/README.md) (tasks 4.1 to 4.17).
 
+**S4 Pull request:** [#4 Sprint 4: The React UI](https://github.com/aarrroon/memoirist/pull/4), open as a **draft** (`phase-1-sprint-4` into `phase-1-sprint-3`, stacked on #3; merge after it), description updated 2026-11-26 for all seventeen tasks. Draft because 4.10 and 4.14 wait on the Q29 decision. Latest CI: backend green on every run; frontend green on run 45771498894 and red on 45771494097 and 45770411217 from one flaky test (see *Sprint 4 wrap-up, CI flake*).
+
 ### S4 Usage
 | Time (Melbourne) | 5-hour used | Weekly used | Decision |
 |---|---|---|---|
@@ -323,7 +325,7 @@
 - **4.17, setup needed (D-17):** on a real iPhone (Safari), pick a photo in capture and check that a JPEG, not a HEIC, is uploaded. Only the `accept` list could be checked here.
 - **4.17, decision needed (docs):** D-17 (DECISIONS.md) and USER_FLOWS F-04 still say the iOS HEIC-to-JPEG conversion is verified in Sprint 4; that check now has no task. Record with `/record-decision` where it goes (for example the 5.6 deploy check or 5.8 installable app) and update both.
 - **4.17, follow-up:** the Playwright smoke tests are not in CI; add them with the deploy check (5.6), which already must pass them against the deployed app.
-- **Sprint 4 wrap-up, CI flake:** the pull-request run [45770411217](https://github.com/aarrroon/memoirist/actions/runs/45770411217) failed one frontend test (`1 failed | 512 passed`) on the same commit (`0963651`) whose push run [45770403437](https://github.com/aarrroon/memoirist/actions/runs/45770403437) passed. `LootDropExtras.test.tsx:181` *a reply is saved as a new entry…* calls `getByRole('link', { name: /Dear past me/ })` straight after `findByRole('region', { name: 'Your reply' })`, while the replies list still shows its loading row. Changing that `getByRole` to `await within(replies).findByRole(…)` should make it wait; not changed in the wrap-up (docs only). Re-run the job, or fix it in the next session.
+- **Sprint 4 wrap-up, CI flake:** the pull-request run [45770411217](https://github.com/aarrroon/memoirist/actions/runs/45770411217) failed one frontend test (`1 failed | 512 passed`) on the same commit (`0963651`) whose push run [45770403437](https://github.com/aarrroon/memoirist/actions/runs/45770403437) passed; it failed again on the overview commit's push run [45771494097](https://github.com/aarrroon/memoirist/actions/runs/45771494097) while that commit's pull-request run passed. `LootDropExtras.test.tsx:181` *a reply is saved as a new entry…* calls `getByRole('link', { name: /Dear past me/ })` straight after `findByRole('region', { name: 'Your reply' })`, while the replies list still shows its loading row. Changing that `getByRole` to `await within(replies).findByRole(…)` should make it wait; not changed in the wrap-up (docs only). Re-run the job, or fix it in the next session.
 - **Sprint 4 not finished:** every task is built; 4.10 and 4.14 need the Q29 decision above. The pull request stays a draft for that reason.
 
 ### S4 Questions for the morning
