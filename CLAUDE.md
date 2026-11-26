@@ -52,9 +52,7 @@ cd frontend && npm run dev                                                # 4.1:
 cd frontend && npm test && npm run lint && npm run typecheck              # 4.1
 cd frontend && npm run gen:api                                            # 4.2: regenerate API types (backend must be running)
 cd frontend && npx playwright test                                        # 4.17: smoke tests F-03 and F-06 (Compose and bootRun up; starts Vite)
-scripts/journal.sh start | stop | backup | list | restore <name> | status # the user's real journal: a commit, own stack, :5174 (DEVELOPMENT.md §8)
 ```
-**The user's real journal lives in the `memoirist-journal` Docker project.** Never run `down -v`, `restore` or SQL against it, and never point a dev command at its ports (5433, 8334, 8081), unless the user asks.
 Add `--memoirist.sample-content=true` to the `bootRun` arguments to fill an empty dev journal (task 3.16).
 
 ## Doc map: read what the task needs, not everything
